@@ -1,0 +1,6 @@
+[
+  {"name": "kernel", "id":  "1"},
+  {"name": "edit", "id": "2"},
+  {"name": "pum-server", "id": "3"},
+  {"name": "pum-client", "id": "4"}
+]

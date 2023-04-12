@@ -4,236 +4,117 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.List;
-import java.util.Map;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.concurrent.*;
 
-import org.jetbrains.annotations.NotNull;
-import com.google.gson.Gson;
-import org.petos.packagemanager.NetworkPacket.CommandType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.petos.packagemanager.NetworkExchange.*;
+import org.petos.packagemanager.server.ServerController;
+import org.petos.packagemanager.server.ServerDispatcher;
 
 public class Server {
-private int port;
-private int clientCnt;
+private static final Logger logger = LogManager.getLogger(Server.class);
+final private int port;
 private ForkJoinPool threadPool;
 private Map<Integer, PackageInfo> table;
 
-Server() {
+{
       threadPool = new ForkJoinPool();
-      //todo: check available port and
+}
+
+public Server(int port) {
+      this.port = port;
+      this.rootHandler = this::defaultController;
+}
+
+private ServerController rootHandler;
+public Server setController(ServerController handle) {
+      this.rootHandler = handle;
+      return this;
+}
+
+private void defaultController(NetworkExchange message) {
+      message.setResponse(ResponseType.Approve, NetworkExchange.NO_PAYLOAD);
 }
 
 public void start() {
-      try (ServerSocket server = new ServerSocket(port, clientCnt)) {
+      try (ServerSocket server = new ServerSocket(port)) {
 	    while (!server.isClosed()) {
 		  Socket client = server.accept();
-		  ClientService service = new ClientService(client);
+		  ClientService service = new ClientService(client, this.rootHandler);
 		  threadPool.submit(service);
 	    }
       } catch (IOException e) {
-	    throw new RuntimeException(e);
+	    throw new RuntimeException(e); //something really hard
       }
 }
 
-private ConcurrentHashMap<String, Integer> nameMapper;
-private ConcurrentHashMap<Integer, PackageInfo> packages;
-
-private byte[] getPayload(Integer packageId){
-      return new byte[0];
-}
-private @NotNull List<DataPackage> getPackageBranch(Integer id){
-      PackageInfo info = packages.get(id);
-      if(info == null)
-	    return List.of();
-      DataPackage data = new DataPackage();
-      data.info = info;
-      data.payload = new byte[0];
-      return List.of(data);
-}
-private @NotNull PackageInfo getPackageInfo(String packageName) throws IllegalStateException {
-      Integer id = nameMapper.get(packageName);
-      if (id == null)
-	    throw new IllegalStateException("Package not exists");
-      PackageInfo info = packages.get(id);
-      if (info == null)
-	    throw new IllegalStateException("No package for corresponding id");
-      return info;
-}
-/**
- * if version == 0: get latest version<br>
- * elsif version in [-1,-9]: get specific latter version<br>
- * else: get minimal available version<br>
- * */
-private @NotNull PackageEntity getPackage(int id, int versionOffset){
-	List<DataPackage> list = getPackageBranch(id);
-	assert list.size() != 0;
-	return null;
-}
-class ClientData {
-      private CommandType lastCommand;
-      private int repeatCnt; //the num of curr command
-      private PackageEntity data;
-
-      ClientData() {
-	    lastCommand = CommandType.Unknown;
-	    markRepeater();
-      }
-      public void setPackageEntity(PackageEntity entity){
-	    this.data = entity;
-      }
-      public void initTransfer(){
-
-      }
-
-      public void markRepeater() {
-	    repeatCnt = 0;
-      }
-
-      public void updateRepeater() {
-	    repeatCnt += 1;
-      }
-
-      public int getRepeater() {
-	    return repeatCnt;
-      }
-
-      public void setLast(CommandType type) {
-	    this.lastCommand = type;
-      }
-
-      public CommandType getLast() {
-	    return this.lastCommand;
-      }
-}
-
-class ClientService implements Runnable {
-      private final int DEFAULT_TIMEOUT = 1000;
+static class ClientService implements Runnable {
+      private final int DEFAULT_TIMEOUT = 5000;
       private Socket socket;
-      private ClientData client;
-      private NetworkPacket response;
+      private ServerController handler;
 
-      public ClientService(Socket socket) {
+      public ClientService(Socket socket, ServerController handler) {
+	    this.handler = handler;
 	    this.socket = socket;
-	    client = new ClientData();
       }
 
-      //each dispatch set response network packet
-
-      private void dispatchPackageRequest(DataInputStream input) throws IOException {
-	    if (client.getLast() != CommandType.GetId)
-		  client.markRepeater();
-	    switch (client.getRepeater()) {
-		  case 0 -> {
-			Integer id = Integer.parseInt(input.readUTF());
-			Integer version = Integer.parseInt(input.readUTF());
-		  }
+      private Optional<NetworkPacket> getRequest(InputStream input) throws IOException {
+	    List<Byte> bytes = new ArrayList<>();
+	    ByteBuffer buffer = ByteBuffer.wrap(new byte[4]);
+	    int signCnt = 0;
+	    while (input.read(buffer.array()) > 0 && signCnt != 2) {
+		  int controlSign = buffer.getInt();
+		  signCnt += controlSign == NetworkPacket.BytesPerCommand ? 1 : 0;
+		  for (byte value : buffer.array())
+			bytes.add(value);
 	    }
-
-      }
-
-      private void dispatchInfoRequestAll() {
-	    client.setLast(CommandType.GetAll);
-      }
-
-      private void dispatchInfoRequest(@NotNull DataInputStream input) throws IOException {
-	    String name = input.readUTF();
-	    PackageInfo info;
-	    try {
-		  info = Server.this.getPackageInfo(name);
-		  String data = info.toJson();
-		  response = new NetworkPacket(CommandType.Approve, data);
-	    } catch (IllegalStateException e) {
-		  response = new NetworkPacket(CommandType.Decline);
+	    if (signCnt < 2)
+		  return Optional.empty();
+	    int index = 0;
+	    byte[] rawBytes = new byte[bytes.size()];
+	    for (byte value : bytes) {
+		  rawBytes[index] = value;
+		  index += 1;
 	    }
-      }
+	    return NetworkPacket.valueOf(rawBytes);
 
-      private void dispatchDefaultRequest() {
-	    response = new NetworkPacket(CommandType.Decline);
-      }
-
-      private void dispatchInfoResponseAll(DataOutputStream output) throws IOException {
-	    NetworkPacket response = new NetworkPacket(CommandType.GetAll);
-	    for (var entry : packages.entrySet()) {
-		  response.setData(entry.getValue().toJson());
-		  output.write(response.code());
-		  output.writeUTF(response.data());
-	    }
-	    output.flush();
-	    client.setLast(CommandType.Unknown);
-      }
-
-      private void dispatchDefaultResponse(DataOutputStream output) throws IOException {
-	    output.write(response.code());
-	    output.writeUTF(response.data());
-	    output.flush();
-      }
-
-      private void dispatchInput(byte[] command, DataInputStream input) throws IOException {
-	    CommandType type = NetworkPacket.convertCommand(command);
-	    response = null;
-	    assert client != null;
-	    try {
-		  switch (type) {
-			case Decline, Approve -> {
-			}
-			case GetAll -> dispatchInfoRequestAll();
-			case GetName -> dispatchInfoRequest(input);
-			case GetId -> dispatchPackageRequest(input);
-			case GetVersion -> {
-			}
-			case Publish -> {}
-			default -> dispatchDefaultRequest();
-		  }
-	    } catch (SocketTimeoutException e) {
-		  dispatchDefaultRequest();
-	    }
-
-      }
-
-      private void dispatchOutput(DataOutputStream output) throws IOException {
-	    if (response == null)
-		  return;
-	    switch (client.getLast()) {
-		  case GetAll -> dispatchInfoResponseAll(output);
-		  default -> dispatchDefaultResponse(output);
-	    }
-      }
-
-      private void updateCommand(byte[] command, DataInputStream input) throws IOException {
-	    boolean hasRequest = false;
-	    while (!hasRequest) {
-		  try {
-			hasRequest = input.read(command) == NetworkPacket.BytesPerCommand;
-		  } catch (SocketTimeoutException ignored) {
-		  }
-	    }
       }
 
       @Override
       public void run() {
 	    try (DataInputStream input = new DataInputStream(socket.getInputStream());
 		 DataOutputStream output = new DataOutputStream(socket.getOutputStream())) {
-		  byte[] command = new byte[NetworkPacket.BytesPerCommand];
 		  socket.setSoTimeout(DEFAULT_TIMEOUT);
-		  while (!socket.isClosed()) {
-			updateCommand(command, input);
-			dispatchInput(command, input);
-			dispatchOutput(output);
+		  Optional<NetworkPacket> packet;
+		  do {
+			packet = getRequest(input);
+		  } while (packet.isEmpty());
+		  NetworkConnection connection = new NetworkConnection(input, output);
+		  NetworkExchange message = new NetworkExchange(packet.get(), connection);
+		  try {
+			handler.accept(message);
+		  } catch (Exception e) {
+			handler.error(message);
+			logger.warn("Error in Server Controller: " + e.getMessage());
 		  }
-	    } catch (IOException e) {
+	    }
+	    catch (SocketTimeoutException e){
+		  logger.warn("Client not response");
+	    }
+	    catch (IOException e) {
+		  logger.error("Socket error: " + e.getMessage());
 		  throw new RuntimeException(e);
 	    }
 
       }
 }
-public static void main(String[] args){
-      DataPackage data = new DataPackage();
-      data.info = new PackageInfo();
-      data.info.name = "FarCommander";
-      data.info.payloadType = "Binary";
-      data.payload = new byte[]{0xF, 0xF, 0xA, 0xA};
-      PackageEntity entity = PackageEntity.valueOf(data, 23, 42);
-      String result = entity.serialize();
-      PackageEntity.deserialize(result);
+
+public static void main(String[] args) {
+      Server server = new Server(3344);
+      server.setController(new ServerDispatcher());
+      server.start();
 }
 }

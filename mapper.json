@@ -1,0 +1,4 @@
+[
+  {"name": "list", "type": "ListAll", "hasParams": "false"},
+  {"name": "install", "type": "Install", "hasParams": "true"}
+]
