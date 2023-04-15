@@ -11,4 +11,6 @@ module com.example.packagemanager {
       requires  org.apache.logging.log4j;
       opens org.petos.packagemanager to javafx.fxml;
       exports org.petos.packagemanager;
+      exports org.petos.packagemanager.transfer;
+      opens org.petos.packagemanager.transfer to javafx.fxml;
 }

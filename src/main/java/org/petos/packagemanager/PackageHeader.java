@@ -53,6 +53,15 @@ public void setEncryptionType(char type) {
 public void setArchiveType(char type) {
       archiveType = type;
 }
+public char getEncryption(){
+      return encryptionType;
+}
+public char getArchive(){
+      return archiveType;
+}
+public int size(){
+      return MinBytesPerHeader + dependencies.length * 4;
+}
 
 public byte[] serialize() {
       ByteBuffer buffer = ByteBuffer.allocate(MinBytesPerHeader + dependencies.length * 4);
@@ -78,10 +87,17 @@ private int getHeaderHash(byte[] header) {
 
 
 final private char signHead;
+//unique id of current package
 final private int id;
+//unique id of version of current package
 final private int version;
+//ids of all packages that used to resolve dependencies
+//this field should be used to quick install additional dependencies
 private int[] dependencies;
 final private char signBody;
+//the following two field are optional
+//if they are set to zero ― no encryption/archivation was used
+//otherwise, you should order of PackageAssembly to determine the real encryption/archive type
 private char encryptionType;
 private char archiveType;
 private int payloadHash;

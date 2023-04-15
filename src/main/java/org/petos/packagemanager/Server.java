@@ -10,9 +10,13 @@ import java.util.concurrent.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.petos.packagemanager.NetworkExchange.*;
+import org.petos.packagemanager.transfer.NetworkConnection;
+import org.petos.packagemanager.transfer.NetworkExchange;
+import org.petos.packagemanager.transfer.NetworkExchange.*;
+import org.petos.packagemanager.server.PackageStorage;
 import org.petos.packagemanager.server.ServerController;
 import org.petos.packagemanager.server.ServerDispatcher;
+import org.petos.packagemanager.transfer.NetworkPacket;
 
 public class Server {
 private static final Logger logger = LogManager.getLogger(Server.class);
@@ -92,14 +96,21 @@ static class ClientService implements Runnable {
 		  do {
 			packet = getRequest(input);
 		  } while (packet.isEmpty());
-		  NetworkConnection connection = new NetworkConnection(input, output);
+		  NetworkConnection connection = new NetworkConnection(input);
 		  NetworkExchange message = new NetworkExchange(packet.get(), connection);
 		  try {
 			handler.accept(message);
 		  } catch (Exception e) {
-			handler.error(message);
+			handler.error(message);//it's obligatory for Controller to process error
 			logger.warn("Error in Server Controller: " + e.getMessage());
+		  } finally {
+			if(message.response().isPresent()){
+			      output.write(message.response().get().rawPacket());
+			      output.write(connection.collect());
+			}
+			connection.close();
 		  }
+
 	    }
 	    catch (SocketTimeoutException e){
 		  logger.warn("Client not response");
@@ -114,7 +125,8 @@ static class ClientService implements Runnable {
 
 public static void main(String[] args) {
       Server server = new Server(3344);
-      server.setController(new ServerDispatcher());
+      PackageStorage storage = new PackageStorage();
+      server.setController(new ServerDispatcher(storage));
       server.start();
 }
 }

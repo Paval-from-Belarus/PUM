@@ -7,8 +7,9 @@ import org.jetbrains.annotations.Nullable;
 //generally, package info is supposed to transfer through network
 public class PackageInfo {
 public  String name;
-public String version;
+public String[] aliases;
 public String payloadType;
+public String version;
 public String licenseType;
 public String[] dependencies;
 public String toJson(){

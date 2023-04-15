@@ -1,13 +1,12 @@
-package org.petos.packagemanager;
+package org.petos.packagemanager.transfer;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-import org.petos.packagemanager.NetworkExchange.ResponseType;
-import org.petos.packagemanager.NetworkExchange.RequestType;
+import org.petos.packagemanager.transfer.NetworkExchange.ResponseType;
+import org.petos.packagemanager.transfer.NetworkExchange.RequestType;
 
 /**
  * Network packet can holds two value<br>
@@ -27,7 +26,7 @@ private final static int RESPONSE_CODE_MASK = 0xFE;
 private final static int REQUEST_CONTROL_MASK = 0xFFFF;
 public static int BytesPerCommand = 12;
 public enum PacketDirection {Response, Request}
-private String data;
+private byte[] data;
 //each network packet exists only with one (Response or Request) type
 private ResponseType responseType;
 private RequestType requestType;
@@ -35,7 +34,7 @@ private final PacketDirection direction;
 private int responseCode;
 
 {
-      this.data = "";
+      this.data = new byte[0];
 
 }
 
@@ -44,6 +43,7 @@ private int responseCode;
  */
 public NetworkPacket(ResponseType type, int responseCode) {
       this.responseType = type;
+      this.responseCode = responseCode;
       this.direction = PacketDirection.Response;
 }
 
@@ -52,26 +52,28 @@ public NetworkPacket(RequestType type) {
       this.direction = PacketDirection.Request;
 }
 
-public NetworkPacket(ResponseType type, int responseCode, String data) {
+public NetworkPacket(ResponseType type, int responseCode, byte[] data) {
       this(type, responseCode);
       this.data = data;
 }
 
-public NetworkPacket(RequestType type, String data) {
+public NetworkPacket(RequestType type, byte[] data) {
       this(type);
       this.data = data;
 }
-
-public void setHeaders(String data) {
+public void setPayload(byte[] data) {
       this.data = data;
 }
 
 public boolean hasData() {
-      return this.data.length() > 0;
+      return this.data.length > 0;
 }
 
-public final String data() {
+public final byte[] data() {
       return this.data;
+}
+public int code(){
+      return responseCode;
 }
 
 public final PacketDirection direction() {
@@ -112,14 +114,13 @@ public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
 	    packet = new NetworkPacket(ResponseType.values()[enumId], code);
       }
       if (rawBytes.length > BytesPerCommand) {
-	    String data = new String(rawBytes, 8, rawBytes.length - 8, StandardCharsets.US_ASCII);
-	    packet.setHeaders(data);
+	    ByteBuffer data = ByteBuffer.wrap(rawBytes, 8, rawBytes.length - 8);
+	    packet.setPayload(data.array());
       }
       return Optional.of(packet);
 }
 
-private static @NotNull byte[] getRawPacket(ResponseType type, int code, String data) {
-      final byte[] payload = data.getBytes(StandardCharsets.US_ASCII);
+private static @NotNull byte[] getRawPacket(ResponseType type, int code, final byte[] payload) {
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_RESPONSE);
       int responseSign = type.ordinal() | code << 1;
@@ -128,8 +129,7 @@ private static @NotNull byte[] getRawPacket(ResponseType type, int code, String 
       return buffer.array();
 }
 
-private static @NotNull byte[] getRawPacket(RequestType type, String data) {
-      final byte[] payload = data.getBytes(StandardCharsets.US_ASCII);
+private static @NotNull byte[] getRawPacket(RequestType type, final byte[] payload) {
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_REQUEST);
       int requestSign = type.ordinal();
