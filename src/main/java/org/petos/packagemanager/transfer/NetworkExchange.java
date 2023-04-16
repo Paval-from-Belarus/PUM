@@ -13,6 +13,7 @@ public class NetworkExchange {
 public enum ResponseType {Approve, Decline}
 
 public enum RequestType {GetAll, GetId, GetInfo, GetFamily, GetPayload, Unknown,
+      GetDependency, //get payload by dependency id
       /*Those requests should be following sequentially*/PublishInfo, PublishPayload,
       UpgradeVersion,
       @Deprecated UnPublish} //it's not recommended to use unpubslish request because can break local dependencies

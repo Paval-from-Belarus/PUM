@@ -54,7 +54,7 @@ public void start() {
 }
 
 static class ClientService implements Runnable {
-      private final int DEFAULT_TIMEOUT = 5000;
+      private final int DEFAULT_TIMEOUT = 5000_000;
       private Socket socket;
       private ServerController handler;
 
@@ -64,7 +64,6 @@ static class ClientService implements Runnable {
       }
 
       private Optional<NetworkPacket> getRequest(InputStream input) throws IOException {
-	    List<Byte> bytes = new ArrayList<>();
 	    byte[] controlBuffer = new byte[NetworkPacket.controlSize()];
 	    Optional<NetworkPacket> optional = Optional.empty();
 	    int cbRead = input.read(controlBuffer);
@@ -90,8 +89,8 @@ static class ClientService implements Runnable {
 
       @Override
       public void run() {
-	    try (DataInputStream input = new DataInputStream(socket.getInputStream());
-		 DataOutputStream output = new DataOutputStream(socket.getOutputStream())) {
+	    try (DataInputStream input = new DataInputStream(socket.getInputStream())) {
+		  DataOutputStream output = new DataOutputStream(socket.getOutputStream());
 		  socket.setSoTimeout(DEFAULT_TIMEOUT);
 		  Optional<NetworkPacket> packet;
 		  do {

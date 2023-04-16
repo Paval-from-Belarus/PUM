@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PackageStorage {
+public record DependencyId(int value){
+      private static DependencyId valueOf(int value){
+	    return new DependencyId(value);
+      }
+}
 public static class PackageId {
       private final int value;
 
@@ -32,6 +38,16 @@ public static class PackageId {
 
       private static PackageId valueOf(Integer id) {
 	    return new PackageId(id);
+      }
+      @Override
+      public boolean equals(Object other){
+	    if(other instanceof PackageId)
+		  return ((PackageId)other).value == value;
+	    return false;
+      }
+      @Override
+      public int hashCode(){
+	    return value;
       }
 }
 public static class VersionId{
@@ -106,9 +122,10 @@ private void initPackages() {
 		.forEach(info -> {
 		      var id = PackageId.valueOf(counter.get());
 		      counter.incrementAndGet();
-		      var packageFamily = packagesMap.getOrDefault(id, List.of());
+		      var packageFamily = packagesMap.getOrDefault(id, new ArrayList<>());
 		      var data = new DataPackage(info, "");
 		      packageFamily.add(data);
+		      packagesMap.put(id, packageFamily);
 		});
       } catch (IOException e) {
 	    logger.error("packages.json file is not found or impossible to read");

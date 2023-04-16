@@ -22,11 +22,10 @@ import static org.petos.packagemanager.transfer.NetworkExchange.*;
 public class Client {
 public enum UserInput {ListAll, Install, Exit, Unknown}
 
-private static class InputCommand {
-      private String pattern;
-      private UserInput type;
-      private boolean hasParams;
-
+public static class InputCommand {
+      public String pattern;
+      public UserInput type;
+      public boolean hasParams;
       public Pattern pattern() {
 	    return Pattern.compile(pattern);
       }
@@ -103,11 +102,10 @@ private void initCommands() {
 }
 
 private String[] collectParams(Matcher matcher) {
-      int index = 0;
       List<String> params = new ArrayList<>();
-      for (int i = 0; i < matcher.groupCount(); i++) {
-	    if (matcher.group(index) != null) {
-		  params.add(matcher.group(index));
+      for (int i = 1; i <= matcher.groupCount(); i++) {
+	    if (matcher.group(i) != null) {
+		  params.add(matcher.group(i));
 	    }
       }
       return params.toArray(new String[0]);
@@ -161,11 +159,12 @@ private String getPackageInfo(Integer id) throws IOException {
       ClientService service = defaultService();
       String[] info = new String[1];
       var request = new NetworkPacket(RequestType.GetInfo);
-      byte[] bytes = ByteBuffer.allocate(4)
-			 .putInt(id).array();
+      byte[] bytes = ByteBuffer.allocate(8)
+			 .putInt(id).putInt(0).array();//second param is version offset
       request.setPayload(bytes);
       service.setRequest(request)
 	  .setResponseHandler((r, s) -> info[0] = onPackageInfoResponse(r, s));
+      System.out.println(request);
       service.run();
       return info[0];
 }
@@ -202,6 +201,7 @@ private void printShortInfo(ShortPackageInfo[] packages) {
 }
 
 private void defaultErrorHandler(Exception e) {
+      e.printStackTrace();
       System.out.println(e.getMessage());
 }
 

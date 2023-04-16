@@ -15,7 +15,7 @@ import static org.petos.packagemanager.transfer.NetworkPacket.BytesPerCommand;
 import static org.petos.packagemanager.transfer.NetworkPacket.valueOf;
 
 public class ClientService implements Runnable {
-private static final int DEFAULT_SERVER_TIMEOUT = 1000;
+private static final int DEFAULT_SERVER_TIMEOUT = 1000_000;
 private final Socket socket;
 private NetworkPacket request;
 private Consumer<Exception> errorHandler = (e) -> {
@@ -45,12 +45,16 @@ public ClientService setResponseHandler(ResponseHandler handler) {
 }
 
 private Optional<NetworkPacket> getResponse(InputStream input) throws IOException {
-      byte[] bytes = input.readNBytes(BytesPerCommand);
-      var packet = valueOf(bytes);
-      if (packet.isPresent()) {
-	    var selfPacket = packet.get();
-	    byte[] payload = input.readNBytes(selfPacket.payloadSize());
-	    selfPacket.setPayload(payload);
+      byte[] bytes = new byte[BytesPerCommand];
+      int cbRead = input.read(bytes);
+      Optional<NetworkPacket> packet = Optional.empty();
+      if(cbRead == BytesPerCommand){
+	    packet = valueOf(bytes);
+	    if (packet.isPresent()) {
+		  var selfPacket = packet.get();
+		  byte[] payload = input.readNBytes(selfPacket.payloadSize());
+		  selfPacket.setPayload(payload);
+	    }
       }
       return packet;
 }

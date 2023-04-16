@@ -61,21 +61,22 @@ public NetworkPacket(RequestType type) {
 
 public NetworkPacket(ResponseType type, int responseCode, byte[] data) {
       this(type, responseCode);
-      this.data = data;
+      setPayload(data);
 }
 
 public NetworkPacket(RequestType type, byte[] data) {
       this(type);
-      this.data = data;
+      setPayload(data);
 }
 public int payloadSize(){
-      return data.length;
+      return payloadSize;
 }
 public void setPayloadSize(int size){
       this.payloadSize = size;
 }
 public void setPayload(@NotNull byte[] data) {
       this.data = data;
+      this.payloadSize = data.length;
 }
 
 public boolean hasData() {
@@ -119,24 +120,23 @@ public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
       if ((controlSign & CONTROL_SIGN) != CONTROL_SIGN)
 	    return Optional.empty();
       NetworkPacket packet;
+      int typeSign = wrapper.getInt(4);
       if (controlSign == CONTROL_REQUEST) {
-	    int enumId = controlSign & REQUEST_CONTROL_MASK;
+	    int enumId = typeSign & REQUEST_CONTROL_MASK;
 	    packet = new NetworkPacket(RequestType.values()[enumId]);
       } else {
-	    int enumId = controlSign & RESPONSE_CONTROL_MASK;
-	    int code = controlSign & RESPONSE_CODE_MASK;
+	    int enumId = typeSign & RESPONSE_CONTROL_MASK;
+	    int code = (typeSign & RESPONSE_CODE_MASK) >>> 1;
 	    packet = new NetworkPacket(ResponseType.values()[enumId], code);
       }
-      if (rawBytes.length > BytesPerCommand) {
-	    ByteBuffer data = ByteBuffer.wrap(rawBytes, 8, rawBytes.length - 8);
-	    packet.setPayload(data.array());
-      }
+      int payloadSize = wrapper.getInt(8);
+      packet.setPayloadSize(payloadSize);
       return Optional.of(packet);
 }
 
 private static @NotNull byte[] getRawPacket(NetworkPacket packet, ResponseType type) {
-      int payloadSize = packet.payloadSize();
       byte[] payload = packet.data();
+      int payloadSize = packet.payloadSize();
       int responseSign = type.ordinal() | packet.code() << 1;
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_RESPONSE);
@@ -158,15 +158,10 @@ private static @NotNull byte[] getRawPacket(NetworkPacket packet, RequestType ty
       return buffer.array();
 }
 public static @NotNull String bytesToString(@NotNull byte[] bytes) {
-      int buffSize = (bytes.length / 2) + ((bytes.length % 2 == 0) ? 0 : 1);
-      CharBuffer buffer = CharBuffer.allocate(buffSize);
-      for (int i = 0; i < bytes.length; i += 2) {
-	    char letter = (char) (bytes[i] << 8 | bytes[i + 1]);
-	    buffer.append(letter);
+      CharBuffer buffer = CharBuffer.allocate(bytes.length);
+      for(byte letter : bytes) {
+	    buffer.put((char) letter);
       }
-      if (buffer.position() < buffer.capacity())
-	    buffer.put((char) ((int) bytes[bytes.length - 1]));
-
       return String.valueOf(buffer.array());
 }
 /**
@@ -186,5 +181,13 @@ private static int getPayloadOffset(final byte[] rawBytes) {
       if (index > rawBytes.length)
 	    return -1;// not found
       return index + 4;
+}
+@Override
+public String toString(){
+      byte[] bytes = rawPacket();
+      StringBuilder strText = new StringBuilder(bytes.length);
+      for(byte letter : bytes)
+	    strText.append((char)letter);
+      return strText.toString();
 }
 }
