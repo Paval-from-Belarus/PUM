@@ -1,6 +1,7 @@
 package org.petos.packagemanager;
 
 import javafx.scene.shape.Arc;
+import org.intellij.lang.annotations.JdkConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,13 +24,17 @@ public enum EncryptionType {None, RC4, A5}
 public enum ArchiveType {None, Lzma}
 private EncryptionType encryption = EncryptionType.RC4;
 private ArchiveType archive = ArchiveType.Lzma;
-private PackageAssembly(PackageHeader header, PackageInfo info, @NotNull byte[] payload) {
+private PackageAssembly(PackageHeader header, byte[] payload){
       header.setArchiveType((char) ArchiveType.None.ordinal());
       header.setEncryptionType((char) EncryptionType.None.ordinal());
       //no encryption and no archive
       this.header = header;
-      this.info = info;
       this.payload = payload;
+      this.description = ""; //no description about package
+}
+private PackageAssembly(PackageHeader header, PackageInfo info, @NotNull byte[] payload) {
+      this(header, payload);
+      this.description = info.toJson();
 }
 
 public PackageAssembly setArchive(ArchiveType type){
@@ -43,20 +48,11 @@ public PackageAssembly setEncrypt(EncryptionType type){
       return this;
 }
 
-private PackageAssembly(DataPackage dataPackage, int packageId, int versionId) {
-      header = new PackageHeader(packageId, versionId);
-      header.setEncryptionType((char) encryption.ordinal());
-      header.setArchiveType((char) archive.ordinal());
-      info = dataPackage.info;
-      payload = dataPackage.payload;
-      header.setPayloadHash(getControlSum(payload));
-}
-
 public byte[] serialize() {
       compress();
       encrypt();
       byte[] header = this.header.serialize();
-      byte[] description = info.toJson().getBytes(StandardCharsets.US_ASCII);
+      byte[] description = this.description.getBytes(StandardCharsets.US_ASCII);
       ByteBuffer buffer = ByteBuffer.allocate(header.length + description.length + payload.length + 4); //length for sign
       buffer.put(header);
       buffer.put(description);
@@ -123,28 +119,17 @@ private static @Nullable String extractDescription(byte[] rawData, AtomicInteger
       offset.set(index);
       return result;
 }
-
-@Deprecated
-private @NotNull String bytesToString(@NotNull byte[] bytes) {
-      int buffSize = (bytes.length / 2) + ((bytes.length % 2 == 0) ? 0 : 1);
-      CharBuffer buffer = CharBuffer.allocate(buffSize);
-      for (int i = 0; i < bytes.length; i += 2) {
-	    char letter = (char) (bytes[i] << 8 | bytes[i + 1]);
-	    buffer.append(letter);
-      }
-      if (buffer.position() < buffer.capacity())
-	    buffer.put((char) ((int) bytes[bytes.length - 1]));
-
-      return String.valueOf(buffer.array());
-}
 private static int getControlSum(byte[] payload) {
       return 0x11;
 }
 public static PackageAssembly valueOf(@NotNull PackageHeader header, @NotNull PackageInfo info,@NotNull byte[] payload){
       return new PackageAssembly(header, info, payload);
 }
+public static PackageAssembly valueOf(@NotNull PackageHeader header, @NotNull byte[] payload){
+      return new PackageAssembly(header, payload);
+}
 final private PackageHeader header;
-final private PackageInfo info;
-private  byte[] payload;
+private String description;
+private byte[] payload;
 
 }

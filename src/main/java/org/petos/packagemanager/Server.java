@@ -34,6 +34,7 @@ public Server(int port) {
 }
 
 private ServerController rootHandler;
+
 public Server setController(ServerController handle) {
       this.rootHandler = handle;
       return this;
@@ -67,24 +68,27 @@ static class ClientService implements Runnable {
 
       private Optional<NetworkPacket> getRequest(InputStream input) throws IOException {
 	    List<Byte> bytes = new ArrayList<>();
-	    ByteBuffer buffer = ByteBuffer.wrap(new byte[4]);
-	    int signCnt = 0;
-	    while (input.read(buffer.array()) > 0 && signCnt != 2) {
-		  int controlSign = buffer.getInt();
-		  signCnt += controlSign == NetworkPacket.BytesPerCommand ? 1 : 0;
-		  for (byte value : buffer.array())
-			bytes.add(value);
+	    byte[] controlBuffer = new byte[NetworkPacket.controlSize()];
+	    Optional<NetworkPacket> optional = Optional.empty();
+	    int cbRead = input.read(controlBuffer);
+	    if (cbRead == NetworkPacket.controlSize() && (optional = NetworkPacket.valueOf(controlBuffer)).isPresent()) {
+		  var packet = optional.get();
+		  byte[] payload = new byte[packet.payloadSize()];
+		  cbRead = input.read(payload);
+		  if (cbRead == packet.payloadSize())
+			packet.setPayload(payload);
+		  else
+			optional = Optional.empty();
 	    }
-	    if (signCnt < 2)
-		  return Optional.empty();
-	    int index = 0;
-	    byte[] rawBytes = new byte[bytes.size()];
-	    for (byte value : bytes) {
-		  rawBytes[index] = value;
-		  index += 1;
-	    }
-	    return NetworkPacket.valueOf(rawBytes);
+	    return optional;
+      }
 
+      private void sendResponse(NetworkPacket response, NetworkConnection connection, OutputStream output) throws IOException {
+	    byte[] collected = connection.collect();
+	    int payloadSize = collected.length + response.payloadSize();
+	    response.setPayloadSize(payloadSize);
+	    output.write(response.rawPacket());
+	    output.write(collected);
       }
 
       @Override
@@ -100,22 +104,20 @@ static class ClientService implements Runnable {
 		  NetworkExchange message = new NetworkExchange(packet.get(), connection);
 		  try {
 			handler.accept(message);
+			if (message.response().isEmpty())
+			      ServerController.defaultResponse(message);
 		  } catch (Exception e) {
 			handler.error(message);//it's obligatory for Controller to process error
 			logger.warn("Error in Server Controller: " + e.getMessage());
 		  } finally {
-			if(message.response().isPresent()){
-			      output.write(message.response().get().rawPacket());
-			      output.write(connection.collect());
-			}
+			if (message.response().isPresent())
+			      sendResponse(message.response().get(), connection, output);
 			connection.close();
 		  }
 
-	    }
-	    catch (SocketTimeoutException e){
+	    } catch (SocketTimeoutException e) {
 		  logger.warn("Client not response");
-	    }
-	    catch (IOException e) {
+	    } catch (IOException e) {
 		  logger.error("Socket error: " + e.getMessage());
 		  throw new RuntimeException(e);
 	    }

@@ -3,13 +3,15 @@ package org.petos.packagemanager.transfer;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.util.Base64;
 import java.util.Optional;
 
 import org.petos.packagemanager.transfer.NetworkExchange.ResponseType;
 import org.petos.packagemanager.transfer.NetworkExchange.RequestType;
 
 /**
- * Network packet can holds two value<br>
+ * Network packet can hold two value<br>
  * Command type (specific value)<br>
  * The general interface of NetworkPacket is used to communicate in both sides<br>
  * But response packet also holds server response code
@@ -18,6 +20,11 @@ import org.petos.packagemanager.transfer.NetworkExchange.RequestType;
  * It's specify the data following after<br>
  */
 public class NetworkPacket {
+//the size of command header that used to transfer payload
+//payload is the not a part of `control packet`
+public static int controlSize(){
+      return BytesPerCommand;
+}
 public final static int CONTROL_SIGN = 0xAACC7798; //the last bit is used to determine packet type
 private final static int CONTROL_REQUEST = CONTROL_SIGN;
 private final static int CONTROL_RESPONSE = CONTROL_SIGN | 0x01;
@@ -32,6 +39,7 @@ private ResponseType responseType;
 private RequestType requestType;
 private final PacketDirection direction;
 private int responseCode;
+private int payloadSize; //in bytes?
 
 {
       this.data = new byte[0];
@@ -60,6 +68,12 @@ public NetworkPacket(ResponseType type, int responseCode, byte[] data) {
 public NetworkPacket(RequestType type, byte[] data) {
       this(type);
       this.data = data;
+}
+public int payloadSize(){
+      return data.length;
+}
+public void setPayloadSize(int size){
+      this.payloadSize = size;
 }
 public void setPayload(byte[] data) {
       this.data = data;
@@ -92,10 +106,13 @@ public final Enum<?> type() {
 public @NotNull byte[] rawPacket() {
       byte[] result;
       if (direction == PacketDirection.Request)
-	    result = getRawPacket(requestType, data);
+	    result = getRawPacket(this, requestType);
       else
-	    result = getRawPacket(responseType, responseCode, data);
+	    result = getRawPacket(this, responseType);
       return result;
+}
+public @NotNull String stringPacket(){
+ 	return bytesToString(data);
 }
 
 
@@ -120,24 +137,41 @@ public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
       return Optional.of(packet);
 }
 
-private static @NotNull byte[] getRawPacket(ResponseType type, int code, final byte[] payload) {
+private static @NotNull byte[] getRawPacket(NetworkPacket packet, ResponseType type) {
+      int payloadSize = packet.payloadSize();
+      byte[] payload = packet.data();
+      int responseSign = type.ordinal() | packet.code() << 1;
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_RESPONSE);
-      int responseSign = type.ordinal() | code << 1;
-      buffer.putInt(4, responseSign);
-      buffer.put(8, payload);
+      buffer.putInt(responseSign);
+      buffer.putInt(payloadSize);
+      buffer.put(payload);
       return buffer.array();
 }
 
-private static @NotNull byte[] getRawPacket(RequestType type, final byte[] payload) {
+private static @NotNull byte[] getRawPacket(NetworkPacket packet, RequestType type) {
+      int payloadSize = packet.payloadSize();
+      byte[] payload = packet.data();
+      int requestSign = type.ordinal();
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_REQUEST);
-      int requestSign = type.ordinal();
-      buffer.putInt(4, requestSign);
-      buffer.put(8, payload);
+      buffer.putInt(requestSign);
+      buffer.putInt(payloadSize);
+      buffer.put(payload);
       return buffer.array();
 }
+private static @NotNull String bytesToString(@NotNull byte[] bytes) {
+      int buffSize = (bytes.length / 2) + ((bytes.length % 2 == 0) ? 0 : 1);
+      CharBuffer buffer = CharBuffer.allocate(buffSize);
+      for (int i = 0; i < bytes.length; i += 2) {
+	    char letter = (char) (bytes[i] << 8 | bytes[i + 1]);
+	    buffer.append(letter);
+      }
+      if (buffer.position() < buffer.capacity())
+	    buffer.put((char) ((int) bytes[bytes.length - 1]));
 
+      return String.valueOf(buffer.array());
+}
 /**
  * @return -1 if impossible to find packet
  * @return index of control bytes
