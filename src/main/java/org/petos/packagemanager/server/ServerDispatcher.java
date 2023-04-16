@@ -4,13 +4,12 @@ import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.petos.packagemanager.PackageAssembly;
-import org.petos.packagemanager.PackageHeader;
-import org.petos.packagemanager.PackageInfo;
-import org.petos.packagemanager.Server;
+import org.petos.packagemanager.packages.PackageAssembly;
+import org.petos.packagemanager.packages.PackageHeader;
+import org.petos.packagemanager.packages.PackageInfo;
 import org.petos.packagemanager.transfer.NetworkExchange;
 import org.petos.packagemanager.transfer.PackageRequest;
-import org.petos.packagemanager.transfer.ShortPackageInfo;
+import org.petos.packagemanager.packages.ShortPackageInfo;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -39,6 +38,7 @@ public void accept(NetworkExchange exchange) throws Exception {
 	    case GetId -> onPackageId(exchange);
 	    case GetInfo -> onPackageInfo(exchange);
 	    case GetPayload -> onPayload(exchange);
+	    case GetFamily -> onFamilyInfo(exchange);
 	    case PublishInfo -> onPublishInfo(exchange);
 	    case PublishPayload -> onPublishPayload(exchange);
 	    case UpgradeVersion -> onUpgradeVersion(exchange);
@@ -58,16 +58,14 @@ private void onAllPackages(NetworkExchange exchange) throws IOException {
 			 .filter(Optional::isPresent)
 			 .map(Optional::get)
 			 .toArray(ShortPackageInfo[]::new);
-      try (DataOutputStream output = new DataOutputStream(exchange.getOutputStream())) {
-	    String response = new Gson().toJson(packages);
-	    output.writeUTF(response);
-      }
+      OutputStream output = exchange.getOutputStream();
+      String payload = new Gson().toJson(packages);
+      output.write(payload.getBytes(StandardCharsets.US_ASCII));
       exchange.setResponse(ResponseType.Approve, ALL_PACKAGES_RESPONSE);
-
 }
 
 private void onPackageId(NetworkExchange exchange) {
-      String alias = exchange.request().stringPacket();
+      String alias = exchange.request().stringData();
       var optional = storage.getPackageId(alias);
       if (optional.isPresent()) {
 	    ByteBuffer buffer = ByteBuffer.allocate(4);
@@ -109,13 +107,18 @@ private void onPackageInfo(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
-
-private void writeBytes(NetworkExchange exchange, @NotNull byte[] payload) throws IOException {
-      try (DataOutputStream output = new DataOutputStream(exchange.getOutputStream())) {
-	    output.write(payload);
-      }
+private void onFamilyInfo(NetworkExchange exchange) {
+      // TODO: 16/04/2023
 }
 
+private void writeBytes(NetworkExchange exchange, @NotNull byte[] payload) throws IOException {
+      DataOutputStream output = new DataOutputStream(exchange.getOutputStream());
+      output.write(payload);
+}
+private byte[] readBytes(NetworkExchange exchange) throws IOException {
+      DataInputStream input = new DataInputStream(exchange.getInputStream());
+      return input.readAllBytes();
+}
 private void onPayload(NetworkExchange exchange) throws IOException {
       var optional = onPackageRequest(exchange);
       if (optional.isPresent()) {
@@ -135,7 +138,7 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      String jsonInfo = exchange.request().stringPacket();
+      String jsonInfo = exchange.request().stringData();
       PackageInfo info = PackageInfo.fromJson(jsonInfo);
       try {
 	    var id = storage.storePackage(info);
@@ -150,8 +153,19 @@ private void onPublishInfo(NetworkExchange exchange) {
       }
 }
 
-private void onPublishPayload(NetworkExchange exchange) {
 
+private void onPublishPayload(NetworkExchange exchange) throws IOException {
+      ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
+      assert buffer.capacity() == 4;
+      int id = buffer.getInt();
+      var packageId = storage.getPackageId(id);
+      if(packageId.isPresent()){
+	    byte[] payload = readBytes(exchange);
+	    storage.storePayload(packageId.get(), payload);
+	    exchange.setResponse(ResponseType.Approve, NO_PAYLOAD);
+      } else {
+	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+      }
 }
 
 private void onUpgradeVersion(NetworkExchange exchange) {

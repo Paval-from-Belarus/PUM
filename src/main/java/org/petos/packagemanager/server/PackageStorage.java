@@ -4,8 +4,9 @@ import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.petos.packagemanager.*;
-import org.petos.packagemanager.transfer.ShortPackageInfo;
+import org.petos.packagemanager.packages.DataPackage;
+import org.petos.packagemanager.packages.PackageInfo;
+import org.petos.packagemanager.packages.ShortPackageInfo;
 
 import java.io.File;
 import java.io.IOException;

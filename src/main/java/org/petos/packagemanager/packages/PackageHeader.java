@@ -1,4 +1,4 @@
-package org.petos.packagemanager;
+package org.petos.packagemanager.packages;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 public class PackageHeader {
 

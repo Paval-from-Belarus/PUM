@@ -1,21 +1,18 @@
-package org.petos.packagemanager;
+package org.petos.packagemanager.server;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.petos.packagemanager.packages.PackageInfo;
 import org.petos.packagemanager.transfer.NetworkConnection;
 import org.petos.packagemanager.transfer.NetworkExchange;
 import org.petos.packagemanager.transfer.NetworkExchange.*;
-import org.petos.packagemanager.server.PackageStorage;
-import org.petos.packagemanager.server.ServerController;
-import org.petos.packagemanager.server.ServerDispatcher;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
 public class Server {

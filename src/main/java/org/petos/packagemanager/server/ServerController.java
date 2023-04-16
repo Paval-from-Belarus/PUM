@@ -1,9 +1,6 @@
 package org.petos.packagemanager.server;
 
-import org.petos.packagemanager.PackageInfo;
 import org.petos.packagemanager.transfer.NetworkExchange;
-
-import java.util.function.Consumer;
 
 public interface ServerController {
       static void defaultResponse(NetworkExchange exchange){

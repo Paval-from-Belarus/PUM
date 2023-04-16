@@ -1,6 +1,4 @@
-package org.petos.packagemanager.transfer;
-
-import org.petos.packagemanager.PackageInfo;
+package org.petos.packagemanager.packages;
 
 public record ShortPackageInfo(String name, String[] aliases, String payloadType) {
       public static ShortPackageInfo valueOf(PackageInfo fullInfo){

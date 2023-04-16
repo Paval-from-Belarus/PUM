@@ -1,4 +1,4 @@
-package org.petos.packagemanager;
+package org.petos.packagemanager.packages;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;

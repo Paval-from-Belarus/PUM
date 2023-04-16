@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.util.Base64;
 import java.util.Optional;
 
 import org.petos.packagemanager.transfer.NetworkExchange.ResponseType;
@@ -19,7 +18,7 @@ import org.petos.packagemanager.transfer.NetworkExchange.RequestType;
  * Network packet is alternative for httpHeader<br>
  * It's specify the data following after<br>
  */
-public class NetworkPacket {
+public class NetworkPacket{
 //the size of command header that used to transfer payload
 //payload is the not a part of `control packet`
 public static int controlSize(){
@@ -75,7 +74,7 @@ public int payloadSize(){
 public void setPayloadSize(int size){
       this.payloadSize = size;
 }
-public void setPayload(byte[] data) {
+public void setPayload(@NotNull byte[] data) {
       this.data = data;
 }
 
@@ -95,12 +94,10 @@ public final PacketDirection direction() {
 }
 
 public final Enum<?> type() {
-      Enum<?> type;
       if (direction == PacketDirection.Request)
-	    type = requestType;
+	    return requestType;
       else
-	    type = responseType;
-      return type;
+	    return responseType;
 }
 
 public @NotNull byte[] rawPacket() {
@@ -111,7 +108,7 @@ public @NotNull byte[] rawPacket() {
 	    result = getRawPacket(this, responseType);
       return result;
 }
-public @NotNull String stringPacket(){
+public @NotNull String stringData(){
  	return bytesToString(data);
 }
 
@@ -160,7 +157,7 @@ private static @NotNull byte[] getRawPacket(NetworkPacket packet, RequestType ty
       buffer.put(payload);
       return buffer.array();
 }
-private static @NotNull String bytesToString(@NotNull byte[] bytes) {
+public static @NotNull String bytesToString(@NotNull byte[] bytes) {
       int buffSize = (bytes.length / 2) + ((bytes.length % 2 == 0) ? 0 : 1);
       CharBuffer buffer = CharBuffer.allocate(buffSize);
       for (int i = 0; i < bytes.length; i += 2) {
