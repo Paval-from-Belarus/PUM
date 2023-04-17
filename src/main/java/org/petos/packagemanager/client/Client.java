@@ -124,6 +124,7 @@ private void storeLocal(PackageInfo info, PackageAssembly assembly){
 private void acceptInstallation(PackageInfo info, Integer id) throws IOException{
       var optional = getPackage(id, 0);//latest version
       PackageAssembly assembly;
+      //todo: if it's impossible to assembly package ― try request several times to server (many times)
       if(optional.isPresent() && (assembly = PackageAssembly.deserialize(optional.get())) != null){
 	    storeLocal(info, assembly);
       } else {

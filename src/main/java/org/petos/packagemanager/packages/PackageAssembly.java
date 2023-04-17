@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -26,13 +25,7 @@ private PackageAssembly(PackageHeader header, byte[] payload){
       //no encryption and no archive
       this.header = header;
       this.payload = payload;
-      this.description = ""; //no description about package
 }
-private PackageAssembly(PackageHeader header, PackageInfo info, @NotNull byte[] payload) {
-      this(header, payload);
-      this.description = info.toJson();
-}
-
 public PackageAssembly setArchive(ArchiveType type){
       archive = type;
       header.setArchiveType((char)(archive.ordinal() + 1));
@@ -56,12 +49,11 @@ public Integer getVersion(){
 public byte[] serialize() {
       compress();
       encrypt();
+      int controlSum = getControlSum(payload);
+      header.setPayloadHash(controlSum);
       byte[] header = this.header.serialize();
-      byte[] description = this.description.getBytes(StandardCharsets.US_ASCII);
-      ByteBuffer buffer = ByteBuffer.allocate(header.length + description.length + payload.length + 4); //length for sign
+      ByteBuffer buffer = ByteBuffer.allocate(header.length + payload.length );
       buffer.put(header);
-      buffer.put(description);
-      buffer.putInt(BODY_SIGN);
       buffer.put(payload);
       return buffer.array();
 }
@@ -82,16 +74,11 @@ public static @Nullable PackageAssembly deserialize(byte[] rawData){
       var header = PackageHeader.deserialize(rawData);
       if(header == null)
             return null;
-      AtomicInteger offset = new AtomicInteger(header.size());
-      String description = extractDescription(rawData, offset);
-      if(description == null)
-            return null;
-      PackageInfo info = PackageInfo.fromJson(description);
-      byte[] payload = new byte[rawData.length - offset.get()];//probably no payload
-      System.arraycopy(rawData, offset.get(), payload, 0, payload.length);
+      byte[] payload = new byte[rawData.length - header.size()];//probably no payload
+      System.arraycopy(rawData, header.size(), payload, 0, payload.length);
       payload = decrypt(payload, convertEncryption(header.getEncryption()));
       payload = uncompress(payload, convertArchive(header.getArchive()));
-      return new PackageAssembly(header, info, payload);
+      return new PackageAssembly(header, payload);
 }
 private static @NotNull EncryptionType convertEncryption(int index){
       if(index >= EncryptionType.values().length)
@@ -106,6 +93,7 @@ private static @NotNull ArchiveType convertArchive(int index){
 /**As said above, assume that String is encoded by ASCII
  * @return null if rawData has incorrect format
  * */
+@Deprecated
 private static @Nullable String extractDescription(byte[] rawData, AtomicInteger offset){
       ByteBuffer buffer = ByteBuffer.wrap(rawData, offset.get(), rawData.length - offset.get());
       String result = null;
@@ -127,14 +115,10 @@ private static @Nullable String extractDescription(byte[] rawData, AtomicInteger
 private static int getControlSum(byte[] payload) {
       return 0x11;
 }
-public static PackageAssembly valueOf(@NotNull PackageHeader header, @NotNull PackageInfo info,@NotNull byte[] payload){
-      return new PackageAssembly(header, info, payload);
-}
 public static PackageAssembly valueOf(@NotNull PackageHeader header, @NotNull byte[] payload){
       return new PackageAssembly(header, payload);
 }
 final private PackageHeader header;
-private String description;
 private byte[] payload;
 
 }

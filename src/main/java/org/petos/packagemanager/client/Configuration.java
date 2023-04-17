@@ -1,7 +1,6 @@
 package org.petos.packagemanager.client;
 
 public class Configuration {
-private String installationPath;
-private String tempPath;//path to temp directory
-
+public String installationPath;
+public String tempPath;//path to temp directory
 }

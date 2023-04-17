@@ -26,3 +26,13 @@ create table PACKAGES_INFO (packageId integer not null, versionId integer not nu
 create table PAYLOADS (id integer not null, name varchar(255), primary key (id))
 DISCONNECT
 /*C5*/DISCONNECT
+/*C9*/SET SCHEMA PUBLIC
+drop table if exists LICENCES CASCADE 
+drop table if exists PACKAGES_HATS CASCADE 
+drop table if exists PACKAGES_INFO CASCADE 
+drop table if exists PAYLOADS CASCADE 
+create table LICENCES (id integer not null, name varchar(255), primary key (id))
+create table PACKAGES_HATS (id integer not null, name varchar(255), payloadType integer, primary key (id))
+create table PACKAGES_INFO (packageId integer not null, versionId integer not null, licence integer, payloadPath varchar(255), versionLabel varchar(255), primary key (packageId, versionId))
+create table PAYLOADS (id integer not null, name varchar(255), primary key (id))
+DISCONNECT
