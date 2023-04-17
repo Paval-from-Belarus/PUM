@@ -29,11 +29,18 @@ public PackageHeader(int id, int version) {
       this.id = id;
       this.version = version;
 }
-
+@Deprecated
 public PackageHeader(int id, int version, int[] dependencies) {
       this(id, version);
       this.dependencies = dependencies;
 }
+public int getId(){
+      return this.id;
+}
+public int getVersion(){
+      return this.version;
+}
+
 public int getPayloadHash(){
       return payloadHash;
 }
@@ -92,6 +99,7 @@ final private int id;
 final private int version;
 //ids of all packages that used to resolve dependencies
 //this field should be used to quick install additional dependencies
+@Deprecated
 private int[] dependencies;
 final private char signBody;
 //the following two field are optional

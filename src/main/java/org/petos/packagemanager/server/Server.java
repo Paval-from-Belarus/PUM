@@ -126,5 +126,6 @@ public static void main(String[] args) {
       PackageStorage storage = new PackageStorage();
       server.setController(new ServerDispatcher(storage));
       server.start();
+      storage.close();
 }
 }

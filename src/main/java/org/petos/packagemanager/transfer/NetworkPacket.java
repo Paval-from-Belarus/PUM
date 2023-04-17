@@ -2,6 +2,7 @@ package org.petos.packagemanager.transfer;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.util.Optional;
@@ -78,7 +79,12 @@ public void setPayload(@NotNull byte[] data) {
       this.data = data;
       this.payloadSize = data.length;
 }
-
+public void setPayload(Integer... values){
+      ByteBuffer buffer = ByteBuffer.allocate(values.length * 4);
+      for(Integer value : values)
+	    buffer.putInt(value);
+      setPayload(buffer.array());
+}
 public boolean hasData() {
       return this.data.length > 0;
 }
@@ -99,6 +105,9 @@ public final Enum<?> type() {
 	    return requestType;
       else
 	    return responseType;
+}
+public final <T> T type(Class<T> type){
+      return type.cast(type());
 }
 
 public @NotNull byte[] rawPacket() {

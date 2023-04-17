@@ -1,8 +1,12 @@
 package org.petos.packagemanager.client;
 
 import com.google.gson.Gson;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
+import org.petos.packagemanager.packages.PackageAssembly;
+import org.petos.packagemanager.packages.PackageInfo;
 import org.petos.packagemanager.packages.ShortPackageInfo;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
@@ -12,167 +16,196 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Optional;
 
+import static org.petos.packagemanager.client.InputProcessor.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class Client {
-public enum UserInput {ListAll, Install, Exit, Unknown}
-
-public static class InputCommand {
-      public String pattern;
-      public UserInput type;
-      public boolean hasParams;
-      public Pattern pattern() {
-	    return Pattern.compile(pattern);
-      }
-
-      public boolean hasParams() {
-	    return hasParams;
-      }
-
-      public UserInput type() {
-	    return type;
-      }
-
-}
-
-private static record InputGroup(UserInput type, String[] params) {
-}
-
+Logger logger = LogManager.getLogger(Client.class);
 private final String serverUri;
 private final int port;
 private Thread listenThread;
 private Thread userThread;
+private Configuration config;
+private InputProcessor input;
+private OutputProcessor output;
 
 public Client(int port, String domain) {
       this.serverUri = domain;
       this.port = port;
-      initCommands();
+      input = new InputProcessor();
+      output = new OutputProcessor();
+      initConfig();
+}
+
+private static final String CONFIG_PATH = "config.json";
+
+private void initConfig() {
+      try {
+	    Path configPath = Path.of(CONFIG_PATH);
+	    String content = Files.readString(configPath);
+	    this.config = new Gson().fromJson(content, Configuration.class);
+
+      } catch (IOException e) {
+	    throw new RuntimeException("Impossible to proceed client without config file");
+      }
+}
+
+private void checkCache() {
+
 }
 
 public void start() {
       InputGroup input;
-      while ((input = dispatchInput()).type() != UserInput.Exit) {
+      while ((input = this.input.nextGroup()).type() != UserInput.Exit) {
 	    dispatchInputGroup(input);
       }
       System.out.println("Thanks for working with us!");
 }
 
-private InputGroup dispatchInput() {
-      Scanner input = new Scanner(System.in);
-      InputGroup inputGroup;
-      do {
-	    String line = input.nextLine();
-	    inputGroup = nextCommand(line);
-	    if (inputGroup == null)
-		  System.out.println("Incorrect params. Try again!");
-      }
-      while (inputGroup == null);
-      return inputGroup;
-}
 
 private void dispatchInputGroup(@NotNull InputGroup group) {
       try {
 	    switch (group.type()) {
-		  case ListAll -> onListAllCommand(group.params);
-		  case Install -> onInstallCommand(group.params);
+		  case ListAll -> onListAllCommand(group.params());
+		  case Install -> onInstallCommand(group.params());
 	    }
       } catch (Exception e) {
 	    defaultErrorHandler(e);
       }
 }
-private ClientService defaultService() throws IOException{
+
+private ClientService defaultService() throws IOException {
       ClientService service = new ClientService(serverUri, port);
       service.setExceptionHandler(this::defaultErrorHandler);
       return service;
 }
-private InputCommand[] rules;
 
-private void initCommands() {
-      try {
-	    String config = Files.readString(Path.of("commands.json"));
-	    this.rules = new Gson().fromJson(config, InputCommand[].class);
-      } catch (IOException e) {
-	    throw new RuntimeException(e);
-      }
-}
-
-private String[] collectParams(Matcher matcher) {
-      List<String> params = new ArrayList<>();
-      for (int i = 1; i <= matcher.groupCount(); i++) {
-	    if (matcher.group(i) != null) {
-		  params.add(matcher.group(i));
-	    }
-      }
-      return params.toArray(new String[0]);
-}
-
-private @Nullable InputGroup nextCommand(String line) {
-      InputGroup result = null;
-      for (InputCommand command : this.rules) {
-	    Matcher matcher = command.pattern().matcher(line);
-	    if (matcher.find()) {
-		  String[] params = collectParams(matcher);
-		  result = new InputGroup(command.type(), params);
-		  break;
-	    }
-      }
-      return result;
-}
 
 private void dispatchService(ClientService service) {
       service.run();
 }
 
-private void onInstallCommand(String[] params) throws IOException {
+private void dispatchTask(Runnable task) {
+      task.run();
+}
+
+
+private void onInstallCommand(String[] params) {
       if (params.length < 1)
 	    throw new IllegalArgumentException("Package is not specified");
       String packageName = params[0];
-      int id = getPackageId(packageName);
-      String info = getPackageInfo(id);
-      System.out.println(info);
+
+      dispatchTask(() -> installTask(packageName));
 }
 
-private int getPackageId(String packageName) throws IOException {
+private void resolveDependencies(PackageInfo info) {
+
+}
+private boolean isAcceptableInstallation(@NotNull PackageInfo info){
+      System.out.format("%30s | %d", info.name, info.payloadSize);
+      QuestionResponse userResponse = output.sendQuestion("Is it ok?", OutputProcessor.YES_NO);
+      if(!((Boolean) userResponse.value()))
+	    System.out.println("Installation aborted");
+      return (Boolean) userResponse.value();
+}
+//packageName is fully qualified name
+private boolean isInstalledPackage(String packageName){
+      return false;//tricky algo to check installation
+}
+/**Store package in local file system
+ * and add package's info to local registry
+ * */
+private void storeLocal(PackageInfo info, PackageAssembly assembly){
+      resolveDependencies(info);
+
+}
+private void acceptInstallation(PackageInfo info, Integer id) throws IOException{
+      var optional = getPackage(id, 0);//latest version
+      PackageAssembly assembly;
+      if(optional.isPresent() && (assembly = PackageAssembly.deserialize(optional.get())) != null){
+	    storeLocal(info, assembly);
+      } else {
+	    logger.warn("Package is not installed");
+      }
+}
+
+private void installTask(String packageName) {
+      try {
+	    var id = getPackageId(packageName);
+	    int version = 0; //latest version
+	    if(id.isPresent()){
+		  String stringInfo = getPackageInfo(id.get(), version).orElse("");
+		  PackageInfo info = PackageInfo.fromJson(stringInfo);
+		  if(info != null && !isInstalledPackage(info.name) && isAcceptableInstallation(info)){
+			acceptInstallation(info, id.get());
+		  } else {
+			logger.info("Installation is aborted");
+		  }
+	    }
+      } catch (IOException e) {
+	    logger.warn("Error during package installation: " + e.getMessage());
+	    throw new IllegalStateException("Impossible to install package");
+      }
+}
+private Optional<byte[]> getPackage(Integer id, Integer version) throws IOException {
+      var request = new NetworkPacket(RequestType.GetPayload);
+      Wrapper<byte[]> payload = new Wrapper<>();
+      request.setPayload(id, version);
       ClientService service = defaultService();
-      var request = new NetworkPacket(RequestType.GetId);
-      AtomicInteger id = new AtomicInteger(0);
-      request.setPayload(packageName.getBytes(StandardCharsets.US_ASCII));
       service.setRequest(request)
-	  .setExceptionHandler(this::defaultErrorHandler)
+	  .setResponseHandler((r, s) -> payload.set(onPackageResponse(r, s)));
+      service.run();
+      return Optional.ofNullable(payload.get());
+}
+private byte[] onPackageResponse(NetworkPacket response, Socket socket){
+      if(response.type() != ResponseType.Approve)
+	    throw new IllegalStateException("No valid package exists");
+      return response.rawPacket();
+}
+private Optional<Integer> getPackageId(String packageName) throws IOException {
+      Wrapper<Integer> id = new Wrapper<>();
+      var request = new NetworkPacket(RequestType.GetId);
+      request.setPayload(packageName.getBytes(StandardCharsets.US_ASCII));
+      ClientService service = defaultService();
+      service.setRequest(request)
 	  .setResponseHandler((p, s) -> id.set(onPackageIdResponse(p, s)));
       service.run();
-      return id.get();
+      return Optional.ofNullable(id.get());
 }
 
-private Integer onPackageIdResponse(NetworkPacket response, Socket socket) {
-      assert response.payloadSize() == 4;
-      ByteBuffer buffer = ByteBuffer.wrap(response.data());
-      return buffer.getInt();
 
+private int onPackageIdResponse(NetworkPacket response, Socket socket) {
+      Integer result = null;
+      if (response.type() == ResponseType.Approve) {
+	    ByteBuffer buffer = ByteBuffer.wrap(response.data());
+	    if (buffer.capacity() == 4)
+		  result = buffer.getInt();
+      }
+      if(result == null)
+	    throw new IllegalArgumentException("Server declines");
+      return result;
 }
-private String getPackageInfo(Integer id) throws IOException {
+
+private Optional<String> getPackageInfo(Integer id, Integer version) throws IOException {
       ClientService service = defaultService();
-      String[] info = new String[1];
+      Wrapper<String> info = new Wrapper<>();
       var request = new NetworkPacket(RequestType.GetInfo);
-      byte[] bytes = ByteBuffer.allocate(8)
-			 .putInt(id).putInt(0).array();//second param is version offset
-      request.setPayload(bytes);
+      request.setPayload(id, version); //second param is version offset
       service.setRequest(request)
-	  .setResponseHandler((r, s) -> info[0] = onPackageInfoResponse(r, s));
+	  .setResponseHandler((r, s) -> info.set(onPackageInfoResponse(r, s)));
       System.out.println(request);
       service.run();
-      return info[0];
+      return Optional.ofNullable(info.get());
 }
-private String onPackageInfoResponse(NetworkPacket response, Socket socket){
-      if(response.type() != ResponseType.Approve)
+
+private String onPackageInfoResponse(NetworkPacket response, Socket socket) {
+      if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No valid package info");
-	return response.stringData();
+      return response.stringData();
 }
+
 private void onListAllCommand(String[] params) throws IOException {
       //params are ignored
       ClientService service = defaultService();

@@ -43,6 +43,15 @@ public PackageAssembly setEncrypt(EncryptionType type){
       header.setEncryptionType((char)(encryption.ordinal() + 1));
       return this;
 }
+public byte[] getPayload(){
+      return payload;
+}
+public Integer getId(){
+      return header.getId();
+}
+public Integer getVersion(){
+      return header.getVersion();
+}
 
 public byte[] serialize() {
       compress();

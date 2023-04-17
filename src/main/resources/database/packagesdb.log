@@ -1,0 +1,28 @@
+/*C6*/SET SCHEMA PUBLIC
+DISCONNECT
+/*C7*/SET SCHEMA PUBLIC
+drop table if exists LICENCES CASCADE 
+drop table if exists PACKAGES_HATS CASCADE 
+drop table if exists PACKAGES_INFO CASCADE 
+drop table if exists PAYLOADS CASCADE 
+create table LICENCES (id integer not null, name varchar(255), primary key (id))
+create table PACKAGES_HATS (id integer not null, name varchar(255), payloadType integer, primary key (id))
+create table PACKAGES_INFO (packageId integer not null, versionId integer not null, licence integer, payloadPath varchar(255), versionLabel varchar(255), primary key (packageId, versionId))
+create table PAYLOADS (id integer not null, name varchar(255), primary key (id))
+DISCONNECT
+/*C5*/SET SCHEMA PUBLIC
+INSERT INTO LICENCES VALUES(0,'MIT')
+COMMIT
+INSERT INTO LICENCES VALUES(1,'BEAR')
+COMMIT
+/*C8*/SET SCHEMA PUBLIC
+drop table if exists LICENCES CASCADE 
+drop table if exists PACKAGES_HATS CASCADE 
+drop table if exists PACKAGES_INFO CASCADE 
+drop table if exists PAYLOADS CASCADE 
+create table LICENCES (id integer not null, name varchar(255), primary key (id))
+create table PACKAGES_HATS (id integer not null, name varchar(255), payloadType integer, primary key (id))
+create table PACKAGES_INFO (packageId integer not null, versionId integer not null, licence integer, payloadPath varchar(255), versionLabel varchar(255), primary key (packageId, versionId))
+create table PAYLOADS (id integer not null, name varchar(255), primary key (id))
+DISCONNECT
+/*C5*/DISCONNECT

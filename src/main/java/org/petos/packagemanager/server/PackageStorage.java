@@ -3,7 +3,12 @@ package org.petos.packagemanager.server;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
+import org.petos.packagemanager.database.Licence;
+import org.petos.packagemanager.database.PackageHat;
 import org.petos.packagemanager.packages.DataPackage;
 import org.petos.packagemanager.packages.PackageInfo;
 import org.petos.packagemanager.packages.ShortPackageInfo;
@@ -20,11 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PackageStorage {
-public record DependencyId(int value){
-      private static DependencyId valueOf(int value){
-	    return new DependencyId(value);
-      }
-}
+
 public static class PackageId {
       private final int value;
 
@@ -78,10 +79,20 @@ private ConcurrentHashMap<PackageId, List<DataPackage>> packagesMap;
 
 //todo: replace hashmaps by databases
 public PackageStorage() {
+      init();
       initPackages();
       initNameMapper();
 }
-
+private SessionFactory factory;
+private void init(){
+	factory = new Configuration().configure().buildSessionFactory();
+	Session session = factory.openSession();
+	session.beginTransaction();
+	session.getTransaction().commit();
+}
+public void close(){
+      factory.close();
+}
 private static int FIRST_PACKAGE_ID = 3;//
 
 private static PackageId nextPackageId() {
@@ -276,6 +287,7 @@ private Optional<DataPackage> getDataPackage(PackageId id, VersionId version) {
       if (packageFamily != null) {
 	    result = Optional.of(packageFamily.get(version.value()));
       }
+
       return result;
 }
 }
