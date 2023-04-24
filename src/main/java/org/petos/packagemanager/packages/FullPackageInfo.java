@@ -13,12 +13,12 @@ import java.util.Optional;
 /**
  * This class is set by Storage class. Storage class in this case is a factory of DataPackage class.
  */
-public class DataPackage {
-Logger logger = LogManager.getLogger(DataPackage.class);
-public PackageInfo info;
+public class FullPackageInfo {
+Logger logger = LogManager.getLogger(FullPackageInfo.class);
+public PackageInfoDTO info;
 public byte[] payload;
 private Integer versionId;
-public DataPackage(PackageInfo info, String path){
+public FullPackageInfo(PackageInfoDTO info, String path){
       this.payloadPath = Path.of(path);
       this.info = info;
 }
@@ -67,13 +67,13 @@ public Optional<byte[]> getPayload() {
  *
  * @return PackageInfo (verbose information about package)
  */
-public Optional<PackageInfo> getPackageInfo() {
+public Optional<PackageInfoDTO> getPackageInfo() {
       assert packageInfoPath != null;
-      Optional<PackageInfo> result = Optional.empty();
+      Optional<PackageInfoDTO> result = Optional.empty();
       try{
             String rawInfo = Files.readString(packageInfoPath);
             Gson gson = new Gson();
-            result = Optional.of(gson.fromJson(rawInfo, PackageInfo.class));
+            result = Optional.of(gson.fromJson(rawInfo, PackageInfoDTO.class));
       } catch (JsonSyntaxException e){
             logger.warn("Json syntax error in " + packageInfoPath.toAbsolutePath());
       } catch (IOException e) {

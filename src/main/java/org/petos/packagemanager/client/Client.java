@@ -6,8 +6,8 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
 import org.petos.packagemanager.packages.PackageAssembly;
-import org.petos.packagemanager.packages.PackageInfo;
-import org.petos.packagemanager.packages.ShortPackageInfo;
+import org.petos.packagemanager.packages.PackageInfoDTO;
+import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
 import java.io.*;
@@ -100,10 +100,10 @@ private void onInstallCommand(String[] params) {
       dispatchTask(() -> installTask(packageName));
 }
 
-private void resolveDependencies(PackageInfo info) {
+private void resolveDependencies(PackageInfoDTO info) {
 
 }
-private boolean isAcceptableInstallation(@NotNull PackageInfo info){
+private boolean isAcceptableInstallation(@NotNull PackageInfoDTO info){
       System.out.format("%30s | %d", info.name, info.payloadSize);
       QuestionResponse userResponse = output.sendQuestion("Is it ok?", OutputProcessor.YES_NO);
       if(!((Boolean) userResponse.value()))
@@ -117,11 +117,11 @@ private boolean isInstalledPackage(String packageName){
 /**Store package in local file system
  * and add package's info to local registry
  * */
-private void storeLocal(PackageInfo info, PackageAssembly assembly){
+private void storeLocal(PackageInfoDTO info, PackageAssembly assembly){
       resolveDependencies(info);
 
 }
-private void acceptInstallation(PackageInfo info, Integer id) throws IOException{
+private void acceptInstallation(PackageInfoDTO info, Integer id) throws IOException{
       var optional = getPackage(id, 0);//latest version
       PackageAssembly assembly;
       //todo: if it's impossible to assembly package ― try request several times to server (many times)
@@ -138,7 +138,7 @@ private void installTask(String packageName) {
 	    int version = 0; //latest version
 	    if(id.isPresent()){
 		  String stringInfo = getPackageInfo(id.get(), version).orElse("");
-		  PackageInfo info = PackageInfo.fromJson(stringInfo);
+		  PackageInfoDTO info = PackageInfoDTO.fromJson(stringInfo);
 		  if(info != null && !isInstalledPackage(info.name) && isAcceptableInstallation(info)){
 			acceptInstallation(info, id.get());
 		  } else {
@@ -220,14 +220,14 @@ private void onListAllResponse(NetworkPacket response, Socket socket) throws IOE
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No payload to print");
       String jsonInfo = response.stringData();
-      ShortPackageInfo[] packages = new Gson().fromJson(jsonInfo, ShortPackageInfo[].class);
+      ShortPackageInfoDTO[] packages = new Gson().fromJson(jsonInfo, ShortPackageInfoDTO[].class);
       printShortInfo(packages);
 }
 
-private void printShortInfo(ShortPackageInfo[] packages) {
+private void printShortInfo(ShortPackageInfoDTO[] packages) {
       System.out.format("Available packages\n | %40s | %40s | %40s\n",
 	  "Package name", "Payload type", "Repository");
-      for (ShortPackageInfo info : packages) {
+      for (ShortPackageInfoDTO info : packages) {
 	    System.out.format("| %40s | %40s | %40s", info.name(), info.payloadType(),
 		"PetOS Central");
       }

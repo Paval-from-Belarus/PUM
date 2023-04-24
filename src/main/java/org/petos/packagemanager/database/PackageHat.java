@@ -1,6 +1,7 @@
 package org.petos.packagemanager.database;
 
 
+import org.hibernate.annotations.Formula;
 
 import javax.persistence.*;
 import java.util.*;
@@ -9,31 +10,25 @@ import java.util.*;
 @Table(name = "PACKAGES_HATS")
 public class PackageHat {
 @Id
+@GeneratedValue( strategy = GenerationType.AUTO )
 private Integer id;
-private Integer payloadType;
 private String name;
-//@ElementCollection
-//@CollectionTable(name = "PACKAGES_ALIASES")
-
+@ManyToOne
+@JoinColumn(name= "payloadType")
+private Payload payload;
 @ElementCollection
-@CollectionTable(name="PACKAGES_ALIASES", joinColumns = @JoinColumn(name="id"))
-@Column(name="alias")
+@CollectionTable(name = "PACKAGES_ALIASES", joinColumns = @JoinColumn(name = "id"))
+@Column(name = "alias")
 private Set<String> aliases;
 
 public void setId(Integer id) {
       this.id = id;
 }
+
 public Integer getId() {
       return id;
 }
 
-public Integer getPayloadType() {
-      return payloadType;
-}
-
-public void setPayloadType(Integer payloadType) {
-      this.payloadType = payloadType;
-}
 
 public String getName() {
       return name;
@@ -49,5 +44,12 @@ public Set<String> getAliases() {
 
 public void setAliases(Set<String> aliases) {
       this.aliases = aliases;
+}
+
+public Payload getPayload() {
+      return payload;
+}
+public void setPayload(Payload payload) {
+      this.payload = payload;
 }
 }

@@ -6,10 +6,10 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.packages.PackageAssembly;
 import org.petos.packagemanager.packages.PackageHeader;
-import org.petos.packagemanager.packages.PackageInfo;
+import org.petos.packagemanager.packages.PackageInfoDTO;
 import org.petos.packagemanager.transfer.NetworkExchange;
 import org.petos.packagemanager.transfer.PackageRequest;
-import org.petos.packagemanager.packages.ShortPackageInfo;
+import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -52,12 +52,8 @@ public void error(NetworkExchange exchange) {
 }
 
 private void onAllPackages(NetworkExchange exchange) throws IOException {
-      var keys = storage.keyList();
-      var packages = keys.stream()
-			 .map(storage::getShortInfo)
-			 .filter(Optional::isPresent)
-			 .map(Optional::get)
-			 .toArray(ShortPackageInfo[]::new);
+      var packages = storage.shortInfoList()
+			 .toArray(ShortPackageInfoDTO[]::new);
       OutputStream output = exchange.getOutputStream();
       String payload = new Gson().toJson(packages);
       output.write(payload.getBytes(StandardCharsets.US_ASCII));
@@ -139,9 +135,9 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 
 private void onPublishInfo(NetworkExchange exchange) {
       String jsonInfo = exchange.request().stringData();
-      PackageInfo info = PackageInfo.fromJson(jsonInfo);
+      PackageInfoDTO info = PackageInfoDTO.fromJson(jsonInfo);
       try {
-	    var id = storage.storePackage(info);
+	    var id = storage.storePackageInfo(info);
 	    var buffer = ByteBuffer.allocate(4);
 	    buffer.putInt(id.value());
 	    exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
