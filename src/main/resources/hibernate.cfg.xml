@@ -7,7 +7,7 @@
 	<session-factory>
 
 		<property name="connection.driver_class">org.hsqldb.jdbc.JDBCDriver</property>
-		<property name="connection.url">jdbc:hsqldb:hsql://localhost/xdb</property>
+		<property name="connection.url">jdbc:hsqldb:hsql://localhost/pum</property>
 		<property name="connection.username">server</property>
 		<property name="connection.password">UnixOneLove</property>
 
@@ -26,13 +26,12 @@
 		<property name="show_sql">true</property>
 
 		<!-- Drop and re-create the database schema on startup -->
-		<property name="hbm2ddl.auto">create</property>
+		<property name="hbm2ddl.auto">update</property>
 
 		<!-- <property name="hibernate.search.default.directory_provider">filesystem</property> 
 			<property name="hibernate.search.default.indexBase">target/indexes</property> -->
 		<mapping class="org.petos.packagemanager.database.Dependency" />
 		<mapping class="org.petos.packagemanager.database.Licence" />
-		<mapping class="org.petos.packagemanager.database.PackageAlias" />
 		<mapping class="org.petos.packagemanager.database.PackageHat" />
 		<mapping class="org.petos.packagemanager.database.PackageInfo" />
 		<mapping class="org.petos.packagemanager.database.Payload" />

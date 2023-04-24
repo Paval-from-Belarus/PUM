@@ -7,12 +7,12 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
-import org.petos.packagemanager.database.Licence;
 import org.petos.packagemanager.database.PackageHat;
 import org.petos.packagemanager.packages.DataPackage;
 import org.petos.packagemanager.packages.PackageInfo;
 import org.petos.packagemanager.packages.ShortPackageInfo;
 
+import javax.persistence.Query;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -83,15 +83,15 @@ public PackageStorage() {
       initPackages();
       initNameMapper();
 }
-private SessionFactory factory;
+private SessionFactory dbFactory;
 private void init(){
-	factory = new Configuration().configure().buildSessionFactory();
-	Session session = factory.openSession();
+	dbFactory = new Configuration().configure().buildSessionFactory();
+	Session session = dbFactory.openSession();
 	session.beginTransaction();
 	session.getTransaction().commit();
 }
 public void close(){
-      factory.close();
+      dbFactory.close();
 }
 private static int FIRST_PACKAGE_ID = 3;//
 
@@ -99,7 +99,21 @@ private static PackageId nextPackageId() {
       return PackageId.valueOf(FIRST_PACKAGE_ID++);
 }
 
+//@SuppressWarnings("unchecked")
 private void initNameMapper() {
+      nameMapper = new ConcurrentHashMap<>();
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageHat");
+      query.setFirstResult(0);
+      List<PackageHat> hats = query.getResultList();
+      session.getTransaction().commit();
+      for (PackageHat hat : hats){
+	    PackageId id = PackageId.valueOf(hat.getId());
+	    nameMapper.put(hat.getName(), id);
+	    hat.getAliases()
+		.forEach(alias -> nameMapper.put(alias, id));
+      }
       assert packagesMap != null;
       nameMapper = new ConcurrentHashMap<>();
       for (var entry : packagesMap.entrySet()) {
