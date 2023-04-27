@@ -1,8 +1,11 @@
 package org.petos.packagemanager.server;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.petos.packagemanager.server.PackageStorage.*;
 
@@ -13,10 +16,12 @@ public class NameMapper {
 private final Map<String, PackageId> mapper;
 
 public NameMapper() {
-      mapper = new HashMap<>();
+      mapper = new HashMap<>(); //thinking about multithreading
 }
-
-public boolean addAlias(PackageId id, String alias) {
+public synchronized Optional<PackageId> get(String alias){
+      return Optional.ofNullable(mapper.get(alias));
+}
+public synchronized boolean add(PackageId id, String alias) {
       PackageId putted = mapper.putIfAbsent(alias, id);
       return putted == null;
 }
@@ -24,15 +29,22 @@ public boolean addAlias(PackageId id, String alias) {
 /**
  * @return true if and only if all aliases are free
  * */
-public boolean addAll(PackageId id, List<String> aliases) {
+public synchronized boolean addAll(PackageId id, @NotNull Collection<String> aliases) {
+      boolean isBusyAlias = contains(aliases);
+      if(!isBusyAlias){
+            aliases.forEach(alias -> mapper.put(alias, id));
+      }
+      return !isBusyAlias;
+}
+public boolean contains(@NotNull String alias){
+      return mapper.containsKey(alias);
+}
+public boolean contains(@NotNull Collection<String> aliases){
       boolean isBusyAlias = true;
       for (String alias : aliases){
             isBusyAlias = mapper.get(alias) != null;
             if (isBusyAlias)
                   break;
-      }
-      if(!isBusyAlias){
-            aliases.forEach(alias -> mapper.put(alias, id));
       }
       return isBusyAlias;
 }

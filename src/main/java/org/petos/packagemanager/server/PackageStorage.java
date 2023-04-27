@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.annotations.NotFound;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.database.*;
@@ -15,10 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class PackageStorage {
 
@@ -73,15 +71,13 @@ public static class StorageException extends Exception {
       }
 }
 
-Logger logger = LogManager.getLogger(PackageStorage.class);
+private static Logger logger = LogManager.getLogger(PackageStorage.class);
 //not will be replaced by database
 //this exactly convert
 //it's supposed to be suitable to have hashtable
 //conversation String to PackageId is the most frequently (I believe) operation
 //always in coherent state
-private ConcurrentHashMap<String, PackageId> nameMapper; //upper functionality
-
-//todo: replace hashmaps by databases
+private NameMapper nameMapper; //upper functionality
 public PackageStorage() {
       init();
       initNameMapper();
@@ -89,27 +85,8 @@ public PackageStorage() {
 
 private SessionFactory dbFactory;
 
-private void init() {
-      dbFactory = new Configuration().configure().buildSessionFactory();
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      session.getTransaction().commit();
-}
-
 public void close() {
       dbFactory.close();
-}
-
-//@SuppressWarnings("unchecked")
-private void initNameMapper() {
-      nameMapper = new ConcurrentHashMap<>();
-      List<PackageHat> hats = getPackageHatAll();
-      for (PackageHat hat : hats) {
-	    PackageId id = PackageId.valueOf(hat.getId());
-	    nameMapper.put(hat.getName(), id);
-	    hat.getAliases()
-		.forEach(alias -> nameMapper.put(alias, id));
-      }
 }
 
 public List<ShortPackageInfoDTO> shortInfoList() {
@@ -119,6 +96,16 @@ public List<ShortPackageInfoDTO> shortInfoList() {
 		 .toList();
 }
 
+//The important assumption is that all database check is unsafe (doesn't check anything)
+//Because all should be checked before addition
+private void amendAliases(PackageId id, @NotNull Collection<String> aliases) throws StorageException {
+      //checkUnique
+      if (!nameMapper.addAll(id, aliases)) //it's realy easy to check in memory aliases
+	    //comparing with addition in DataBase
+	    throw new StorageException("Aliases already defined");
+}
+
+//todo: review implementation
 private void checkPackageUniqueness(ShortPackageInfoDTO info) throws StorageException {
       logger.info("Attempt to check info uniqueness");
       var id = getPackageId(info.name());
@@ -137,8 +124,7 @@ private void checkPackageUniqueness(ShortPackageInfoDTO info) throws StorageExce
 }
 
 public Optional<PackageId> getPackageId(String aliasName) {
-      var id = nameMapper.get(aliasName);
-      return Optional.ofNullable(id);
+      return nameMapper.get(aliasName);
 }
 
 /**
@@ -181,29 +167,6 @@ public VersionId mapVersion(PackageId id, int versionOffset) {
 }
 //assume: aliases are unique
 
-
-//check package on uniqueness and store in database
-//return package
-public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info) throws StorageException {
-      checkPackageUniqueness(info);//methods throw exception if something wrong
-      var id = initPackageHat(info);
-      List<String> aliases = Arrays.asList(info.aliases);
-      addAliases(id, aliases);
-      appendCommonInfo(id, info);
-      return id;
-
-}
-
-/**
- * Automatically remove old package and replace it by new payload
- *
- * @throws IllegalArgumentException if packageFamily by PackageId is not exists
- */
-public void storePayload(PackageId id, byte[] payload) {
-//      if (packagesMap.get(id) == null)
-//	    throw new IllegalArgumentException("Package id is not exists");
-      //todo: store in random place of FileSystem package's payload
-}
 
 /**
  * @return sorted DataPackage according time that had been added <br>
@@ -274,39 +237,22 @@ public Optional<byte[]> getPayload(PackageId id, VersionId version) {
       return Optional.ofNullable(bytes);
 }
 
-private synchronized void addAliases(PackageId id, @NotNull List<String> aliases) throws StorageException {
-      boolean isUnique = true;
-      for (String alias : aliases) {
-	    if (nameMapper.get(alias) != null)
-		  break;
-      }
-      if (!isUnique)
-	    throw new StorageException("Alias is already used");
-      List<PackageAlias> aliasList = aliases.stream()
-					 .map(raw -> new PackageAlias(id.value(), raw))
-					 .toList();
-      Session session = dbFactory.openSession();
-      for (var aliasEntity : aliasList)
-	    session.save(aliasEntity);
-      session.getTransaction().commit();
+//check package on uniqueness and store in database
+//return package
+public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info) throws StorageException {
+      checkPackageUniqueness(info);//methods throw exception if something wrong
+      return initPackageHat(info);
 }
 
-private void appendCommonInfo(PackageId id, FullPackageInfoDTO dto) throws StorageException {
-      var license = getLicence(dto.licenseType);
-      String version = dto.version == null ? "0.0.1" : dto.version;
-      if (license.isPresent()) {
-	    PackageInfo info = new PackageInfo();
-	    info.setPackageId(id.value());
-	    info.setVersionLabel(version);
-	    info.setLicence(license.get());
-	    var versionId = nextVersionId(id);
-	    Session session = dbFactory.openSession();
-	    info.setVersionId(versionId.value());
-	    session.save(info);
-	    session.getTransaction().commit();
-      } else {
-	    throw new StorageException("Licence type is not correct");
-      }
+/**
+ * Automatically remove old package and replace it by new payload
+ *
+ * @throws IllegalArgumentException if packageFamily by PackageId is not exists
+ */
+public void storePayload(PackageId id, byte[] payload) {
+//      if (packagesMap.get(id) == null)
+//	    throw new IllegalArgumentException("Package id is not exists");
+      //todo: store in random place of FileSystem package's payload
 }
 
 private @NotNull VersionId nextVersionId(PackageId id) throws StorageException {
@@ -317,7 +263,7 @@ private @NotNull VersionId nextVersionId(PackageId id) throws StorageException {
       List<PackageInfo> infoList = query.getResultList();
       session.getTransaction().commit();
       VersionId version;
-      if(!infoList.isEmpty()){
+      if (!infoList.isEmpty()) {
 	    var info = infoList.get(0);
 	    version = VersionId.valueOf(info.getVersionId() + 1);//there should be trigger in database
       } else {
@@ -384,39 +330,33 @@ private void removePackageAll(PackageId id) {
 /**
  * Assume that all checks are passed
  * To add this dto to database is safe
- * */
-private @NotNull PackageId initPackageHat(ShortPackageInfoDTO dto) throws StorageException {
+ */
+private @NotNull PackageId initPackageHat(@NotNull ShortPackageInfoDTO dto) throws StorageException {
       Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
       PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
       hat.setPayload(payload);
       Session session = dbFactory.openSession();
       session.save(hat);
+      Query query = session.createQuery("from PackageHat where name= :packageName");
+      query.setParameter("packageName", hat.getName());
+      hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
       session.getTransaction().commit();
-
-      Optional<PackageId> optional = getPackageId(hat.getName());
-      PackageId id = null;
-      if (optional.isPresent()) {
-	    id = optional.get();
-	    //todo: thinking about ACID in db
-	    removeOldestVersion(id);
+      PackageId id;
+      if (hat != null) {
+	    id = PackageId.valueOf(hat.getId());
+	    Collection<String> aliases = hat.getAliases();
+	    aliases.add(hat.getName());
+	    amendAliases(id, aliases);
       } else {
-	    String log = String.format("Package hat is not saved: %s", hat.getName());
+	    String log = String.format("Package hat is not saved: %s", dto.name());
 	    logger.error(log);
 	    throw new StorageException("Impossible to save package hat " + hat.getName());
       }
       return id;
 }
 
-private List<PackageHat> getPackageHatAll() {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageHat");
-      query.setFirstResult(0);
-      List<PackageHat> hats = query.getResultList();
-      session.getTransaction().commit();
-      return hats;
-}
 
+//Additional DataBase's entity such as Payload or License should be
 private @NotNull Payload fetchPayload(String payloadType) throws StorageException {
       Payload payload;
       Session session = dbFactory.openSession();
@@ -424,19 +364,21 @@ private @NotNull Payload fetchPayload(String payloadType) throws StorageExceptio
       query.setParameter("payloadType", payloadType);
       payload = (Payload) query.getSingleResult();
       session.getTransaction().commit();
-      if(payload == null)
+      if (payload == null)
 	    throw new StorageException("Invalid payload type");
       return payload;
 }
 
-private Optional<Licence> getLicence(String type) {
+private @NotNull Licence fetchLicense(String type) throws StorageException {
       Licence licence;
       Session session = dbFactory.openSession();
       Query query = session.createQuery("from Licence where name= :licenceType");
       query.setParameter("licenceType", type);
       licence = (Licence) query.getSingleResult();
       session.getTransaction().commit();
-      return Optional.ofNullable(licence);
+      if (licence == null)
+	    throw new StorageException("Invalid license type");
+      return licence;
 }
 
 private Optional<PackageHat> getPackageHat(PackageId id) {
@@ -448,6 +390,16 @@ private Optional<PackageHat> getPackageHat(PackageId id) {
       return Optional.ofNullable(result);
 }
 
+private @NotNull List<PackageHat> getPackageHatAll() {
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageHat");
+      query.setFirstResult(0);
+      List<PackageHat> hats = query.getResultList();
+      session.getTransaction().commit();
+      return hats;
+}
+
 private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
       Session session = dbFactory.openSession();
       Query query = session.createQuery("from PackageInfo where id= :instanceId");
@@ -455,5 +407,34 @@ private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
       PackageInfo info = (PackageInfo) query.getSingleResult();
       session.getTransaction().commit();
       return Optional.ofNullable(info);
+}
+
+//todo: limit request to instances with specific count
+private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
+      Session session = dbFactory.openSession();
+      Query query = session.createQuery("from PackageInfo where id= :familyId");
+      query.setParameter("familyId", id.value());
+      List<PackageInfo> family = query.getResultList();
+      session.getTransaction().commit();
+      return family;
+}
+
+private void init() {
+      dbFactory = new Configuration().configure().buildSessionFactory();
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      session.getTransaction().commit();
+}
+
+//@SuppressWarnings("unchecked")
+private void initNameMapper() {
+      nameMapper = new NameMapper();
+      List<PackageHat> hats = getPackageHatAll();
+      for (PackageHat hat : hats) {
+	    PackageId id = PackageId.valueOf(hat.getId());
+	    //don't check any addition because database is supposed to be correct
+	    nameMapper.add(id, hat.getName());
+	    nameMapper.addAll(id, hat.getAliases());
+      }
 }
 }
