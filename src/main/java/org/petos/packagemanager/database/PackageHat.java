@@ -13,8 +13,7 @@ public class PackageHat {
 @GeneratedValue(strategy = GenerationType.AUTO )
 private Integer id;
 private String name;
-@Column(name="VALID")
-private boolean isValid;
+private boolean valid;
 @ManyToOne
 @JoinColumn(name= "payloadType")
 private Payload payload;
@@ -63,5 +62,13 @@ public static PackageHat valueOf(String name, String[] aliases){
       hat.setName(name);
       hat.setAliases(aliases);
       return hat;
+}
+
+public boolean isValid() {
+      return valid;
+}
+
+public void setValid(boolean valid) {
+      this.valid = valid;
 }
 }

@@ -1,15 +1,15 @@
 package org.petos.packagemanager.packages;
 
-import java.util.Objects;
-
 /**
- *
+ *This class is used as upper interface for PackageStorage
+ *To convert database representation to finite client
  */
-public final class PayloadPublishDTO {
-private final byte[] payload;
+public final class PackageInstanceDTO {
+public static final String DEFAULT_LICENCE = "GNU";
+private final Integer packageId;
 private final String version;
 private final String[] dependencies;
-private String licenseType;
+private String license;
 
 /**
  * @param dependencies is any alias (or package name) of dependency that should be used to install package.
@@ -17,16 +17,12 @@ private String licenseType;
  * @param payload      is payload self
  * @param version      is unique String label for package Family
  */
-public PayloadPublishDTO(byte[] payload, String version, String[] dependencies) {
-      this.payload = payload;
+public PackageInstanceDTO(Integer id, String version, String[] dependencies) {
+      this.packageId = id;
       this.version = version;
       this.dependencies = dependencies;
+      this.license = DEFAULT_LICENCE;
 }
-
-public byte[] payload() {
-      return payload;
-}
-
 public String version() {
       return version;
 }
@@ -35,11 +31,14 @@ public String[] dependencies() {
       return dependencies;
 }
 
-public String getLicenseType() {
-      return licenseType;
+public String getLicense() {
+      return license;
+}
+public void setLicense(String license) {
+      this.license = license;
 }
 
-public void setLicenseType(String licenseType) {
-      this.licenseType = licenseType;
+public Integer packageId() {
+      return packageId;
 }
 }

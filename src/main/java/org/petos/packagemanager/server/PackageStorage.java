@@ -4,11 +4,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.annotations.NotFound;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.database.*;
 import org.petos.packagemanager.packages.FullPackageInfoDTO;
+import org.petos.packagemanager.packages.PackageInstanceDTO;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 
 import javax.persistence.Query;
@@ -78,6 +78,7 @@ private static Logger logger = LogManager.getLogger(PackageStorage.class);
 //conversation String to PackageId is the most frequently (I believe) operation
 //always in coherent state
 private NameMapper nameMapper; //upper functionality
+
 public PackageStorage() {
       init();
       initNameMapper();
@@ -107,20 +108,33 @@ private void amendAliases(PackageId id, @NotNull Collection<String> aliases) thr
 
 //todo: review implementation
 private void checkPackageUniqueness(ShortPackageInfoDTO info) throws StorageException {
-      logger.info("Attempt to check info uniqueness");
-      var id = getPackageId(info.name());
-      if (id.isPresent()) {
-	    logger.warn("Uniqueness check is failed");
-	    throw new StorageException("Package name is busy");
-      }
-      for (String alias : info.aliases()) {
-	    id = getPackageId(alias);
-	    if (id.isPresent()) {
-		  logger.warn("Uniqueness check is failed");
-		  throw new StorageException("Package alias is busy");
+      Optional<PackageId> id = getPackageId(info.name());
+      boolean isUnique = id.isEmpty();
+      if (isUnique) {
+	    for (String alias : info.aliases()) {
+		  isUnique = getPackageId(alias).isEmpty();
+		  if (!isUnique)
+			break;
 	    }
       }
-      logger.info("Uniqueness check is passed");
+      if (!isUnique)
+	    throw new StorageException("Package name is busy");
+}
+
+private void checkInstanceUniqueness(PackageInstanceDTO instance) throws StorageException {
+      Optional<PackageId> id = getPackageId(instance.packageId());
+      boolean isUnique = id.isPresent();
+      if (isUnique) {
+	    Session session = dbFactory.openSession();
+	    Query query = session.createQuery("from PackageInfo where packageId= :package and versionLabel= :label");
+	    query.setParameter("package", instance.packageId());
+	    query.setParameter("label", instance.version());
+	    List<PackageInfo> list = query.getResultList();
+	    session.getTransaction().commit();
+	    isUnique = list.size() == 0;
+      }
+      if (!isUnique)
+	    throw new StorageException("Version label is busy");
 }
 
 public Optional<PackageId> getPackageId(String aliasName) {
@@ -205,7 +219,7 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 		  dto.payloadType = hat.getPayload().getName();
 		  dto.payloadSize = (int) Files.size(Path.of(info.getPayloadPath()));
 		  //todo: add dependencies to dto
-		  //todo: exhause max file size to long
+		  //todo: exhause max file size to Long
 	    } catch (IOException e) {
 		  String log = String.format("Inaccessible full info by PackageId and VersionId: %d ; %d",
 		      id.value(), version.value());
@@ -247,15 +261,16 @@ public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info
 /**
  * Automatically remove old package and replace it by new payload
  *
- * @throws IllegalArgumentException if packageFamily by PackageId is not exists
+ * @throws StorageException if packageFamily by PackageId is not exists
  */
-public void storePayload(PackageId id, byte[] payload) {
-//      if (packagesMap.get(id) == null)
-//	    throw new IllegalArgumentException("Package id is not exists");
-      //todo: store in random place of FileSystem package's payload
+public VersionId storePayload(PackageInstanceDTO dto, byte[] payload) throws StorageException {
+      checkInstanceUniqueness(dto);
+      //todo: add option to update payload by PackageInstance
+      return initPackageInfo(dto, payload);
 }
 
-private @NotNull VersionId nextVersionId(PackageId id) throws StorageException {
+//todo: here should be database trigger
+private @NotNull VersionId nextVersionId(PackageId id) {
       Session session = dbFactory.openSession();
       Query query = session.createQuery("from PackageInfo where packageId= :id order by time desc");
       query.setParameter("id", id);
@@ -267,10 +282,22 @@ private @NotNull VersionId nextVersionId(PackageId id) throws StorageException {
 	    var info = infoList.get(0);
 	    version = VersionId.valueOf(info.getVersionId() + 1);//there should be trigger in database
       } else {
-	    logger.error("No existent packageInfo");
-	    throw new StorageException("Package family not exists");
+	    logger.info("Initialization of PackageInfo entity");
+	    version = VersionId.valueOf(0);
       }
+//      removeOldestVersion(id);
       return version;
+}
+
+private @NotNull Path toPayloadPath(PackageInstanceDTO dto) throws IOException {
+	return Path.of("dummy.txt");
+}
+
+/**
+ * Check if package instance has dependencies in other package
+ */
+private boolean hasDeepDependencies(PackageId id, VersionId version) {
+      return false;
 }
 
 private void removeOldestVersion(PackageId id) {
@@ -328,6 +355,36 @@ private void removePackageAll(PackageId id) {
 }
 
 /**
+ * All checks are passed
+ */
+private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payload) throws StorageException {
+      Licence licence = fetchLicense(dto.getLicense());
+      Optional<PackageId> optionalId = getPackageId(dto.packageId());
+      VersionId version;
+      if (optionalId.isPresent()) {
+	    PackageId id = optionalId.get();
+	    version = nextVersionId(id);
+	    PackageInfo info = PackageInfo.valueOf(id.value(), version.value());
+	    info.setVersionLabel(dto.version());
+	    info.setLicence(licence);
+	    try {
+		  Path path = toPayloadPath(dto);
+		  Files.write(path, payload);
+		  info.setPayloadPath(path.toString());
+	    } catch (IOException e){
+		  throw new StorageException("Error during file saving");
+	    }
+	    Session session = dbFactory.openSession();
+	    session.save(info);
+	    session.getTransaction().commit();
+	    validatePackageHat(id, true);
+      } else {
+	    throw new StorageException("Invalid package id");
+      }
+	return version;
+}
+
+/**
  * Assume that all checks are passed
  * To add this dto to database is safe
  */
@@ -381,9 +438,18 @@ private @NotNull Licence fetchLicense(String type) throws StorageException {
       return licence;
 }
 
-private Optional<PackageHat> getPackageHat(PackageId id) {
+private void validatePackageHat(PackageId id, boolean isValid) {
       Session session = dbFactory.openSession();
       Query query = session.createQuery("from PackageHat where id= :packageId");
+      PackageHat hat = (PackageHat) query.getSingleResult();
+      hat.setValid(isValid);
+      session.update(hat);
+      session.getTransaction().commit();
+}
+
+private Optional<PackageHat> getPackageHat(PackageId id) {
+      Session session = dbFactory.openSession();
+      Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
       query.setParameter("packageId", id.value());
       PackageHat result = (PackageHat) query.getSingleResult();
       session.getTransaction().commit();
@@ -393,7 +459,7 @@ private Optional<PackageHat> getPackageHat(PackageId id) {
 private @NotNull List<PackageHat> getPackageHatAll() {
       Session session = dbFactory.openSession();
       session.beginTransaction();
-      Query query = session.createQuery("from PackageHat");
+      Query query = session.createQuery("from PackageHat where valid= true");
       query.setFirstResult(0);
       List<PackageHat> hats = query.getResultList();
       session.getTransaction().commit();
@@ -418,6 +484,8 @@ private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
       session.getTransaction().commit();
       return family;
 }
+
+private static String DEFAULT_LICENSE = "GNU";
 
 private void init() {
       dbFactory = new Configuration().configure().buildSessionFactory();

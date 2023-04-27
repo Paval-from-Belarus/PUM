@@ -6,12 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.petos.packagemanager.packages.PackageAssembly;
-import org.petos.packagemanager.packages.PackageHeader;
-import org.petos.packagemanager.packages.FullPackageInfoDTO;
+import org.petos.packagemanager.packages.*;
 import org.petos.packagemanager.transfer.NetworkExchange;
 import org.petos.packagemanager.transfer.PackageRequest;
-import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -105,6 +102,7 @@ private void onPackageInfo(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
+
 private void onFamilyInfo(NetworkExchange exchange) {
       // TODO: 16/04/2023
 }
@@ -113,10 +111,12 @@ private void writeBytes(NetworkExchange exchange, @NotNull byte[] payload) throw
       DataOutputStream output = new DataOutputStream(exchange.getOutputStream());
       output.write(payload);
 }
+
 private byte[] readBytes(NetworkExchange exchange) throws IOException {
       DataInputStream input = new DataInputStream(exchange.getInputStream());
       return input.readAllBytes();
 }
+
 private void onPayload(NetworkExchange exchange) throws IOException {
       var optional = onPackageRequest(exchange);
       if (optional.isPresent()) {
@@ -151,38 +151,46 @@ private void onPublishInfo(NetworkExchange exchange) {
       }
 }
 
-
+/**
+ *
+ */
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
-      assert buffer.capacity() == 4;
-      int id = buffer.getInt();
-      var packageId = storage.getPackageId(id);
-      if(packageId.isPresent()){
-	    byte[] payload = readBytes(exchange);
-	    storage.storePayload(packageId.get(), payload);
-	    exchange.setResponse(ResponseType.Approve, NO_PAYLOAD);
-      } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+      String jsonInfo = exchange.request().stringData();
+      PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
+      byte[] payload = readBytes(exchange);
+      try {
+	    var version = storage.storePayload(dto, payload);
+	    var buffer = ByteBuffer.allocate(4);//int
+	    buffer.putInt(version.value());
+	    exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
+		buffer.array());
+      } catch (PackageStorage.StorageException e) {
+	    exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
+		e.getMessage().getBytes(StandardCharsets.US_ASCII));
       }
 }
+
 private void onUpgradeVersion(NetworkExchange exchange) {
 
 }
 
 private static final Gson gson;
+
 static {
       gson = new Gson();
 }
-private static <T> @Nullable T fromJson(String source, Class<T> classType){
+
+private static <T> @Nullable T fromJson(String source, Class<T> classType) {
       T result = null;
       try {
-       result = gson.fromJson(source, classType);
-      } catch (JsonSyntaxException e){
+	    result = gson.fromJson(source, classType);
+      } catch (JsonSyntaxException e) {
 	    logger.warn("Json syntax at " + source);
       }
       return result;
 }
-private static <T> @NotNull String toJson(T source){
+
+private static <T> @NotNull String toJson(T source) {
       return gson.toJson(source);
 }
 }

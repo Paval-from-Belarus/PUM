@@ -33,8 +33,9 @@ public static int BIN_FORMAT = 64;
 public static int ALL_PACKAGES_RESPONSE = STR_FORMAT | SHORT_INFO;
 public static int PACKAGE_ID_RESPONSE = INT_FORMAT;
 public static int PACKAGE_INFO_FORMAT = STR_FORMAT;
-public static int PACKAGE_PAYLOAD_FORMAT = BIN_FORMAT;
+public static int PACKAGE_PAYLOAD_FORMAT = STR_FORMAT | BIN_FORMAT;
 public static int PUBLISH_INFO_RESPONSE = INT_FORMAT;
+public static int PUBLISH_PAYLOAD_RESPONSE = INT_FORMAT;
 //Success codes
 public static int CREATED = 8;
 //Errors codes

@@ -16,6 +16,7 @@ private Integer packageId;
 private Integer versionId;
 private String versionLabel;
 private String payloadPath;
+@GeneratedValue
 private Timestamp time;
 @ManyToOne
 @JoinColumn(name = "licence")
@@ -58,5 +59,11 @@ public Licence getLicence() {
 
 public void setLicence(Licence licence) {
       this.licence = licence;
+}
+public static PackageInfo valueOf(Integer packageId, Integer versionId){
+      PackageInfo info = new PackageInfo();
+      info.setVersionId(versionId);
+      info.setPackageId(packageId);
+      return info;
 }
 }
