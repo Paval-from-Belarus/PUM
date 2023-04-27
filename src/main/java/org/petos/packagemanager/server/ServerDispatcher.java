@@ -1,12 +1,14 @@
 package org.petos.packagemanager.server;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.petos.packagemanager.packages.PackageAssembly;
 import org.petos.packagemanager.packages.PackageHeader;
-import org.petos.packagemanager.packages.PackageInfoDTO;
+import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.transfer.NetworkExchange;
 import org.petos.packagemanager.transfer.PackageRequest;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
@@ -55,7 +57,7 @@ private void onAllPackages(NetworkExchange exchange) throws IOException {
       var packages = storage.shortInfoList()
 			 .toArray(ShortPackageInfoDTO[]::new);
       OutputStream output = exchange.getOutputStream();
-      String payload = new Gson().toJson(packages);
+      String payload = toJson(packages);
       output.write(payload.getBytes(StandardCharsets.US_ASCII));
       exchange.setResponse(ResponseType.Approve, ALL_PACKAGES_RESPONSE);
 }
@@ -92,7 +94,7 @@ private void onPackageInfo(NetworkExchange exchange) {
 	    PackageRequest request = optional.get();
 	    var info = storage.getFullInfo(request.id(), request.version());
 	    if (info.isPresent()) {
-		  String response = info.get().toJson();
+		  String response = toJson(info.get());
 		  exchange.setResponse(
 		      ResponseType.Approve, PACKAGE_INFO_FORMAT,
 		      response.getBytes(StandardCharsets.US_ASCII));
@@ -135,7 +137,7 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 
 private void onPublishInfo(NetworkExchange exchange) {
       String jsonInfo = exchange.request().stringData();
-      PackageInfoDTO info = PackageInfoDTO.fromJson(jsonInfo);
+      ShortPackageInfoDTO info = fromJson(jsonInfo, ShortPackageInfoDTO.class);
       try {
 	    var id = storage.storePackageInfo(info);
 	    var buffer = ByteBuffer.allocate(4);
@@ -163,8 +165,24 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
-
 private void onUpgradeVersion(NetworkExchange exchange) {
 
+}
+
+private static final Gson gson;
+static {
+      gson = new Gson();
+}
+private static <T> @Nullable T fromJson(String source, Class<T> classType){
+      T result = null;
+      try {
+       result = gson.fromJson(source, classType);
+      } catch (JsonSyntaxException e){
+	    logger.warn("Json syntax at " + source);
+      }
+      return result;
+}
+private static <T> @NotNull String toJson(T source){
+      return gson.toJson(source);
 }
 }

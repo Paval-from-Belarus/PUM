@@ -13,6 +13,8 @@ public class PackageHat {
 @GeneratedValue( strategy = GenerationType.AUTO )
 private Integer id;
 private String name;
+@Column(name="VALID")
+private boolean isValid;
 @ManyToOne
 @JoinColumn(name= "payloadType")
 private Payload payload;
@@ -45,11 +47,21 @@ public Set<String> getAliases() {
 public void setAliases(Set<String> aliases) {
       this.aliases = aliases;
 }
+public void setAliases(String[] aliases){
+      this.aliases = new HashSet<>();
+      this.aliases.addAll(Arrays.asList(aliases));
+}
 
 public Payload getPayload() {
       return payload;
 }
 public void setPayload(Payload payload) {
       this.payload = payload;
+}
+public static PackageHat valueOf(String name, String[] aliases){
+      PackageHat hat = new PackageHat();
+      hat.setName(name);
+      hat.setAliases(aliases);
+      return hat;
 }
 }

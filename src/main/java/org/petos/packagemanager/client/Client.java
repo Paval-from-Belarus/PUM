@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
 import org.petos.packagemanager.packages.PackageAssembly;
-import org.petos.packagemanager.packages.PackageInfoDTO;
+import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
@@ -100,10 +100,10 @@ private void onInstallCommand(String[] params) {
       dispatchTask(() -> installTask(packageName));
 }
 
-private void resolveDependencies(PackageInfoDTO info) {
+private void resolveDependencies(FullPackageInfoDTO info) {
 
 }
-private boolean isAcceptableInstallation(@NotNull PackageInfoDTO info){
+private boolean isAcceptableInstallation(@NotNull FullPackageInfoDTO info){
       System.out.format("%30s | %d", info.name, info.payloadSize);
       QuestionResponse userResponse = output.sendQuestion("Is it ok?", OutputProcessor.YES_NO);
       if(!((Boolean) userResponse.value()))
@@ -117,11 +117,11 @@ private boolean isInstalledPackage(String packageName){
 /**Store package in local file system
  * and add package's info to local registry
  * */
-private void storeLocal(PackageInfoDTO info, PackageAssembly assembly){
+private void storeLocal(FullPackageInfoDTO info, PackageAssembly assembly){
       resolveDependencies(info);
 
 }
-private void acceptInstallation(PackageInfoDTO info, Integer id) throws IOException{
+private void acceptInstallation(FullPackageInfoDTO info, Integer id) throws IOException{
       var optional = getPackage(id, 0);//latest version
       PackageAssembly assembly;
       //todo: if it's impossible to assembly package ― try request several times to server (many times)
@@ -138,7 +138,7 @@ private void installTask(String packageName) {
 	    int version = 0; //latest version
 	    if(id.isPresent()){
 		  String stringInfo = getPackageInfo(id.get(), version).orElse("");
-		  PackageInfoDTO info = PackageInfoDTO.fromJson(stringInfo);
+		  FullPackageInfoDTO info = FullPackageInfoDTO.fromJson(stringInfo);
 		  if(info != null && !isInstalledPackage(info.name) && isAcceptableInstallation(info)){
 			acceptInstallation(info, id.get());
 		  } else {

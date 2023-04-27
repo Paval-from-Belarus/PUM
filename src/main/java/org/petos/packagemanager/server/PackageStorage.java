@@ -7,7 +7,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.database.*;
-import org.petos.packagemanager.packages.PackageInfoDTO;
+import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 
 import javax.persistence.Query;
@@ -119,14 +119,14 @@ public List<ShortPackageInfoDTO> shortInfoList() {
 		 .toList();
 }
 
-private void checkPackageUniqueness(PackageInfoDTO info) throws StorageException {
+private void checkPackageUniqueness(ShortPackageInfoDTO info) throws StorageException {
       logger.info("Attempt to check info uniqueness");
-      var id = getPackageId(info.name);
+      var id = getPackageId(info.name());
       if (id.isPresent()) {
 	    logger.warn("Uniqueness check is failed");
 	    throw new StorageException("Package name is busy");
       }
-      for (String alias : info.aliases) {
+      for (String alias : info.aliases()) {
 	    id = getPackageId(alias);
 	    if (id.isPresent()) {
 		  logger.warn("Uniqueness check is failed");
@@ -184,12 +184,12 @@ public VersionId mapVersion(PackageId id, int versionOffset) {
 
 //check package on uniqueness and store in database
 //return package
-public synchronized @NotNull PackageId storePackageInfo(PackageInfoDTO info) throws StorageException {
+public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info) throws StorageException {
       checkPackageUniqueness(info);//methods throw exception if something wrong
-      var id = addPackage(info);
+      var id = initPackageHat(info);
       List<String> aliases = Arrays.asList(info.aliases);
       addAliases(id, aliases);
-      appendPackageInfo(info);
+      appendCommonInfo(id, info);
       return id;
 
 }
@@ -226,15 +226,15 @@ public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
  * elsif version in [1,9]: get specific latter version<br>
  * else: get minimal available version<br>
  */
-public Optional<PackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
+public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
       var optionalInfo = getInstanceInfo(id, version);
       var optionalHat = getPackageHat(id);
-      PackageInfoDTO dto = null;
+      FullPackageInfoDTO dto = null;
       if (optionalHat.isPresent() && optionalInfo.isPresent()) {
 	    PackageHat hat = optionalHat.get();
 	    PackageInfo info = optionalInfo.get();
 	    try {
-		  dto = new PackageInfoDTO();
+		  dto = new FullPackageInfoDTO();
 		  dto.version = info.getVersionLabel();
 		  dto.aliases = hat.getAliases().toArray(new String[0]);
 		  dto.name = hat.getName();
@@ -291,7 +291,7 @@ private synchronized void addAliases(PackageId id, @NotNull List<String> aliases
       session.getTransaction().commit();
 }
 
-private void appendCommonInfo(PackageId id, PackageInfoDTO dto) throws StorageException {
+private void appendCommonInfo(PackageId id, FullPackageInfoDTO dto) throws StorageException {
       var license = getLicence(dto.licenseType);
       String version = dto.version == null ? "0.0.1" : dto.version;
       if (license.isPresent()) {
@@ -299,20 +299,32 @@ private void appendCommonInfo(PackageId id, PackageInfoDTO dto) throws StorageEx
 	    info.setPackageId(id.value());
 	    info.setVersionLabel(version);
 	    info.setLicence(license.get());
+	    var versionId = nextVersionId(id);
 	    Session session = dbFactory.openSession();
-	    var versionId = nextVersionId(session, id);
 	    info.setVersionId(versionId.value());
 	    session.save(info);
 	    session.getTransaction().commit();
-
       } else {
 	    throw new StorageException("Licence type is not correct");
       }
 }
 
-private @NotNull VersionId nextVersionId(Session session, PackageId id) {
-//      Query query = session.createQuery("from PackageInfo where packageId= :id");
-      return null;
+private @NotNull VersionId nextVersionId(PackageId id) throws StorageException {
+      Session session = dbFactory.openSession();
+      Query query = session.createQuery("from PackageInfo where packageId= :id order by time desc");
+      query.setParameter("id", id);
+      query.setMaxResults(1);
+      List<PackageInfo> infoList = query.getResultList();
+      session.getTransaction().commit();
+      VersionId version;
+      if(!infoList.isEmpty()){
+	    var info = infoList.get(0);
+	    version = VersionId.valueOf(info.getVersionId() + 1);//there should be trigger in database
+      } else {
+	    logger.error("No existent packageInfo");
+	    throw new StorageException("Package family not exists");
+      }
+      return version;
 }
 
 private void removeOldestVersion(PackageId id) {
@@ -363,38 +375,34 @@ private void removePackageAll(PackageId id) {
       var optionalHat = getPackageHat(id);
       if (optionalHat.isPresent()) {
 	    Session session = dbFactory.openSession();
-
 	    session.getTransaction().commit();
       } else {
 	    logger.warn("Attempt to remove not existent package");
       }
 }
 
-private @NotNull PackageId addPackage(PackageInfoDTO dto) throws StorageException {
-      var payload = getPayloadType(dto.payloadType);
-      var license = getLicence(dto.licenseType);
-      PackageId id;
-      if (payload.isPresent() && license.isPresent()) {
-	    PackageHat hat = new PackageHat();
-	    hat.setPayload(payload.get());
-	    hat.setName(dto.name);
-	    Session session = dbFactory.openSession();
-	    session.save(hat);
-	    session.getTransaction().commit();
-	    var optional = getPackageId(hat.getName());
-	    if (optional.isPresent()) {
-		  id = optional.get();
-		  //todo: thinking about ACID in db
-		  appendCommonInfo(id, dto);
-		  removeOldestVersion(id);
-	    } else {
-		  String log = String.format("Package hat is not saved: %s", hat.getName());
-		  logger.error(log);
-		  throw new StorageException("Impossible to save package hat " + hat.getName());
-	    }
+/**
+ * Assume that all checks are passed
+ * To add this dto to database is safe
+ * */
+private @NotNull PackageId initPackageHat(ShortPackageInfoDTO dto) throws StorageException {
+      Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
+      PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
+      hat.setPayload(payload);
+      Session session = dbFactory.openSession();
+      session.save(hat);
+      session.getTransaction().commit();
+
+      Optional<PackageId> optional = getPackageId(hat.getName());
+      PackageId id = null;
+      if (optional.isPresent()) {
+	    id = optional.get();
+	    //todo: thinking about ACID in db
+	    removeOldestVersion(id);
       } else {
-	    logger.info("Bad attempt to store packageHat");
-	    throw new StorageException("Incorrect info format");//
+	    String log = String.format("Package hat is not saved: %s", hat.getName());
+	    logger.error(log);
+	    throw new StorageException("Impossible to save package hat " + hat.getName());
       }
       return id;
 }
@@ -409,14 +417,16 @@ private List<PackageHat> getPackageHatAll() {
       return hats;
 }
 
-private Optional<Payload> getPayloadType(String type) {
+private @NotNull Payload fetchPayload(String payloadType) throws StorageException {
       Payload payload;
       Session session = dbFactory.openSession();
       Query query = session.createQuery("from Payload where name= :payloadType");
-      query.setParameter("payloadType", type);
+      query.setParameter("payloadType", payloadType);
       payload = (Payload) query.getSingleResult();
       session.getTransaction().commit();
-      return Optional.ofNullable(payload);
+      if(payload == null)
+	    throw new StorageException("Invalid payload type");
+      return payload;
 }
 
 private Optional<Licence> getLicence(String type) {
