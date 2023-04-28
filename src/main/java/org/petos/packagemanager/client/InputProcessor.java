@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class InputProcessor {
 public InputProcessor() {
@@ -30,39 +31,87 @@ public InputGroup nextGroup() {
 }
 
 public record InputGroup(@NotNull UserInput type, @NotNull Map<ParameterType, List<InputParameter>> typeMap) {
-      public @Nullable List<InputParameter> rawParams(){
+      public @NotNull List<InputParameter> rawParams() {
 	    return typeMap.get(ParameterType.Raw);
       }
-      public @Nullable List<InputParameter> shortParams(){
+
+      public @NotNull List<InputParameter> shortParams() {
 	    return typeMap.get(ParameterType.Shorts);
       }
-      public @Nullable List<InputParameter> verboseParams(){
+
+      public @NotNull List<InputParameter> verboseParams() {
 	    return typeMap.get(ParameterType.Verbose);
       }
-      public static InputGroup valueOf(UserInput type, Collection<InputParameter> params){
+
+      @Override
+      public String toString() {
+	    StringBuilder output = new StringBuilder("(type=" + type + ", map=\n");
+	    for (var entry : typeMap().entrySet()) {
+		  output.append("param=").append(entry.getKey()).append(", values=");
+		  output.append(Arrays.toString(entry.getValue().toArray(new InputParameter[0])));
+		  output.append("\n");
+	    }
+	    output.append(")");
+	    return output.toString();
+      }
+
+      public static InputGroup valueOf(UserInput type, Collection<InputParameter> params) {
 	    Map<ParameterType, List<InputParameter>> typeMap = new HashMap<>();
-	    for (InputParameter parameter : params){
+	    for (InputParameter parameter : params) {
 		  var list = typeMap.getOrDefault(parameter.type(), new ArrayList<>());
-		  list.add(parameter);
+		  List<InputParameter> bufferList = new ArrayList<>();
+		  if (parameter.type() != ParameterType.Shorts) {
+			bufferList.add(parameter);
+		  } else {
+			bufferList.addAll(splitShorts(parameter));
+		  }
+		  bufferList.forEach(p -> {
+			if (!list.contains(p))
+			      list.add(p);
+		  });
 		  typeMap.put(parameter.type(), list);
 	    }
 	    fillGaps(typeMap);
 	    return new InputGroup(type, typeMap);
       }
-      private static void fillGaps(Map<ParameterType, List<InputParameter>> typeMap){
-	    for (ParameterType type : ParameterType.values()){
-		  List<InputParameter> list = typeMap.get(type);
-		  if (list == null){
-			list = new ArrayList<>(0);
-			typeMap.put(type, list);
-		  }
+
+      private static void fillGaps(Map<ParameterType, List<InputParameter>> typeMap) {
+	    for (ParameterType type : ParameterType.values()) {
+		  typeMap.computeIfAbsent(type, k -> new ArrayList<>(0));
 	    }
       }
+
+      //finally, the order of parameters doesn't have any sense
+      private static @NotNull List<InputParameter> splitShorts(InputParameter shorts) {
+	    assert shorts.type() == ParameterType.Shorts && !shorts.self().isEmpty();
+	    var params = new ArrayList<InputParameter>();
+	    if (!shorts.value().isEmpty()) {
+		  final int LAST_INDEX = shorts.self().length() - 1;
+		  String self = String.valueOf(shorts.self().charAt(LAST_INDEX));
+		  params.add(new InputParameter(ParameterType.Shorts, self, shorts.value()));
+		  shorts = new InputParameter(ParameterType.Shorts, shorts.self().substring(0, LAST_INDEX), "");
+	    }
+	    for (char letter : shorts.self().toCharArray()) {
+		  String self = String.valueOf(letter);
+		  params.add(new InputParameter(ParameterType.Shorts, self, ""));
+	    }
+	    return params;
+      }
+
 }
 
 public enum ParameterType {Raw, Shorts, Verbose}
 
 public record InputParameter(@NotNull ParameterType type, @NotNull String self, @NotNull String value) {
+      @Override
+      public boolean equals(Object other) {
+	    boolean result = false;
+	    if (other instanceof InputParameter param) {
+		  result = param.type.equals(this.type) &&
+			       param.self.equals(this.self); //only name and the type
+	    }
+	    return result;
+      }
 }
 
 public enum UserInput {List, Install, Exit, Unknown}
@@ -97,6 +146,14 @@ public static class InputPattern {
 
 }
 
+private boolean isValidName(char letter) {
+      return letter != ' ' && letter != '-' && letter != '=';
+}
+
+private boolean isValidValue(char letter) {
+      return letter != ' ' && letter != '-';
+}
+
 private @NotNull List<InputParameter> collectParams(String source, InputPattern pattern) {
       List<InputParameter> params = new ArrayList<>();
       //search of short parameters
@@ -117,26 +174,27 @@ private @NotNull List<InputParameter> collectParams(String source, InputPattern 
 	    }
 	    StringBuilder nameBuilder = new StringBuilder();
 	    StringBuilder valueBuilder = new StringBuilder();
-	    //skip spaces
-	    while (i < letters.length && letters[i] == ' ') {
-		  i += 1;
-	    }
-	    while (i < letters.length && letters[i] != ' ') { //attempt to extract self parameter name
+	    while (i < letters.length && isValidName(letters[i])) { //attempt to extract self parameter name
 		  nameBuilder.append(letters[i]);
 		  i += 1;
 	    }
-	    while (i < letters.length && letters[i] == ' ') {
+	    //the beginning of the parameter's value
+	    if (i < letters.length && letters[i] == '=') {
 		  i += 1;
+		  while (i < letters.length && isValidValue(letters[i])) {
+			valueBuilder.append(letters[i]);
+			i += 1;
+		  }
 	    }
-	    while (i < letters.length && letters[i] != '-') {
-		  valueBuilder.append(letters[i]);
-		  i += 1;
-	    }
-	    if (((paramIndex == VERBOSE_PARAMETER || paramIndex == SHORT_PARAMETER) && !nameBuilder.isEmpty()) || paramIndex == RAW_PARAMETER) {
+	    if (!nameBuilder.isEmpty()) {
 		  String name = nameBuilder.toString();
 		  String value = valueBuilder.toString();
 		  ParameterType type = ParameterType.values()[paramIndex];
 		  params.add(new InputParameter(type, name, value));
+	    }
+	    //skip spaces between params
+	    while (i < letters.length && letters[i] == ' ') {
+		  i += 1;
 	    }
       }
       return params;
@@ -144,13 +202,13 @@ private @NotNull List<InputParameter> collectParams(String source, InputPattern 
 
 private @Nullable InputGroup nextCommand(@NotNull String line) {
       InputGroup result = null;
-      String[] groups = line.split("( +)", 2); //split first occurene of params to different side
+      String[] groups = line.split("( +)", 2); //split first occurrence of params to different side
       for (InputPattern command : this.rules) {
 	    Matcher matcher = command.pattern().matcher(groups[0]);
 	    if (matcher.find()) {
 		  List<InputParameter> params = List.of();
 		  if (groups.length >= 2)
-			 params = collectParams(groups[1], command);
+			params = collectParams(groups[1], command);
 		  result = InputGroup.valueOf(command.type(), params);
 		  break;
 	    }

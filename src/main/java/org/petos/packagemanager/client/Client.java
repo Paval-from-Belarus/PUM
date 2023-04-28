@@ -60,7 +60,8 @@ private void checkCache() {
 public void start() {
       InputGroup input;
       while ((input = this.input.nextGroup()).type() != UserInput.Exit) {
-	    dispatchInputGroup(input);
+	    //    dispatchInputGroup(input);
+	    System.out.println(input.toString());
       }
       System.out.println("Thanks for working with us!");
 }
