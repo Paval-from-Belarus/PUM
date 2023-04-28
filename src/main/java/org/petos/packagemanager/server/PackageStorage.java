@@ -263,7 +263,7 @@ public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info
  *
  * @throws StorageException if packageFamily by PackageId is not exists
  */
-public VersionId storePayload(PackageInstanceDTO dto, byte[] payload) throws StorageException {
+public VersionId storePayload(@NotNull PackageInstanceDTO dto, @NotNull byte[] payload) throws StorageException {
       checkInstanceUniqueness(dto);
       //todo: add option to update payload by PackageInstance
       return initPackageInfo(dto, payload);

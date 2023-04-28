@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import static org.petos.packagemanager.server.PackageStorage.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class ServerDispatcher implements ServerController {
@@ -40,7 +41,7 @@ public void accept(NetworkExchange exchange) throws Exception {
 	    case GetFamily -> onFamilyInfo(exchange);
 	    case PublishInfo -> onPublishInfo(exchange);
 	    case PublishPayload -> onPublishPayload(exchange);
-	    case UpgradeVersion -> onUpgradeVersion(exchange);
+	    case DeprecateVersion -> onDeprecateVersion(exchange);
 	    default -> throw new IllegalStateException("Illegal command");
       }
 }
@@ -144,7 +145,7 @@ private void onPublishInfo(NetworkExchange exchange) {
 	    buffer.putInt(id.value());
 	    exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
 		buffer.array());
-      } catch (PackageStorage.StorageException e) {
+      } catch (StorageException e) {
 	    String error = e.getMessage();
 	    exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
 		error.getBytes(StandardCharsets.US_ASCII));
@@ -158,19 +159,23 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
       String jsonInfo = exchange.request().stringData();
       PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
       byte[] payload = readBytes(exchange);
-      try {
-	    var version = storage.storePayload(dto, payload);
-	    var buffer = ByteBuffer.allocate(4);//int
-	    buffer.putInt(version.value());
-	    exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
-		buffer.array());
-      } catch (PackageStorage.StorageException e) {
-	    exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		e.getMessage().getBytes(StandardCharsets.US_ASCII));
+      if(dto != null && payload != null){
+	    try {
+		  var version = storage.storePayload(dto, payload);
+		  var buffer = ByteBuffer.allocate(4);//int
+		  buffer.putInt(version.value());
+		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
+		      buffer.array());
+	    } catch (StorageException e) {
+		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
+		      e.getMessage().getBytes(StandardCharsets.US_ASCII));
+	    }
+      } else {
+	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
       }
 }
 
-private void onUpgradeVersion(NetworkExchange exchange) {
+private void onDeprecateVersion(NetworkExchange exchange) {
 
 }
 

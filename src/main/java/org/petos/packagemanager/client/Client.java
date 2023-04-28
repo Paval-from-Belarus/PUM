@@ -16,6 +16,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.petos.packagemanager.client.InputProcessor.*;
@@ -46,7 +48,6 @@ private void initConfig() {
 	    Path configPath = Path.of(CONFIG_PATH);
 	    String content = Files.readString(configPath);
 	    this.config = new Gson().fromJson(content, Configuration.class);
-
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");
       }
@@ -68,8 +69,8 @@ public void start() {
 private void dispatchInputGroup(@NotNull InputGroup group) {
       try {
 	    switch (group.type()) {
-		  case ListAll -> onListAllCommand(group.params());
-		  case Install -> onInstallCommand(group.params());
+		  case List -> onListCommand(group.typeMap());
+		  case Install -> onInstallCommand(group.typeMap());
 	    }
       } catch (Exception e) {
 	    defaultErrorHandler(e);
@@ -83,6 +84,7 @@ private ClientService defaultService() throws IOException {
 }
 
 
+//Multithreading intrinsic)
 private void dispatchService(ClientService service) {
       service.run();
 }
@@ -92,11 +94,11 @@ private void dispatchTask(Runnable task) {
 }
 
 
-private void onInstallCommand(String[] params) {
-      if (params.length < 1)
+private void onInstallCommand(Map<ParameterType, List<InputParameter>> typeMap) {
+      var rawParams = typeMap.get(ParameterType.Raw);
+      if (rawParams.isEmpty() || rawParams.size() > 1)
 	    throw new IllegalArgumentException("Package is not specified");
-      String packageName = params[0];
-
+      String packageName = rawParams.get(0).self();//raw parameter has only value
       dispatchTask(() -> installTask(packageName));
 }
 
@@ -138,7 +140,7 @@ private void installTask(String packageName) {
 	    int version = 0; //latest version
 	    if(id.isPresent()){
 		  String stringInfo = getPackageInfo(id.get(), version).orElse("");
-		  FullPackageInfoDTO info = FullPackageInfoDTO.fromJson(stringInfo);
+		  FullPackageInfoDTO info = new Gson().fromJson(stringInfo, FullPackageInfoDTO.class);
 		  if(info != null && !isInstalledPackage(info.name) && isAcceptableInstallation(info)){
 			acceptInstallation(info, id.get());
 		  } else {
@@ -207,7 +209,7 @@ private String onPackageInfoResponse(NetworkPacket response, Socket socket) {
       return response.stringData();
 }
 
-private void onListAllCommand(String[] params) throws IOException {
+private void onListCommand(Map<ParameterType, List<InputParameter>> typeMap) throws IOException {
       //params are ignored
       ClientService service = defaultService();
       var request = new NetworkPacket(RequestType.GetAll);

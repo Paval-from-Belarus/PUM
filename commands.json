@@ -1,4 +1,6 @@
 [
-  {"type": "ListAll", "pattern": "list", "hasParams": false},
-  {"type": "Install", "pattern": "install (.+)", "hasParams": true}
+  {"type":"List", "aliases": ["list"], "shorts": [], "verbose": ["installed"]},
+  {"type":"Install", "aliases": ["install"], "shorts": [], "verbose": []},
+  {"type": "Remove", "aliases":  ["remove", "rm"], "shorts": [], "verbose": []},
+  {"type": "Repository", "aliases":  ["repository"], "shorts": [], "verbose": ["add", "list", "remove"]}
 ]

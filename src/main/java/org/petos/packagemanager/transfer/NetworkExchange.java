@@ -18,7 +18,7 @@ public enum RequestType {GetAll, GetId, GetInfo, GetFamily, GetPayload, Unknown,
       /**PublishInfo is used to public common info about package
        * */
       PublishInfo, PublishPayload,
-      UpgradeVersion,
+      DeprecateVersion,
       @Deprecated UnPublish} //it's not recommended to use unpubslish request because can break local dependencies
 //let's image that no UnPublish request (almost)
 
