@@ -126,6 +126,7 @@ private void checkInstanceUniqueness(PackageInstanceDTO instance) throws Storage
       boolean isUnique = id.isPresent();
       if (isUnique) {
 	    Session session = dbFactory.openSession();
+	    session.beginTransaction();
 	    Query query = session.createQuery("from PackageInfo where packageId= :package and versionLabel= :label");
 	    query.setParameter("package", instance.packageId());
 	    query.setParameter("label", instance.version());
@@ -164,6 +165,7 @@ public Optional<PackageId> getPackageId(int value) {
 public VersionId mapVersion(PackageId id, int versionOffset) {
       List<PackageInfo> infoList;
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageInfo where packageId= :familyId");
       query.setParameter("familyId", id.value());
       infoList = query.getResultList();
@@ -272,6 +274,7 @@ public VersionId storePayload(@NotNull PackageInstanceDTO dto, @NotNull byte[] p
 //todo: here should be database trigger
 private @NotNull VersionId nextVersionId(PackageId id) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageInfo where packageId= :id order by time desc");
       query.setParameter("id", id);
       query.setMaxResults(1);
@@ -302,6 +305,7 @@ private boolean hasDeepDependencies(PackageId id, VersionId version) {
 
 private void removeOldestVersion(PackageId id) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageInfo where packageId= :id order by time asc");
       query.setParameter("id", id);
       query.setMaxResults(1);
@@ -334,6 +338,7 @@ private void deletePayload(File file) {
 
 private void removeVersion(PackageId id, VersionId version) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       var instanceId = InstanceId.valueOf(id.value(), version.value());
       PackageInfo info = session.get(PackageInfo.class, instanceId);
       session.remove(info);
@@ -348,6 +353,7 @@ private void removePackageAll(PackageId id) {
       var optionalHat = getPackageHat(id);
       if (optionalHat.isPresent()) {
 	    Session session = dbFactory.openSession();
+	    session.beginTransaction();
 	    session.getTransaction().commit();
       } else {
 	    logger.warn("Attempt to remove not existent package");
@@ -375,6 +381,7 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
 		  throw new StorageException("Error during file saving");
 	    }
 	    Session session = dbFactory.openSession();
+	    session.beginTransaction();
 	    session.save(info);
 	    session.getTransaction().commit();
 	    validatePackageHat(id, true);
@@ -393,6 +400,7 @@ private @NotNull PackageId initPackageHat(@NotNull ShortPackageInfoDTO dto) thro
       PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
       hat.setPayload(payload);
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       session.save(hat);
       Query query = session.createQuery("from PackageHat where name= :packageName");
       query.setParameter("packageName", hat.getName());
@@ -417,6 +425,7 @@ private @NotNull PackageId initPackageHat(@NotNull ShortPackageInfoDTO dto) thro
 private @NotNull Payload fetchPayload(String payloadType) throws StorageException {
       Payload payload;
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from Payload where name= :payloadType");
       query.setParameter("payloadType", payloadType);
       payload = (Payload) query.getSingleResult();
@@ -429,6 +438,7 @@ private @NotNull Payload fetchPayload(String payloadType) throws StorageExceptio
 private @NotNull Licence fetchLicense(String type) throws StorageException {
       Licence licence;
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from Licence where name= :licenceType");
       query.setParameter("licenceType", type);
       licence = (Licence) query.getSingleResult();
@@ -440,6 +450,7 @@ private @NotNull Licence fetchLicense(String type) throws StorageException {
 
 private void validatePackageHat(PackageId id, boolean isValid) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageHat where id= :packageId");
       PackageHat hat = (PackageHat) query.getSingleResult();
       hat.setValid(isValid);
@@ -449,6 +460,7 @@ private void validatePackageHat(PackageId id, boolean isValid) {
 
 private Optional<PackageHat> getPackageHat(PackageId id) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
       query.setParameter("packageId", id.value());
       PackageHat result = (PackageHat) query.getSingleResult();
@@ -468,6 +480,7 @@ private @NotNull List<PackageHat> getPackageHatAll() {
 
 private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageInfo where id= :instanceId");
       query.setParameter("instanceId", InstanceId.valueOf(id.value(), version.value()));
       PackageInfo info = (PackageInfo) query.getSingleResult();
@@ -478,6 +491,7 @@ private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
 //todo: limit request to instances with specific count
 private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
       Session session = dbFactory.openSession();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageInfo where id= :familyId");
       query.setParameter("familyId", id.value());
       List<PackageInfo> family = query.getResultList();
@@ -489,9 +503,6 @@ private static String DEFAULT_LICENSE = "GNU";
 
 private void init() {
       dbFactory = new Configuration().configure().buildSessionFactory();
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      session.getTransaction().commit();
 }
 
 //@SuppressWarnings("unchecked")

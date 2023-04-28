@@ -2,7 +2,6 @@ package org.petos.packagemanager.client;
 
 import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,24 +9,35 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 public class InputProcessor {
-public InputProcessor() {
+public static class InputFormatException extends Exception {
+      InputFormatException(String msg) {
+	    super(msg);
+      }
+}
+
+public static class ConfigFormatException extends Exception {
+      ConfigFormatException(String msg) {
+	    super(msg);
+      }
+}
+
+public InputProcessor() throws ConfigFormatException {
       initCommands();
 }
 
-public InputGroup nextGroup() {
+public @NotNull InputGroup nextGroup() {
       Scanner input = new Scanner(System.in);
-      InputGroup inputGroup;
+      Optional<InputGroup> promise;
       do {
 	    String line = input.nextLine();
-	    inputGroup = nextCommand(line);
-	    if (inputGroup == null)
+	    promise = nextCommand(line);
+	    if (promise.isEmpty())
 		  System.out.println("Incorrect params. Try again!");
       }
-      while (inputGroup == null);
-      return inputGroup;
+      while (promise.isEmpty());
+      return promise.get();
 }
 
 public record InputGroup(@NotNull UserInput type, @NotNull Map<ParameterType, List<InputParameter>> typeMap) {
@@ -42,7 +52,9 @@ public record InputGroup(@NotNull UserInput type, @NotNull Map<ParameterType, Li
       public @NotNull List<InputParameter> verboseParams() {
 	    return typeMap.get(ParameterType.Verbose);
       }
-
+      public ParameterMap params(){
+	    return new ParameterMap(typeMap());
+      }
       @Override
       public String toString() {
 	    StringBuilder output = new StringBuilder("(type=" + type + ", map=\n");
@@ -114,7 +126,7 @@ public record InputParameter(@NotNull ParameterType type, @NotNull String self, 
       }
 }
 
-public enum UserInput {List, Install, Exit, Unknown}
+public enum UserInput {List, Install, Repository, Remove, Exit, Unknown}
 
 public static class InputPattern {
       public UserInput type;
@@ -154,7 +166,7 @@ private boolean isValidValue(char letter) {
       return letter != ' ' && letter != '-';
 }
 
-private @NotNull List<InputParameter> collectParams(String source, InputPattern pattern) {
+private @NotNull List<InputParameter> collectParams(String source) {
       List<InputParameter> params = new ArrayList<>();
       //search of short parameters
       final int RAW_PARAMETER = 0;
@@ -200,30 +212,72 @@ private @NotNull List<InputParameter> collectParams(String source, InputPattern 
       return params;
 }
 
-private @Nullable InputGroup nextCommand(@NotNull String line) {
+private boolean belongsGroup(List<InputParameter> params, String[] patterns){
+      boolean isValid = true; //no params means valid
+      for (InputParameter param : params){
+	    isValid = false;
+	    for (String label : patterns){
+		  if (label.equals(param.self())){
+			isValid = true;
+			break;
+		  }
+	    }
+	    if (!isValid){
+		  break;
+	    }
+      }
+      return isValid;
+}
+private Optional<InputGroup> verifyGroup(@NotNull InputGroup group) {
+      Optional<InputGroup> result = Optional.empty();
+      InputPattern pattern = patternMap.get(group.type());
+      assert pattern != null;
+      var labels = List.of(pattern.shortParams(), pattern.verboseParams());
+      var params = List.of(group.shortParams(), group.verboseParams());
+      final int VALIDATION_LENGTH = 2;
+      int index = 0;
+      boolean isValid = true;
+      while (isValid && index < VALIDATION_LENGTH){
+	    isValid = belongsGroup(params.get(index), labels.get(index));
+	    index += 1;
+      }
+      if (isValid)
+	    result = Optional.of(group);
+      return result;
+}
+
+private Optional<InputGroup> nextCommand(@NotNull String line) {
+      Optional<InputGroup> promise = Optional.empty();
       InputGroup result = null;
       String[] groups = line.split("( +)", 2); //split first occurrence of params to different side
-      for (InputPattern command : this.rules) {
+      for (InputPattern command : patternMap.values()) {
 	    Matcher matcher = command.pattern().matcher(groups[0]);
 	    if (matcher.find()) {
 		  List<InputParameter> params = List.of();
 		  if (groups.length >= 2)
-			params = collectParams(groups[1], command);
+			params = collectParams(groups[1]);
 		  result = InputGroup.valueOf(command.type(), params);
 		  break;
 	    }
       }
-      return result;
+      if (result != null)
+	    promise = verifyGroup(result);
+      return promise;
 }
 
-private void initCommands() {
+private void initCommands() throws ConfigFormatException {
       try {
 	    String config = Files.readString(Path.of("commands.json"));
-	    this.rules = new Gson().fromJson(config, InputPattern[].class);
-      } catch (IOException e) {
-	    throw new RuntimeException(e);
+	    InputPattern[] patterns = new Gson().fromJson(config, InputPattern[].class);
+	    patternMap = new HashMap<>();
+	    for (InputPattern pattern : patterns) {
+		  assert pattern.type != null;
+		  patternMap.put(pattern.type, pattern);
+	    }
+      } catch (IOException | AssertionError e) {
+	    throw new ConfigFormatException("The config file is not exists or set not properly");
       }
 }
 
-private InputPattern[] rules;
+private Map<UserInput, InputPattern> patternMap;
 }

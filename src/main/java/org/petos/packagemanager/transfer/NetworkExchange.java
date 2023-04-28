@@ -13,7 +13,7 @@ public class NetworkExchange {
 public enum ResponseType {Approve, Decline}
 
 public enum RequestType {GetAll, GetId, GetInfo, GetFamily, GetPayload, Unknown,
-      GetDependency, //get payload by dependency id
+      GetVersion, //get payload by dependency id
       /*Those requests should be following sequentially*/
       /**PublishInfo is used to public common info about package
        * */
