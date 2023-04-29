@@ -15,6 +15,9 @@ public record QuestionResponse(Object value) {
 	    return (classType.cast(value));
       }
 }
+public void sendError(String title, String text){
+      sendMessage(title, text);
+}
 
 public void sendMessage(String title, String text){
       String msg = String.format("%-40s\n%s\n", title.toUpperCase(), text);

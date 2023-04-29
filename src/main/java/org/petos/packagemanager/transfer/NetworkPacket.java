@@ -79,10 +79,15 @@ public void setPayload(@NotNull byte[] data) {
       this.data = data;
       this.payloadSize = data.length;
 }
-public void setPayload(Integer... values){
-      ByteBuffer buffer = ByteBuffer.allocate(values.length * 4);
-      for(Integer value : values)
-	    buffer.putInt(value);
+public void setPayload(byte[]... values){
+      int capacity = 0;
+      for (byte[] bytes : values){
+	    capacity += bytes.length;
+      }
+      ByteBuffer buffer = ByteBuffer.allocate(capacity);
+	    for (byte[] bytes : values){
+		  buffer.put(bytes);
+	    }
       setPayload(buffer.array());
 }
 public boolean hasData() {

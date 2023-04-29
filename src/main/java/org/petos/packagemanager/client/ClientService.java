@@ -7,6 +7,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -15,6 +17,11 @@ import static org.petos.packagemanager.transfer.NetworkPacket.BytesPerCommand;
 import static org.petos.packagemanager.transfer.NetworkPacket.valueOf;
 
 public class ClientService implements Runnable {
+public static class ServerAccessException extends IOException {
+	public ServerAccessException(String msg){
+	      super(msg);
+	}
+}
 private static final int DEFAULT_SERVER_TIMEOUT = 1000_000;
 private final Socket socket;
 private NetworkPacket request;
@@ -23,9 +30,15 @@ private Consumer<Exception> errorHandler = (e) -> {
 private ResponseHandler responseHandler = (n, s) -> {
 };
 
-ClientService(String uri, int port) throws IOException {
-      socket = new Socket(uri, port);
-      socket.setSoTimeout(DEFAULT_SERVER_TIMEOUT);
+ClientService(String uri, int port) throws ServerAccessException {
+      try {
+	    socket = new Socket(uri, port);
+	    socket.setSoTimeout(DEFAULT_SERVER_TIMEOUT);
+      } catch (UnknownHostException e) {
+	    throw new ServerAccessException("Servier is too busy");
+      } catch (IOException  e) {
+	    throw new ServerAccessException("Unknown system error");
+      }
 }
 
 public ClientService setExceptionHandler(Consumer<Exception> handler) {

@@ -7,6 +7,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.database.*;
+import org.petos.packagemanager.packages.DependencyInfoDTO;
 import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.packages.PackageInstanceDTO;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
@@ -82,14 +83,6 @@ private NameMapper nameMapper; //upper functionality
 public PackageStorage() {
       init();
       initNameMapper();
-      var s = dbFactory.openSession();
-      s.beginTransaction();
-      Query q = s.createQuery("from PackageInfo where packageId = 0");
-      List<PackageInfo> results = q.getResultList();
-      for (var r : results){
-	    System.out.println(r.getDependencies());
-      }
-      s.getTransaction().commit();
 }
 
 private SessionFactory dbFactory;
@@ -169,6 +162,7 @@ public Optional<PackageId> getPackageId(int value) {
  * if version == -1: get oldest version<br>
  * elsif version in [1,9]: get specific latter version<br>
  * else: get minimal available version<br>
+ *
  * @param versionOffset is client view of version<br> See getDataPackage to determine how it works
  * @param id            is unique packageId
  * @return unique versionId
@@ -190,26 +184,27 @@ public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
 	    versionOffset = maxOffset;
       }
       Optional<VersionId> result = Optional.empty();
-      if (infoList.size() != 0){ //last assertion should be erased
+      if (infoList.size() != 0) { //last assertion should be erased
 	    int version = infoList.get(versionOffset).getVersionId();
 	    VersionId versionId = VersionId.valueOf(version);
 	    result = Optional.of(versionId);
       }
       return result;
 }
-public Optional<VersionId> mapVersion(PackageId id, String label){
-	Session session = dbFactory.openSession();
-	session.beginTransaction();
-	Query query = session.createQuery("from PackageInfo where versionLabel= :label");
-	query.setParameter("label", label);
-	PackageInfo instance = (PackageInfo) query.getSingleResult();
-	session.getTransaction().commit();
-	Optional<VersionId> result = Optional.empty();
-	if (instance != null){
-	      VersionId version = VersionId.valueOf(instance.getVersionId());
-	      result = Optional.of(version);
-	}
-	return result;
+
+public Optional<VersionId> mapVersion(PackageId id, String label) {
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageInfo where versionLabel= :label");
+      query.setParameter("label", label);
+      PackageInfo instance = (PackageInfo) query.getSingleResult();
+      session.getTransaction().commit();
+      Optional<VersionId> result = Optional.empty();
+      if (instance != null) {
+	    VersionId version = VersionId.valueOf(instance.getVersionId());
+	    result = Optional.of(version);
+      }
+      return result;
 }
 //assume: aliases are unique
 
@@ -244,12 +239,12 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 		  dto.licenseType = info.getLicence().getName();
 		  dto.payloadType = hat.getPayload().getName();
 		  dto.payloadSize = (int) Files.size(Path.of(info.getPayloadPath()));
-		  //todo: add dependencies to dto
+		  dto.dependencies = collectDependencies(info).toArray(new DependencyInfoDTO[0]);
 		  //todo: exhause max file size to Long
-	    } catch (IOException e) {
-		  String log = String.format("Inaccessible full info by PackageId and VersionId: %d ; %d",
-		      id.value(), version.value());
-		  logger.warn(log);
+	    } catch (StorageException | IOException e) {
+		  logger.error("Broken dependency" +
+				   "Id= " + info.getPackageId() +
+				   "Version=" + info.getVersionLabel());
 	    }
       }
       return Optional.ofNullable(dto);
@@ -317,7 +312,7 @@ private @NotNull VersionId nextVersionId(PackageId id) {
 }
 
 private @NotNull Path toPayloadPath(PackageInstanceDTO dto) throws IOException {
-	return Path.of("dummy.txt");
+      return Path.of("dummy.txt");
 }
 
 /**
@@ -384,6 +379,23 @@ private void removePackageAll(PackageId id) {
       }
 }
 
+private List<DependencyInfoDTO> collectDependencies(@NotNull PackageInfo info) throws StorageException {
+      List<DependencyInfoDTO> list = new ArrayList<>();
+      for (var dependency : info.getDependencies()) {
+	    Optional<PackageId> packageId = getPackageId(dependency.getPackageId());
+	    Optional<VersionId> versionId =
+		packageId.flatMap(id -> mapVersion(id, dependency.getVersionId()));
+	    var depInfo =
+		versionId.flatMap(version -> getFullInfo(packageId.get(), version));
+	    if (depInfo.isPresent()) {
+		  list.add(new DependencyInfoDTO(dependency.getPackageId(), depInfo.get().version));
+	    } else {
+		  throw new StorageException("Broken dependency");
+	    }
+      }
+      return list;
+}
+
 /**
  * All checks are passed
  */
@@ -401,7 +413,7 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
 		  Path path = toPayloadPath(dto);
 		  Files.write(path, payload);
 		  info.setPayloadPath(path.toString());
-	    } catch (IOException e){
+	    } catch (IOException e) {
 		  throw new StorageException("Error during file saving");
 	    }
 	    Session session = dbFactory.openSession();
@@ -412,7 +424,7 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
       } else {
 	    throw new StorageException("Invalid package id");
       }
-	return version;
+      return version;
 }
 
 /**
@@ -522,6 +534,7 @@ private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
       session.getTransaction().commit();
       return family;
 }
+
 private static final String DEFAULT_LICENSE = "GNU";
 
 private void init() {

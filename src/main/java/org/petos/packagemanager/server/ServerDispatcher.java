@@ -132,7 +132,7 @@ private void onVersionInfo(NetworkExchange exchange) {
 	    var request = optional.get();
 	    var fullInfo = storage.getFullInfo(request.id(), request.version());
 	    if (fullInfo.isPresent()) {
-		  VersionInfo versionInfo = new VersionInfo(
+		  VersionInfoDTO versionInfo = new VersionInfoDTO(
 		      request.version().value(),
 		      fullInfo.get().version
 		  );
