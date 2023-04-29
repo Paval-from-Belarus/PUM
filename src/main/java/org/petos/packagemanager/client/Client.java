@@ -121,15 +121,15 @@ private List<FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) {
       if (isInstalledPackage(info.name) || info.dependencies == null)
 	    return List.of();
       var dependencies = Arrays.stream(info.dependencies)
-	  .filter(d -> !isInstalledPackage(d))
+	  .filter(d -> !isInstalledPackage(d.label()))
 	  .toList();
       try {
-	    for (String dependency : dependencies){
-		  var optional = getPackageId(dependency);
+	    for (var dependency : dependencies){
+		  var optional = getPackageId(dependency.label());
 		  if (optional.isPresent()){
 			var id = optional.get();
 		  } else {
-			//throw new PackageIntegrityException
+//			throw new PackageIntegrityException
 		  }
 	    }
       } catch (IOException e){
@@ -214,7 +214,7 @@ private void installTask(String packageName) {
 }
 
 private Optional<byte[]> getPackage(Integer id, Integer version) throws IOException {
-      var request = new NetworkPacket(RequestType.GetPayload);
+      var request = new NetworkPacket(RequestType.GetPayload, RequestCode.INT_FORMAT);
       Wrapper<byte[]> payload = new Wrapper<>();
       request.setPayload(id, version);
       ClientService service = defaultService();
@@ -227,12 +227,12 @@ private Optional<byte[]> getPackage(Integer id, Integer version) throws IOExcept
 private byte[] onPackageResponse(NetworkPacket response, Socket socket) {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No valid package exists");
-      return response.rawPacket();
+      return response.data();
 }
 
 private Optional<Integer> getPackageId(String packageName) throws IOException {
       Wrapper<Integer> id = new Wrapper<>();
-      var request = new NetworkPacket(RequestType.GetId);
+      var request = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
       request.setPayload(packageName.getBytes(StandardCharsets.US_ASCII));
       ClientService service = defaultService();
       service.setRequest(request)
@@ -257,7 +257,7 @@ private int onPackageIdResponse(NetworkPacket response, Socket socket) {
 private Optional<String> getPackageInfo(Integer id, Integer version) throws IOException {
       ClientService service = defaultService();
       Wrapper<String> info = new Wrapper<>();
-      var request = new NetworkPacket(RequestType.GetInfo);
+      var request = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
       request.setPayload(id, version); //second param is version offset
       service.setRequest(request)
 	  .setResponseHandler((r, s) -> info.set(onPackageInfoResponse(r, s)));
@@ -274,7 +274,7 @@ private String onPackageInfoResponse(NetworkPacket response, Socket socket) {
 private void onListCommand(ParameterMap params) throws IOException {
       //params are ignored
       ClientService service = defaultService();
-      var request = new NetworkPacket(RequestType.GetAll);
+      var request = new NetworkPacket(RequestType.GetAll, RequestCode.NO_CODE);
       service.setRequest(request)
 	  .setResponseHandler(this::onListAllResponse);
       dispatchService(service);

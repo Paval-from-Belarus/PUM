@@ -15,6 +15,6 @@ public String[] aliases;
 public String payloadType;
 public String version;
 public String licenseType;
-public String[] dependencies;
+public DependencyInfo[] dependencies;
 public Integer payloadSize;
 }

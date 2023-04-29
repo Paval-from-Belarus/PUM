@@ -2,7 +2,6 @@ package org.petos.packagemanager.transfer;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.util.Optional;
@@ -20,7 +19,7 @@ import org.petos.packagemanager.transfer.NetworkExchange.RequestType;
  * It's specify the data following after<br>
  */
 public class NetworkPacket{
-//the size of command header that used to transfer payload
+//the size of command header that used to transfer
 //payload is the not a part of `control packet`
 public static int controlSize(){
       return BytesPerCommand;
@@ -29,8 +28,9 @@ public final static int CONTROL_SIGN = 0xAACC7798; //the last bit is used to det
 private final static int CONTROL_REQUEST = CONTROL_SIGN;
 private final static int CONTROL_RESPONSE = CONTROL_SIGN | 0x01;
 private final static int RESPONSE_CONTROL_MASK = 0x01;
-private final static int RESPONSE_CODE_MASK = 0xFE;
-private final static int REQUEST_CONTROL_MASK = 0xFFFF;
+private final static int REQUEST_CONTROL_MASK = 0x1F;
+private final static int RESPONSE_CODE_MASK = 0xFFFFFFFE;
+private final static int REQUEST_CODE_MASK = 0xFFFFFFE0;
 public static int BytesPerCommand = 12;
 public enum PacketDirection {Response, Request}
 private byte[] data;
@@ -38,7 +38,7 @@ private byte[] data;
 private ResponseType responseType;
 private RequestType requestType;
 private final PacketDirection direction;
-private int responseCode;
+private final int packetCode;
 private int payloadSize; //in bytes?
 
 {
@@ -47,28 +47,28 @@ private int payloadSize; //in bytes?
 }
 
 /**
- * @param responseCode ― should be integer in specific range
+ * @param requestCode ― should be integer in specific range
  */
-public NetworkPacket(ResponseType type, int responseCode) {
-      this.responseType = type;
-      this.responseCode = responseCode;
-      this.direction = PacketDirection.Response;
-}
 
-public NetworkPacket(RequestType type) {
+public NetworkPacket(RequestType type, int requestCode) {
       this.requestType = type;
       this.direction = PacketDirection.Request;
+      this.packetCode = requestCode;
 }
-
+public NetworkPacket(RequestType type, int requestCode, byte[] data) {
+      this(type, requestCode);
+      setPayload(data);
+}
 public NetworkPacket(ResponseType type, int responseCode, byte[] data) {
       this(type, responseCode);
       setPayload(data);
 }
-
-public NetworkPacket(RequestType type, byte[] data) {
-      this(type);
-      setPayload(data);
+public NetworkPacket(ResponseType type, int responseCode) {
+      this.responseType = type;
+      this.packetCode = responseCode;
+      this.direction = PacketDirection.Response;
 }
+
 public int payloadSize(){
       return payloadSize;
 }
@@ -88,12 +88,18 @@ public void setPayload(Integer... values){
 public boolean hasData() {
       return this.data.length > 0;
 }
-
+/**
+ * It's preferable to use this method, because <code>code()</code> method return <i>raw packet code</i>, which pottentially
+ * can contain other code values (differ from code)
+ * */
+public boolean containsCode(int code){
+      return (packetCode | code) == packetCode;
+}
 public final byte[] data() {
       return this.data;
 }
 public int code(){
-      return responseCode;
+      return packetCode;
 }
 
 public final PacketDirection direction() {
@@ -121,6 +127,19 @@ public @NotNull byte[] rawPacket() {
 public @NotNull String stringData(){
  	return bytesToString(data);
 }
+/**
+ * Offset in byte array to get string value
+ * */
+public @NotNull String stringData(int offset){
+      final int BUFF_LENGTH = Math.max(0, data.length - offset);
+      String result = "";
+      if (BUFF_LENGTH != 0 && data.length != 0){
+	    byte[] payload = new byte[BUFF_LENGTH];
+	    System.arraycopy(data, offset, payload, 0, payload.length);
+	    result = bytesToString(payload);
+      }
+      return result;
+}
 
 
 public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
@@ -132,7 +151,8 @@ public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
       int typeSign = wrapper.getInt(4);
       if (controlSign == CONTROL_REQUEST) {
 	    int enumId = typeSign & REQUEST_CONTROL_MASK;
-	    packet = new NetworkPacket(RequestType.values()[enumId]);
+	    int code = (typeSign & REQUEST_CODE_MASK) >>> 5;
+	    packet = new NetworkPacket(RequestType.values()[enumId], code);
       } else {
 	    int enumId = typeSign & RESPONSE_CONTROL_MASK;
 	    int code = (typeSign & RESPONSE_CODE_MASK) >>> 1;
@@ -146,7 +166,7 @@ public static Optional<NetworkPacket> valueOf(byte[] rawBytes) {
 private static @NotNull byte[] getRawPacket(NetworkPacket packet, ResponseType type) {
       byte[] payload = packet.data();
       int payloadSize = packet.payloadSize();
-      int responseSign = type.ordinal() | packet.code() << 1;
+      int responseSign = type.ordinal() | (packet.code() << 1); //only two commands
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_RESPONSE);
       buffer.putInt(responseSign);
@@ -158,7 +178,7 @@ private static @NotNull byte[] getRawPacket(NetworkPacket packet, ResponseType t
 private static @NotNull byte[] getRawPacket(NetworkPacket packet, RequestType type) {
       int payloadSize = packet.payloadSize();
       byte[] payload = packet.data();
-      int requestSign = type.ordinal();
+      int requestSign = type.ordinal() | (packet.code() << 5);//only 32 commands
       ByteBuffer buffer = ByteBuffer.allocate(BytesPerCommand + payload.length);
       buffer.putInt(CONTROL_REQUEST);
       buffer.putInt(requestSign);
@@ -174,8 +194,7 @@ public static @NotNull String bytesToString(@NotNull byte[] bytes) {
       return String.valueOf(buffer.array());
 }
 /**
- * @return -1 if impossible to find packet
- * @return index of control bytes
+ * @return -1 if impossible to find packet or index of control bytes
  */
 private static int getPayloadOffset(final byte[] rawBytes) {
       if (rawBytes.length < BytesPerCommand)

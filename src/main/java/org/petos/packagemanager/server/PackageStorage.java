@@ -154,32 +154,54 @@ public Optional<PackageId> getPackageId(int value) {
 }
 
 /**
- * Convert versionOffset to unique versionId
+ * Convert versionOffset to unique versionId.
  * Generally, each certain package is determined by packageId and versionId. In case, if current version offset is not exists
- * return last available package
- *
+ * return last available package.<br>
+ * if version == 0: get latest version<br>
+ * if version == -1: get oldest version<br>
+ * elsif version in [1,9]: get specific latter version<br>
+ * else: get minimal available version<br>
  * @param versionOffset is client view of version<br> See getDataPackage to determine how it works
  * @param id            is unique packageId
  * @return unique versionId
  */
-public VersionId mapVersion(PackageId id, int versionOffset) {
-      List<PackageInfo> infoList;
+public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
+      final int MAX_PACKAGES_CNT = 10;//only ten latest packages are available
       Session session = dbFactory.openSession();
       session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where packageId= :familyId");
+      Query query = session.createQuery("from PackageInfo where packageId= :familyId order by time desc");
       query.setParameter("familyId", id.value());
-      infoList = query.getResultList();
+      query.setMaxResults(MAX_PACKAGES_CNT);
+      List<PackageInfo> infoList = query.getResultList();
       session.getTransaction().commit();
       int maxOffset = infoList.size() - 1;
-      assert maxOffset >= 0;
       if (versionOffset != -1) {
 	    versionOffset = Math.max(versionOffset, 0); //not negative
 	    versionOffset = Math.min(versionOffset, maxOffset); //any correct offset
       } else {
 	    versionOffset = maxOffset;
       }
-      int version = infoList.get(versionOffset).getVersionId();
-      return VersionId.valueOf(version);
+      Optional<VersionId> result = Optional.empty();
+      if (infoList.size() != 0){ //last assertion should be erased
+	    int version = infoList.get(versionOffset).getVersionId();
+	    VersionId versionId = VersionId.valueOf(version);
+	    result = Optional.of(versionId);
+      }
+      return result;
+}
+public Optional<VersionId> mapVersion(PackageId id, String label){
+	Session session = dbFactory.openSession();
+	session.beginTransaction();
+	Query query = session.createQuery("from PackageInfo where versionLabel= :label");
+	query.setParameter("label", label);
+	PackageInfo instance = (PackageInfo) query.getSingleResult();
+	session.getTransaction().commit();
+	Optional<VersionId> result = Optional.empty();
+	if (instance != null){
+	      VersionId version = VersionId.valueOf(instance.getVersionId());
+	      result = Optional.of(version);
+	}
+	return result;
 }
 //assume: aliases are unique
 
@@ -199,12 +221,6 @@ public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
       return Optional.ofNullable(result);
 }
 
-/**
- * if version == 0: get latest version<br>
- * if version == -1: get oldest version
- * elsif version in [1,9]: get specific latter version<br>
- * else: get minimal available version<br>
- */
 public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
       var optionalInfo = getInstanceInfo(id, version);
       var optionalHat = getPackageHat(id);

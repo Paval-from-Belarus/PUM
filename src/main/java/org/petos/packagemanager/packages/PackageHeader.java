@@ -9,9 +9,9 @@ import java.util.List;
 
 public class PackageHeader {
 
-public final static int SIGN_HEAD = 0xAA33;
-public final static int SIGN_BODY = 0xFFFF;
-public final static int SIGN_TAIL = 0xCC55;
+public final static char SIGN_HEAD = 0xAA33;
+public final static char SIGN_BODY = 0xFFFF;
+public final static char SIGN_TAIL = 0xCC55;
 public final static int MinBytesPerHeader = 26;
 
 {

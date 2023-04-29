@@ -71,17 +71,37 @@ private void onPackageId(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
-
+/**
+ * There method resolves three kinds of request:<br><ol>
+ * <li>PackageId handle and Version label</li>
+ * <li>PackageId handle and Version offset (user available format to choose version)</li>
+ * </ol>
+ * VersionId handle is forbidden (during future updates)
+ * How this should be implemented? By request format.
+ * If <code>request.code()</code> equals <code>INT_FORMAT</code>, that is VersionOffset. Otherwise
+ * (if code is <code>STR_FORMAT</code>) the VersionLabel is assumed
+ * */
 private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
       ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
       Optional<PackageRequest> result = Optional.empty();
       int id = buffer.getInt();
-      int version = buffer.getInt();
       var optional = storage.getPackageId(id);
       if (optional.isPresent()) {
 	    var packageId = optional.get();
-	    var versionId = storage.mapVersion(packageId, version);
-	    result = Optional.of(new PackageRequest(packageId, versionId));
+	    Optional<VersionId> versionId;
+	    switch (exchange.request().code()){
+		  case RequestCode.INT_FORMAT -> {
+			int offset = buffer.getInt();
+			versionId = storage.mapVersion(packageId, offset);
+		  }
+		  case RequestCode.STR_FORMAT -> {
+			String label = exchange.request().stringData(4);//int offsest
+			versionId = storage.mapVersion(packageId, label);
+		  }
+		  default -> versionId = Optional.empty();
+	    }
+	    //if version id is correct, return not empty optional
+	    result = versionId.map(v -> new PackageRequest(packageId, v));
       }
       return result;
 }

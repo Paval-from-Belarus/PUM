@@ -8,7 +8,7 @@ public final class PackageInstanceDTO {
 public static final String DEFAULT_LICENCE = "GNU";
 private final Integer packageId;
 private final String version;
-private final String[] dependencies;
+private final DependencyInfo[] dependencies;
 private String license;
 
 /**
@@ -17,7 +17,7 @@ private String license;
  * @param payload      is payload self
  * @param version      is unique String label for package Family
  */
-public PackageInstanceDTO(Integer id, String version, String[] dependencies) {
+public PackageInstanceDTO(Integer id, String version, DependencyInfo[] dependencies) {
       this.packageId = id;
       this.version = version;
       this.dependencies = dependencies;
@@ -27,7 +27,7 @@ public String version() {
       return version;
 }
 
-public String[] dependencies() {
+public DependencyInfo[] dependencies() {
       return dependencies;
 }
 

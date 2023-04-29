@@ -5,6 +5,7 @@ import org.hibernate.annotations.Formula;
 import javax.persistence.*;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.Set;
 
 @Entity
 @IdClass(InstanceId.class)
@@ -21,6 +22,13 @@ private Timestamp time;
 @ManyToOne
 @JoinColumn(name = "licence")
 private Licence licence; //replace LicenceId directly to Licence value
+
+@ElementCollection
+@CollectionTable(name = "DEPENDENCY", joinColumns = {
+    @JoinColumn(name="PACKAGE_ID", referencedColumnName = "packageId"),
+    @JoinColumn(name="VERSION_ID", referencedColumnName = "versionId")
+})
+private Set<InstanceId> dependencies;
 public Integer getPackageId() {
       return packageId;
 }
