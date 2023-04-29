@@ -4,14 +4,20 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import java.io.Serializable;
 
+@SuppressWarnings("JpaDataSourceORMInspection")//foreign key for collection table
 @Embeddable
-public class InstanceId implements Serializable {
-@Column
+public class DependencyId implements Serializable {
+@Column(name="DEPENDENCY_PACKAGE")
 private Integer packageId;
-@Column
+@Column(name="DEPENDENCY_VERSION")
 private Integer versionId;
+
 public Integer getPackageId() {
       return packageId;
+}
+
+public void setPackageId(Integer packageId) {
+      this.packageId = packageId;
 }
 
 public Integer getVersionId() {
@@ -20,15 +26,5 @@ public Integer getVersionId() {
 
 public void setVersionId(Integer versionId) {
       this.versionId = versionId;
-}
-
-public void setPackageId(Integer packageId) {
-      this.packageId = packageId;
-}
-public static InstanceId valueOf(Integer packageId, Integer versionId){
-      var id = new InstanceId();
-      id.setPackageId(packageId);
-      id.setVersionId(versionId);
-      return id;
 }
 }

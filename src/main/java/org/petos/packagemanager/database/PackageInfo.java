@@ -1,9 +1,8 @@
 package org.petos.packagemanager.database;
 
-import org.hibernate.annotations.Formula;
+import org.hibernate.annotations.Columns;
 
 import javax.persistence.*;
-import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Set;
 
@@ -24,11 +23,15 @@ private Timestamp time;
 private Licence licence; //replace LicenceId directly to Licence value
 
 @ElementCollection
-@CollectionTable(name = "DEPENDENCY", joinColumns = {
-    @JoinColumn(name="PACKAGE_ID", referencedColumnName = "packageId"),
-    @JoinColumn(name="VERSION_ID", referencedColumnName = "versionId")
+@CollectionTable(name = "DEPENDENCIES", joinColumns = {
+    @JoinColumn(name = "PACKAGE_ID", referencedColumnName= "packageId"),
+    @JoinColumn(name = "VERSION_ID", referencedColumnName= "versionId")
 })
-private Set<InstanceId> dependencies;
+@Columns(columns = {
+    @Column(name="DEPENDENCY_PACKAGE"),
+    @Column(name="DEPENDENCY_VERSION")
+})
+private Set<DependencyId> dependencies;
 public Integer getPackageId() {
       return packageId;
 }
@@ -64,9 +67,14 @@ public void setPayloadPath(String payloadPath) {
 public Licence getLicence() {
       return licence;
 }
-
 public void setLicence(Licence licence) {
       this.licence = licence;
+}
+public Set<DependencyId> getDependencies(){
+      return dependencies;
+}
+public void setDependencies(Set<DependencyId> dependencies){
+      this.dependencies= dependencies;
 }
 public static PackageInfo valueOf(Integer packageId, Integer versionId){
       PackageInfo info = new PackageInfo();

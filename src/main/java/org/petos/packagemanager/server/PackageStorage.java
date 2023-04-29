@@ -82,6 +82,14 @@ private NameMapper nameMapper; //upper functionality
 public PackageStorage() {
       init();
       initNameMapper();
+      var s = dbFactory.openSession();
+      s.beginTransaction();
+      Query q = s.createQuery("from PackageInfo where packageId = 0");
+      List<PackageInfo> results = q.getResultList();
+      for (var r : results){
+	    System.out.println(r.getDependencies());
+      }
+      s.getTransaction().commit();
 }
 
 private SessionFactory dbFactory;
@@ -514,8 +522,7 @@ private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
       session.getTransaction().commit();
       return family;
 }
-
-private static String DEFAULT_LICENSE = "GNU";
+private static final String DEFAULT_LICENSE = "GNU";
 
 private void init() {
       dbFactory = new Configuration().configure().buildSessionFactory();

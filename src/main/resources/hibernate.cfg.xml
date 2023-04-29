@@ -2,7 +2,6 @@
 <!DOCTYPE hibernate-configuration PUBLIC
   "-//Hibernate/Hibernate Configuration DTD//EN"
   "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
-
 <hibernate-configuration>
 	<session-factory>
 
@@ -30,7 +29,6 @@
 
 		<!-- <property name="hibernate.search.default.directory_provider">filesystem</property> 
 			<property name="hibernate.search.default.indexBase">target/indexes</property> -->
-		<mapping class="org.petos.packagemanager.database.Dependency" />
 		<mapping class="org.petos.packagemanager.database.Licence" />
 		<mapping class="org.petos.packagemanager.database.PackageHat" />
 		<mapping class="org.petos.packagemanager.database.PackageInfo" />

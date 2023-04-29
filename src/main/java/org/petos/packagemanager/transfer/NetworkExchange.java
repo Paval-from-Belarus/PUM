@@ -26,16 +26,22 @@ public enum ResponseType {Approve, Decline}
  * Request support two codes: <code>INT_FORMAT</code> and <code>STR_FORMAT</code>. Other format code should be ignored<br>
  * The parameters of GetInfo is PackageId and VersionId. FormatCode determines the format of VersionId (this is string label or int offset in package family)<br>
  * <h3>GetPayload</h3>
- * Supports two formats (as GetInfo). Generally, convention is the same as for GetInfo.
+ * Supports two formats (as GetInfo). Generally, convention is the same as for GetInfo. Used to get instance payload
+ * <h3>GetVersion</h3>
+ * Supports two formats (as GetInfo, GetPayload). The general purpose of method is to convert (PackageId + VersionOffset) or
+ * (PackageId + VersionLabel) ― generalized format instance invocation ― to the unique version (pure VersionId handle). The Server ensure
+ * that each package instance has unique versionId (version handle). But to eliminate possible issues (very old client request the frequently updated package)
+ * the server response has two values: versionID (handle) and versionLabel (String). By this way, is possible to upgrade each package
+ * Convert
  */
-public enum RequestType {GetAll, GetId, GetInfo, GetFamily, GetPayload, Unknown,
-      /*Those requests should be following sequentially*/
+public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, Unknown,
       /**
+       * Those requests should be following sequentially
        * PublishInfo is used to public common info about package
        * */
       PublishInfo, PublishPayload,
       DeprecateVersion,
-      @Deprecated UnPublish} //it's not recommended to use unpubslish request because can break local dependencies
+      @Deprecated UnPublish, @Deprecated GetFamily} //it's not recommended to use unpubslish request because can break local dependencies
 //let's image that no UnPublish request (almost)
 public static class RequestCode {
 public static final int NO_CODE = 0;
@@ -53,7 +59,8 @@ public static final int BIN_FORMAT = 64;
 public static final int ALL_PACKAGES_RESPONSE = STR_FORMAT | SHORT_INFO;
 public static final int PACKAGE_ID_RESPONSE = INT_FORMAT;
 public static final int PACKAGE_INFO_FORMAT = STR_FORMAT;
-public static final int PACKAGE_PAYLOAD_FORMAT = STR_FORMAT | BIN_FORMAT;
+public static final int PAYLOAD_FORMAT = STR_FORMAT | BIN_FORMAT;
+public static final int VERSION_INFO_FORMAT = STR_FORMAT;
 public static final int PUBLISH_INFO_RESPONSE = INT_FORMAT;
 public static final int PUBLISH_PAYLOAD_RESPONSE = INT_FORMAT;
 //Success codes

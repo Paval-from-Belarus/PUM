@@ -16,7 +16,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.temporal.IsoFields;
 import java.util.*;
 
 import static org.petos.packagemanager.client.InputProcessor.*;
@@ -121,18 +120,18 @@ private List<FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) {
       if (isInstalledPackage(info.name) || info.dependencies == null)
 	    return List.of();
       var dependencies = Arrays.stream(info.dependencies)
-	  .filter(d -> !isInstalledPackage(d.label()))
-	  .toList();
+			     .filter(d -> !isInstalledPackage(d.label()))
+			     .toList();
       try {
-	    for (var dependency : dependencies){
+	    for (var dependency : dependencies) {
 		  var optional = getPackageId(dependency.label());
-		  if (optional.isPresent()){
+		  if (optional.isPresent()) {
 			var id = optional.get();
 		  } else {
 //			throw new PackageIntegrityException
 		  }
 	    }
-      } catch (IOException e){
+      } catch (IOException e) {
 
       }
       return null;
@@ -175,18 +174,18 @@ private void acceptInstallation(FullPackageInfoDTO info, Integer id) throws IOEx
       output.sendMessage("", "Installation in progress...");
       var optional = getPackage(id, 0);//latest version
       output.sendMessage("", "Verification in progress...");
-      PackageAssembly assembly;
-      //todo: if it's impossible to assembly package ― try request several times to server (many times)
-      if (optional.isPresent() && (assembly = PackageAssembly.deserialize(optional.get())) != null) {
-	    if (assembly.getId().equals(id)) {
+      try {
+	    PackageAssembly assembly;
+	    if (optional.isPresent()) {
+		  assembly = PackageAssembly.deserialize(optional.get());
 		  output.sendMessage("", "Installation locally...");
 		  storeLocal(info, assembly);
 	    } else {
-		  output.sendMessage("", "Verification failed");
+		  output.sendMessage("", "Failed to load package");
 		  logger.warn("Package is not installed");
 	    }
-      } else {
-	    logger.warn("Package is not installed");
+      } catch (PackageAssembly.VerificationException e) {
+	    output.sendMessage("Verification error", e.getMessage());
       }
 }
 

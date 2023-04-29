@@ -19,15 +19,11 @@ import static org.petos.packagemanager.server.PackageStorage.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class ServerDispatcher implements ServerController {
-private static Logger logger = LogManager.getLogger(Server.class);
+private static final Logger logger = LogManager.getLogger(Server.class);
 private final PackageStorage storage;
 
 public ServerDispatcher(PackageStorage storage) {
       this.storage = storage;
-}
-
-private byte[] getPayload(Integer packageId) {
-      return new byte[0];
 }
 
 @Override
@@ -38,7 +34,7 @@ public void accept(NetworkExchange exchange) throws Exception {
 	    case GetId -> onPackageId(exchange);
 	    case GetInfo -> onPackageInfo(exchange);
 	    case GetPayload -> onPayload(exchange);
-	    case GetFamily -> onFamilyInfo(exchange);
+	    case GetVersion -> onVersionInfo(exchange);
 	    case PublishInfo -> onPublishInfo(exchange);
 	    case PublishPayload -> onPublishPayload(exchange);
 	    case DeprecateVersion -> onDeprecateVersion(exchange);
@@ -71,6 +67,7 @@ private void onPackageId(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
+
 /**
  * There method resolves three kinds of request:<br><ol>
  * <li>PackageId handle and Version label</li>
@@ -78,9 +75,9 @@ private void onPackageId(NetworkExchange exchange) {
  * </ol>
  * VersionId handle is forbidden (during future updates)
  * How this should be implemented? By request format.
- * If <code>request.code()</code> equals <code>INT_FORMAT</code>, that is VersionOffset. Otherwise
+ * If <code>request.code()</code> equals <code>INT_FORMAT</code>, that is VersionOffset. Otherwise,
  * (if code is <code>STR_FORMAT</code>) the VersionLabel is assumed
- * */
+ */
 private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
       ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
       Optional<PackageRequest> result = Optional.empty();
@@ -89,13 +86,13 @@ private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
       if (optional.isPresent()) {
 	    var packageId = optional.get();
 	    Optional<VersionId> versionId;
-	    switch (exchange.request().code()){
+	    switch (exchange.request().code()) {
 		  case RequestCode.INT_FORMAT -> {
 			int offset = buffer.getInt();
 			versionId = storage.mapVersion(packageId, offset);
 		  }
 		  case RequestCode.STR_FORMAT -> {
-			String label = exchange.request().stringData(4);//int offsest
+			String label = exchange.request().stringData(4);//int offset
 			versionId = storage.mapVersion(packageId, label);
 		  }
 		  default -> versionId = Optional.empty();
@@ -124,8 +121,30 @@ private void onPackageInfo(NetworkExchange exchange) {
       }
 }
 
-private void onFamilyInfo(NetworkExchange exchange) {
-      // TODO: 16/04/2023
+
+/**
+ * Specific request to check the version integrity
+ * The versionInfo can be replaced by GetInfo. But it's supposed to be more suitable and fast
+ */
+private void onVersionInfo(NetworkExchange exchange) {
+      var optional = onPackageRequest(exchange);
+      if (optional.isPresent()) {
+	    var request = optional.get();
+	    var fullInfo = storage.getFullInfo(request.id(), request.version());
+	    if (fullInfo.isPresent()) {
+		  VersionInfo versionInfo = new VersionInfo(
+		      request.version().value(),
+		      fullInfo.get().version
+		  );
+		  String response = toJson(versionInfo);
+		  exchange.setResponse(ResponseType.Approve, VERSION_INFO_FORMAT,
+		      response.getBytes(StandardCharsets.US_ASCII));
+	    } else {
+		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+	    }
+      } else {
+	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+      }
 }
 
 private void writeBytes(NetworkExchange exchange, @NotNull byte[] payload) throws IOException {
@@ -147,7 +166,7 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 	    if (payload.isPresent()) {
 		  var assembly = PackageAssembly.valueOf(header, payload.get());
 		  writeBytes(exchange, assembly.serialize());
-		  exchange.setResponse(ResponseType.Approve, PACKAGE_PAYLOAD_FORMAT);
+		  exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
 	    } else {
 		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
 	    }
@@ -179,7 +198,7 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
       String jsonInfo = exchange.request().stringData();
       PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
       byte[] payload = readBytes(exchange);
-      if(dto != null && payload != null){
+      if (dto != null && payload != null) {
 	    try {
 		  var version = storage.storePayload(dto, payload);
 		  var buffer = ByteBuffer.allocate(4);//int
@@ -196,7 +215,7 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onDeprecateVersion(NetworkExchange exchange) {
-
+      // TODO: 29/04/2023
 }
 
 private static final Gson gson;

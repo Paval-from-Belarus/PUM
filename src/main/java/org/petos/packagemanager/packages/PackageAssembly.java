@@ -13,9 +13,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <h3>the main assumption: all characters are encoded by ASCII</h3>
  */
 public class PackageAssembly {
+public static class VerificationException extends Exception{
+      VerificationException(String msg){
+            super(msg);
+      }
+}
 private static final int BODY_SIGN = 0xCCEEDDFF;
 public enum AssemblyType {Info, Package}
-public enum EncryptionType {None, RC4, A5}
+public enum EncryptionType {None, RC4, RSA}
 public enum ArchiveType {None, Lzma}
 private EncryptionType encryption = EncryptionType.RC4;
 private ArchiveType archive = ArchiveType.Lzma;
@@ -64,21 +69,25 @@ private void encrypt(){
       payload = payload;
 }
 
-public static @NotNull byte[] decrypt(byte[] payload, EncryptionType type){
+public static @NotNull byte[] decrypt(byte[] payload, EncryptionType type) throws VerificationException {
       return payload;
 }
-public static @NotNull byte[] uncompress(byte[] payload, ArchiveType type){
+public static @NotNull byte[] uncompress(byte[] payload, ArchiveType type) throws VerificationException {
       return payload;
 }
-public static @Nullable PackageAssembly deserialize(byte[] rawData){
-      var header = PackageHeader.deserialize(rawData);
-      if(header == null)
-            return null;
-      byte[] payload = new byte[rawData.length - header.size()];//probably no payload
-      System.arraycopy(rawData, header.size(), payload, 0, payload.length);
-      payload = decrypt(payload, convertEncryption(header.getEncryption()));
-      payload = uncompress(payload, convertArchive(header.getArchive()));
-      return new PackageAssembly(header, payload);
+public static @NotNull PackageAssembly deserialize(byte[] rawData) throws VerificationException {
+      PackageHeader header = PackageHeader.deserialize(rawData);
+      PackageAssembly result;
+      if (header != null){
+            byte[] payload = new byte[rawData.length - header.size()];//probably no payload
+            System.arraycopy(rawData, header.size(), payload, 0, payload.length);
+            payload = decrypt(payload, convertEncryption(header.getEncryption())); //throws
+            payload = uncompress(payload, convertArchive(header.getArchive())); //throws
+            result = new PackageAssembly(header, payload);
+      } else {
+            throw new VerificationException("The package header is damaged");
+      }
+      return result;
 }
 private static @NotNull EncryptionType convertEncryption(int index){
       if(index >= EncryptionType.values().length)
