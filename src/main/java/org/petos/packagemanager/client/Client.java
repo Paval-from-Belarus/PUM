@@ -35,6 +35,7 @@ private Thread listenThread;
 private Thread userThread;
 private Configuration config;
 private PackageInstaller installer;
+private PackageStorage storage;
 private InputProcessor input;
 private OutputProcessor output;
 
@@ -55,6 +56,7 @@ private void initConfig() {
 	    this.config = new Gson().fromJson(content, Configuration.class);
 	    this.config.init();
 	    installer = new PackageInstaller(this.config);
+	    storage = new PackageStorage(this.config);//throws
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");
       }
@@ -111,6 +113,7 @@ private void onInstallCommand(ParameterMap params) {
       if (rawParams.isEmpty() || rawParams.size() > 1)
 	    throw new IllegalArgumentException("Package is not specified");
       String packageName = rawParams.get(0).self();//raw parameter has only value
+//      if (!storage.isInstalledPackage(packageName))
       dispatchTask(() -> installTask(packageName));
 }
 
@@ -140,29 +143,6 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
       QuestionResponse userResponse = output.sendQuestion("Is it ok?", QuestionType.YesNo);
       return (Boolean) userResponse.value();
 }
-
-//packageName is fully qualified name
-private boolean isInstalledPackage(String packageName) {
-      return false;//tricky algo to check installation
-}
-
-private boolean isInstalledPackage(Integer id, String version) {
-      return false;
-}
-
-private String getShortestAlias(FullPackageInfoDTO dto) {
-      assert dto.name != null;
-      String shortest = dto.name;
-      if (dto.aliases != null) {
-	    for (String alias : dto.aliases) {
-		  if (alias.length() < shortest.length()) {
-			shortest = alias;
-		  }
-	    }
-      }
-      return shortest;
-}
-
 
 //this method install dependencies according the common conventional rules
 private void storeDependencies(Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
@@ -205,6 +185,8 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
 		  logger.warn("Package is not installed");
 	    }
 	    installer.commitSession(commitState);
+	    if (commitState == CommitState.Success)
+		  output.sendMessage("Congratulations!", "Installed successfully!");
       } catch (PackageAssembly.VerificationException e) {
 	    output.sendMessage("Verification error", e.getMessage());
       } catch (PackageIntegrityException e) {
@@ -285,14 +267,13 @@ private void printShortInfo(ShortPackageInfoDTO[] packages) {
 private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
       assert info.dependencies != null;
       List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)
-						 .filter(d -> !isInstalledPackage(d.packageId(), d.label()))
+						 .filter(d -> !storage.isInstalledPackage(d.packageId(), d.label()))
 						 .toList();
       Map<Integer, FullPackageInfoDTO> dependencyMap = new HashMap<>();
       for (var dependency : dependencies) {
-	    var packageId = getPackageId(dependency.label());
-	    var fullInfo = packageId.flatMap(id -> getFullInfo(id, dependency.label()));
+	    var fullInfo = getFullInfo(dependency.packageId(), dependency.label());
 	    if (fullInfo.isPresent()) {
-		  dependencyMap.put(packageId.get(), fullInfo.get());
+		  dependencyMap.put(dependency.packageId(), fullInfo.get());
 		  dependencyMap.putAll(resolveDependencies(fullInfo.get()));
 	    } else {
 		  logger.warn("Broken dependency:" +
@@ -376,6 +357,7 @@ private void defaultErrorHandler(Exception e) {
 private static byte[] toBytes(Integer value) {
       return ByteBuffer.allocate(4).putInt(value).array();
 }
+
 public static void main(String[] args) {
       try {
 	    Client client = new Client(3344, "self.ip");

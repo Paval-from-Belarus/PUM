@@ -28,6 +28,7 @@ public void init() {
 	    if (!Files.exists(infoPath)){
 		  Files.createFile(infoPath);
 	    }
+	    this.infoPath = infoPath.toAbsolutePath().toString();
       } catch (IOException e) {
 	    throw new RuntimeException(e);
       }

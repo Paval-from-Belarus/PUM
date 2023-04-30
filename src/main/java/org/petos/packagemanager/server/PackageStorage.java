@@ -195,8 +195,9 @@ public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
 public Optional<VersionId> mapVersion(PackageId id, String label) {
       Session session = dbFactory.openSession();
       session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where versionLabel= :label");
+      Query query = session.createQuery("from PackageInfo where packageId= :packageId and versionLabel= :label");
       query.setParameter("label", label);
+      query.setParameter("packageId", id.value());
       PackageInfo instance = (PackageInfo) query.getSingleResult();
       session.getTransaction().commit();
       Optional<VersionId> result = Optional.empty();

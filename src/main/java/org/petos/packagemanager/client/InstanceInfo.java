@@ -1,55 +1,86 @@
 package org.petos.packagemanager.client;
 
-import org.hibernate.query.criteria.internal.expression.function.AggregationFunction;
 import org.jetbrains.annotations.NotNull;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class InstanceInfo {
 private final static int MIN_LETTERS_PER_INSTANCE = 19;
+private final Integer packageId;
 private final String[] aliases;
 private final String path;
 
-public InstanceInfo(String[] aliases, String path) {
+public InstanceInfo(Integer id, String[] aliases, String path) {
+      this.packageId = id;
       this.aliases = aliases;
       this.path = path;
-}
-
-public Path getPath() {
-      return Path.of(path);
 }
 
 public String[] getAliases() {
       return aliases;
 }
+public boolean similar(@NotNull String name){
+      boolean response = false;
+      for (String alias : aliases) {
+	    response = alias.equals(name);
+	    if (response)
+		  break;
+      }
+      return response;
+}
+public String getPath() {
+      return path;
+}
+
+public Integer getId() {
+      return packageId;
+}
 
 @Override
 public String toString() {
       StringBuilder strText = new StringBuilder();
+      strText.append("id=[").append(packageId).append("]");
       strText.append("aliases=[");
       for (String alias : aliases)
 	    strText.append(alias).append(",");
       strText.setLength(strText.length() - 1);
       strText.append("]");
-      strText.append("path=[").append(path).append("]\n");
+      strText.append("path=[").append(path).append("]\r\n");
       return strText.toString();
 }
 
+@Override
+public boolean equals(Object other) {
+      boolean result = false;
+      if (other instanceof InstanceInfo info) {
+	    result = Objects.equals(info.packageId, this.packageId);
+      }
+      return result;
+}
+
+
+// TODO: rewrite to finite state machine
+//this method should never lie
 public static List<InstanceInfo> valueOf(@NotNull String source) {
       if (source.length() < MIN_LETTERS_PER_INSTANCE) //magic_number
 	    return List.of();
-      String[] separated = source.split("\n");
+      String[] separated = source.split("\r\n");
       List<InstanceInfo> list = new ArrayList<>();
       for (String line : separated) {
-	    String[] parts = line.split("]");
-	    if (parts.length == 2) {
-		  String[] aliases = collectParams(parts[0] + "]");
-		  String[] path = collectParams(parts[1] + "]");
-		  if (path.length == 1)
-			list.add(new InstanceInfo(aliases, path[0]));
+	    try {
+		  String[] parts = line.split("]");
+		  if (parts.length == 3) {
+			String[] id = collectParams(parts[0]);
+			String[] aliases = collectParams(parts[1] + "]");
+			String[] path = collectParams(parts[2] + "]");
+			if (path.length == 1 && id.length == 1 && aliases.length != 0) {
+			      list.add(new InstanceInfo(Integer.parseInt(id[0]), aliases, path[0]));
+			}
 
+		  }
+	    } catch (NumberFormatException ignored) {
 	    }
       }
       return list;
@@ -57,16 +88,20 @@ public static List<InstanceInfo> valueOf(@NotNull String source) {
 
 //collect params upon the next the first occurrence of `]` letter
 //parameter is any sequence of letter besides space and coma
-private static String[] collectParams(String line) {
+private static String[] collectParams(@NotNull String line) {
       String[] params = line.split("( *, *)|(])");
       int index = 0;
       for (char letter : params[0].toCharArray()) {
-	    if (letter == '['){
+	    if (letter == '[') {
 		  break;
 	    }
 	    index += 1;
       }
-      params[0] = params[0].substring(index + 1);
+      if (index + 1 >= params[0].length())
+	    params = new String[0];
+      else
+	    params[0] = params[0].substring(index + 1);
       return params;
 }
+
 }
