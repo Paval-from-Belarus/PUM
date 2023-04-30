@@ -22,15 +22,10 @@ import java.util.*;
 import static org.petos.packagemanager.client.ClientService.*;
 import static org.petos.packagemanager.client.InputProcessor.*;
 import static org.petos.packagemanager.client.OutputProcessor.*;
+import static org.petos.packagemanager.client.PackageInstaller.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class Client {
-public static class PackageIntegrityException extends Exception {
-      PackageIntegrityException(String msg) {
-	    super(msg);
-      }
-}
-
 public final int LATEST_VERSION = 0;
 public final int OLDEST_VERSION = -1;
 Logger logger = LogManager.getLogger(Client.class);
@@ -39,6 +34,7 @@ private final int port;
 private Thread listenThread;
 private Thread userThread;
 private Configuration config;
+private PackageInstaller installer;
 private InputProcessor input;
 private OutputProcessor output;
 
@@ -57,6 +53,8 @@ private void initConfig() {
 	    Path configPath = Path.of(CONFIG_PATH);
 	    String content = Files.readString(configPath);
 	    this.config = new Gson().fromJson(content, Configuration.class);
+	    this.config.init();
+	    installer = new PackageInstaller(this.config);
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");
       }
@@ -130,12 +128,16 @@ private void printPackageInfo(@NotNull FullPackageInfoDTO dto) {
 
 }
 
-private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, List<FullPackageInfoDTO> dependencies) {
+private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Collection<FullPackageInfoDTO> dependencies) {
       printPackageInfo(info);
-      QuestionResponse userResponse = output.sendQuestion("Is it ok?", QuestionType.YesNo);
-      if (!userResponse.value(Boolean.class)) {
-	    output.sendMessage("Installation aborted", "");
+      output.sendMessage("The additional dependencies", "");
+      long totalSize = info.payloadSize;
+      for (var dto : dependencies) {
+	    printPackageInfo(dto);
+	    totalSize += dto.payloadSize;
       }
+      output.sendMessage("The total size", String.format("%d", totalSize));
+      QuestionResponse userResponse = output.sendQuestion("Is it ok?", QuestionType.YesNo);
       return (Boolean) userResponse.value();
 }
 
@@ -148,39 +150,66 @@ private boolean isInstalledPackage(Integer id, String version) {
       return false;
 }
 
-/**
- * Store package in local file system
- * and add package's info to local registry
- */
-private void storeLocal(FullPackageInfoDTO info, PackageAssembly assembly) {
-
+private String getShortestAlias(FullPackageInfoDTO dto) {
+      assert dto.name != null;
+      String shortest = dto.name;
+      if (dto.aliases != null) {
+	    for (String alias : dto.aliases) {
+		  if (alias.length() < shortest.length()) {
+			shortest = alias;
+		  }
+	    }
+      }
+      return shortest;
 }
 
-private void installPackage( ){
 
+//this method install dependencies according the common conventional rules
+private void storeDependencies(Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
+      //todo: rewrite onto parallel stream or dispatchTask methods
+      PackageAssembly assembly;
+      try {
+	    for (var entry : dependencies.entrySet()) {
+		  var payload = getRawAssembly(entry.getKey(), entry.getValue().version);
+		  if (payload.isPresent()) {
+			assembly = PackageAssembly.deserialize(payload.get());
+			installer.storeLocally(entry.getValue(), assembly);
+		  }
+	    }
+      } catch (PackageIntegrityException | PackageAssembly.VerificationException e) {
+	    throw new PackageIntegrityException("Cannot install package: " + e.getMessage());
+      }
 }
-private void installDependencies(List<DependencyInfoDTO> dependencies) throws PackageIntegrityException{
 
-}
 //the main thread is for gui
 //the multiple thread for dependencies
 //This method is final in sequence of installation
-private void startInstallation(Integer id, FullPackageInfoDTO info, List<DependencyInfoDTO> dependencies) {
+private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer, FullPackageInfoDTO> dependencies) {
       output.sendMessage("", "Installation in progress...");
-      var optional = getRawAssembly(id, info.version);//latest version
-      output.sendMessage("", "Verification in progress...");
+      PackageAssembly assembly;
+      CommitState commitState = CommitState.Failed;
       try {
-	    PackageAssembly assembly;
+	    installer.initSession();
+	    output.sendMessage("", "Dependency installation...");
+	    storeDependencies(dependencies);
+	    var optional = getRawAssembly(id, info.version);//latest version
+	    output.sendMessage("", "Verification in progress...");
 	    if (optional.isPresent()) {
 		  assembly = PackageAssembly.deserialize(optional.get());
 		  output.sendMessage("", "Installation locally...");
-		  storeLocal(info, assembly);
+		  installer.storeLocally(info, assembly);
+		  output.sendMessage("", "Local transactions are running...");
+		  commitState = CommitState.Success;
 	    } else {
 		  output.sendMessage("", "Failed to load package");
 		  logger.warn("Package is not installed");
 	    }
+	    installer.commitSession(commitState);
       } catch (PackageAssembly.VerificationException e) {
 	    output.sendMessage("Verification error", e.getMessage());
+      } catch (PackageIntegrityException e) {
+	    logger.warn("Broken dependencies: " + e.getMessage());
+	    output.sendMessage("Broken dependencies", e.getMessage());
       }
 }
 
@@ -189,19 +218,18 @@ private void installTask(String packageName) {
 	    var packageId = getPackageId(packageName);
 	    var fullInfo =
 		packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
-	    if (fullInfo.isPresent()){
-		  var dto = fullInfo.get();
-		  List<FullPackageInfoDTO> dependencies = resolveDependencies(dto);
-		  if (hasUserAgreement(dto, dependencies)){
-			startInstallation(packageId.get(), dto, Arrays.asList(dto.dependencies));
+	    if (fullInfo.isPresent()) {
+		  FullPackageInfoDTO dto = fullInfo.get();
+		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto);
+		  if (hasUserAgreement(dto, dependencies.values())) {
+			startInstallation(packageId.get(), dto, dependencies);
 		  } else {
 			output.sendMessage("", "Installation is aborted by user");
 		  }
 	    } else {
 		  output.sendMessage("", "Package is not found");
 	    }
-      }
-      catch (PackageIntegrityException e) {
+      } catch (PackageIntegrityException e) {
 	    output.sendError("Package integrity Error", e.getMessage());
       }
 }
@@ -254,24 +282,25 @@ private void printShortInfo(ShortPackageInfoDTO[] packages) {
       }
 }
 
-private List<FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
+private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
       assert info.dependencies != null;
       List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)
 						 .filter(d -> !isInstalledPackage(d.packageId(), d.label()))
 						 .toList();
-      List<FullPackageInfoDTO> list = new ArrayList<>();
+      Map<Integer, FullPackageInfoDTO> dependencyMap = new HashMap<>();
       for (var dependency : dependencies) {
 	    var packageId = getPackageId(dependency.label());
 	    var fullInfo = packageId.flatMap(id -> getFullInfo(id, dependency.label()));
 	    if (fullInfo.isPresent()) {
-		  list.add(fullInfo.get());
+		  dependencyMap.put(packageId.get(), fullInfo.get());
+		  dependencyMap.putAll(resolveDependencies(fullInfo.get()));
 	    } else {
 		  logger.warn("Broken dependency:" +
 				  dependency.label() + " id=" + dependency.packageId());
 		  throw new PackageIntegrityException("Broken dependency");
 	    }
       }
-      return list;
+      return dependencyMap;
 }
 
 private Optional<Integer> getPackageId(String packageName) {
@@ -331,6 +360,8 @@ private Optional<FullPackageInfoDTO> getFullInfo(NetworkPacket request) {
 	    if (stringInfo.isPresent()) {
 		  dto = new Gson().fromJson(stringInfo.get(), FullPackageInfoDTO.class);
 	    }
+	    if (dto != null && dto.aliases == null)
+		  dto.aliases = new String[0];
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
       }
@@ -345,7 +376,6 @@ private void defaultErrorHandler(Exception e) {
 private static byte[] toBytes(Integer value) {
       return ByteBuffer.allocate(4).putInt(value).array();
 }
-
 public static void main(String[] args) {
       try {
 	    Client client = new Client(3344, "self.ip");

@@ -1,4 +1,6 @@
 {
-"installation": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr",
-  "temporary": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/temp"
+"programs": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs",
+"libraries": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/libraries",
+"temp": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/temp",
+"packages": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs/pum/packages"
 }
