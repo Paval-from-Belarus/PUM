@@ -14,17 +14,14 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import static org.petos.packagemanager.client.PackageStorage.PackageIntegrityException;
+
 /**
- * The current issue: if something go wrong, all package (even existing version) will be removed
+ * The current issue: if something go wrong, all package (even existing version) will be removed<br>
+ * todo: Replace the logic of current class to Client's PackageStorage class
  */
 public class PackageInstaller {
 private static final Logger logger = LogManager.getLogger(PackageInstaller.class);
-public static class PackageIntegrityException extends Exception {
-      PackageIntegrityException(String msg) {
-	    super(msg);
-      }
-}
-
 public static class ManagerConfigurationException extends Exception {
       ManagerConfigurationException(String msg) {
 	    super(msg);
@@ -35,147 +32,165 @@ public enum PayloadType {Binary, Library, Docs, Config, Unknown}
 
 public enum CommitState {Failed, Success}
 
+public class InstallerSession {
+      private Path centralPath; //central file for which each dependency belongs
+      private File configFile;
+      private File exeFile;//the executable file
+
+      /**
+       * Store package in local file system
+       * and add package's info to local registry<br>
+       * The following methods are fully depends on OS. As rule, the following sample is very primitive and generalized
+       */
+      public void storeLocally(FullPackageInfoDTO dto, PackageAssembly assembly) throws PackageIntegrityException {
+	    checkSession();
+	    PayloadType type = convert(dto.payloadType);
+	    if (type == PayloadType.Unknown)
+		  throw new PackageIntegrityException("Unknown package type");
+	    try {
+		  //the directory where package should be installed -> the method is full safe
+		  Path normalized = normalizePath(dto.name, type); //sileietly remove existing dir
+		  if (Files.exists(normalized)) { //old version of package should be retired
+			removeFiles(normalized);
+		  }
+		  Files.createDirectory(normalized);
+		  switch (type) {
+			case Binary -> {
+			      saveBinary(normalized, assembly, dto);
+			}
+			case Library -> {
+			      saveLibrary(normalized, assembly, dto);
+			}
+		  }
+		  PackageInfo info = PackageStorage.toLocalFormat(assembly, dto);
+		  PackageStorage.storePackageInfo(normalized, info);
+	    } catch (IOException e) {
+		  throw new PackageIntegrityException("Payload installation error: " + e.getMessage());
+	    }
+      }
+
+      //Each session should be commit
+      public void commit(CommitState state) throws PackageIntegrityException {
+	    if (centralPath == null) //remove in prod
+		  throw new PackageIntegrityException("Package without binary payload");
+	    checkSession();
+	    if (state == CommitState.Success) {
+		  try {
+			String config = Files.readString(configFile.toPath());
+			List<InstanceInfo> dependencies = InstanceInfo.valueOf(config);
+			PackageStorage.rebuildConfig(dependencies);
+			var libPath = PackageStorage.linkLibraries(centralPath, dependencies);
+			linkLibraries(exeFile, libPath);
+			//storage relink storage
+			//it's known info that some packages are already installed
+			clearSession();
+		  } catch (IOException e) {
+			logger.warn("Package linking error: " + e.getMessage());
+			eraseSession();
+			throw new PackageIntegrityException("Package linking error" + e.getMessage());
+		  }
+	    } else {
+		  eraseSession();
+	    }
+      }
+
+      private void checkSession() throws PackageIntegrityException {
+	    if (configFile == null)
+		  throw new PackageIntegrityException("Session is not started");
+      }
+
+      /**
+       * Save dependency payload path
+       */
+      private void saveLibrary(@NotNull Path normalized, @NotNull PackageAssembly assembly, @NotNull FullPackageInfoDTO dto) throws PackageIntegrityException {
+	    checkSession();
+	    try {
+		  Path libPath = Path.of(normalized.toString(), dto.name + ".ddl");
+		  Files.write(libPath, assembly.getPayload());
+		  Files.setPosixFilePermissions(libPath, EnumSet.of(PosixFilePermission.OWNER_EXECUTE)); //or mark as shared library
+		  appendConfig(assembly.getId(), normalized, dto);
+	    } catch (IOException e) {
+		  throw new PackageIntegrityException("Library storage error");
+	    }
+      }
+
+      private void saveBinary(@NotNull Path normalized, @NotNull PackageAssembly assembly, @NotNull FullPackageInfoDTO dto) throws PackageIntegrityException {
+	    checkSession();
+	    Path binDir = Path.of(normalized.toString(), "bin");
+	    Path binaryPath = Path.of(normalized.toString(), "bin", dto.name + ".exe");
+	    try {
+		  Files.createDirectory(binDir);
+		  Files.write(binaryPath, assembly.getPayload());
+		  Files.setPosixFilePermissions(binaryPath, EnumSet.of(PosixFilePermission.OWNER_EXECUTE));
+		  appendConfig(assembly.getId(), normalized, dto);
+		  //if all is cool, set current instance of session
+		  centralPath = normalized;
+		  exeFile = centralPath.resolve(Path.of("bin", dto.name + ".exe")).toFile();
+	    } catch (IOException e) {
+		  throw new PackageIntegrityException("Binary file storage error");
+	    }
+      }
+
+      private void clearSession() throws IOException {
+	    Files.deleteIfExists(configFile.toPath());
+      }
+
+      private void eraseSession() {
+	    try {
+		  assert configFile != null;
+		  if (centralPath != null)
+			removeFiles(centralPath);
+		  String info = Files.readString(configFile.toPath());
+		  List<InstanceInfo> instances = InstanceInfo.valueOf(info);
+		  for (var path : instances) {
+			removeFiles(Path.of(path.getStringPath()));
+		  }
+		  clearSession();
+	    } catch (IOException ignored) {
+		  logger.warn("Failed to remove broken package: " + ignored.getMessage());
+	    }
+      }
+
+      private void appendConfig(Integer packageId, Path instancePath, FullPackageInfoDTO dto) {
+	    String[] aliases = new String[dto.aliases.length + 1];
+	    System.arraycopy(dto.aliases, 0, aliases, 0, dto.aliases.length);
+	    aliases[dto.aliases.length] = dto.name;
+	    try {
+		  var info = new InstanceInfo(packageId, aliases, instancePath.toAbsolutePath().toString());
+		  Files.writeString(configFile.toPath(), info.toString(), StandardOpenOption.APPEND);
+	    } catch (IOException e) {
+		  throw new RuntimeException("Configuration file is not exists");
+	    }
+      }
+
+      private InstallerSession() {
+      }
+
+      private InstallerSession setConfigFile(File file) {
+	    this.configFile = file;
+	    return this;
+      }
+}
+
 private final Configuration config;
 
 public PackageInstaller(Configuration config) {
       this.config = config;
 }
 
-public void initSession() {
-      centralPath = null;
-      dependencies = new ArrayList<>();
+public InstallerSession initSession() {
+      InstallerSession session = new InstallerSession();
       try {
-	    tempConfig = Path.of(getTempPath(), "config.pum");
-	    Files.deleteIfExists(tempConfig);
-	    Files.createFile(tempConfig);
+	    Path tempConfig = Files.createTempFile(Path.of(getTempDirectory()), "config", ".pum");//
+	    session.setConfigFile(tempConfig.toFile());
       } catch (IOException e) {
 	    //really interesting case...
 	    throw new RuntimeException(e);
       }
+      return session;
 }
 
-/**
- * Store package in local file system
- * and add package's info to local registry<br>
- * The following methods are fully depends on OS. As rule, the following sample is very primitive and generalized
- */
-public void storeLocally(FullPackageInfoDTO dto, PackageAssembly assembly) throws PackageIntegrityException {
-      PayloadType type = convert(dto.payloadType);
-      if (type == PayloadType.Unknown)
-	    throw new PackageIntegrityException("Unknown package typ");
-      try {
-	    //the directory where package should be installed -> the method is full safe
-	    Path normalized = normalizePath(dto.name, type);
-	    if (Files.exists(normalized)) { //old version of package should be retired
-		  removeFiles(normalized);
-	    }
-	    Files.createDirectory(normalized);
-	    switch (type) {
-		  case Binary -> {
-			Path binDir = Path.of(normalized.toString(), "bin");
-			Path binaryPath = Path.of(normalized.toString(), "bin", dto.name + ".exe");
-			Files.createDirectory(binDir);
-			Files.write(binaryPath, assembly.getPayload());
-			Files.setPosixFilePermissions(binaryPath, EnumSet.of(PosixFilePermission.OWNER_EXECUTE));
-			addBinary(normalized, assembly.getId(), dto);
-		  }
-		  case Library -> {
-			Path libPath = Path.of(normalized.toString(), dto.name + ".ddl");
-			Files.write(libPath, assembly.getPayload());
-			Files.setPosixFilePermissions(libPath, EnumSet.of(PosixFilePermission.OWNER_EXECUTE)); //or mark as shared library
-			addLibrary(normalized, assembly.getId(), dto);//save installation to regist
-		  }
-	    }
-	    PackageInfo info = PackageStorage.toLocalFormat(assembly, dto);
-	    PackageStorage.storePackageInfo(normalized, info);
-      } catch (IOException e) {
-	    throw new PackageIntegrityException("Payload installation error: " + e.getMessage());
-      }
-}
-public void commitSession(CommitState state) throws PackageIntegrityException {
-      checkSession();
-      if (centralPath == null)
-	    throw new PackageIntegrityException("Package without binary payload");
-      if (state == CommitState.Success) {
-	    try {
-		  String config = Files.readString(tempConfig);
-		  PackageStorage.rebuildConfig(InstanceInfo.valueOf(config));
-		  Path linkPath = Path.of(centralPath.toString(), "bin", "ddl.conf");
-		  linkLibraries(linkPath, exeFile, dependencies);
-		  clearSession();
-	    } catch (IOException e) {
-		  logger.warn("Package linking error: " + e.getMessage());
-		  eraseSession();
-		  throw new PackageIntegrityException("Package linking error" + e.getMessage());
-	    }
-      } else {
-	    eraseSession();
-      }
-}
-
-private void clearSession() throws IOException {
-      if (tempConfig != null)
-      	Files.deleteIfExists(tempConfig);
-      centralPath = null;
-      dependencies = null;
-      tempConfig = null;
-}
-
-private void eraseSession() {
-      try {
-	    if (centralPath != null)
-		  removeFiles(centralPath);
-	    if (dependencies != null) {
-		  for (Path path : dependencies) {
-			removeFiles(path);
-		  }
-	    }
-	    clearSession();
-      } catch (IOException ignored) {
-	    logger.warn("Failed to remove broken package: " + ignored.getMessage());
-      }
-}
-
-private void saveConfiguration(@NotNull Path installation, @NotNull Integer packageId, @NotNull FullPackageInfoDTO dto) {
-      assert dto.aliases != null;
-      String[] aliases = new String[dto.aliases.length + 1];
-      System.arraycopy(dto.aliases, 0, aliases, 0, dto.aliases.length);
-      aliases[dto.aliases.length] = dto.name;
-      appendTempConfig(packageId, aliases, installation);
-}
-private void appendTempConfig(Integer packageId, String[] aliases, Path instancePath) {
-      try {
-	    var info = new InstanceInfo(packageId, aliases, instancePath.toAbsolutePath().toString());
-	    Files.writeString(tempConfig, info.toString(), StandardOpenOption.APPEND);
-      } catch (IOException e) {
-	    throw new RuntimeException("Configuration file is not exists");
-      }
-}
-
-/**
- * Save dependency payload path
- */
-private void addLibrary(@NotNull Path installation, @NotNull Integer id, @NotNull FullPackageInfoDTO dto) throws PackageIntegrityException {
-      checkSession();
-      dependencies.add(installation);
-      saveConfiguration(installation, id, dto);
-}
-
-private void addBinary(@NotNull Path packagePath,@NotNull Integer id, @NotNull FullPackageInfoDTO dto) throws PackageIntegrityException {
-      checkSession();
-      centralPath = packagePath;
-      exeFile = centralPath.resolve(Path.of("bin", dto.name + ".exe")).toFile();
-      saveConfiguration(packagePath, id, dto);
-}
-
-private void checkSession() throws PackageIntegrityException {
-      if (dependencies == null || tempConfig == null)
-	    throw new PackageIntegrityException("Session is not started");
-}
-private File exeFile;
-private Path centralPath; //where binary file is storing
-private Path tempConfig;
-private List<Path> dependencies;
+//Utilities methods depends on the instance of Parent class
 
 private @NotNull Path normalizePath(String name, PayloadType type) {
       Path destPath = null;
@@ -202,6 +217,7 @@ private static class PackageRemover extends SimpleFileVisitor<Path> {
 	    Files.delete(filePath);
 	    return FileVisitResult.CONTINUE;
       }
+
       @Override
       public FileVisitResult postVisitDirectory(Path filePath, IOException exc) throws IOException {
 	    Files.delete(filePath);
@@ -210,16 +226,9 @@ private static class PackageRemover extends SimpleFileVisitor<Path> {
 
 }
 
-
 //OS relative functionality
-private static void linkLibraries(@NotNull Path linkPath,@NotNull File executable, @NotNull List<Path> dependencies) throws IOException {
-      if (dependencies.size() != 0){
-	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(linkPath.toFile()))) {
-		  for (var path : dependencies) {
-			writer.write(path.toAbsolutePath() + "\r\n");
-		  }
-	    }
-      }//also store linkPath in executable
+private static void linkLibraries(@NotNull File executable, @NotNull Path linkPath) throws PackageIntegrityException {
+
 }
 
 private static PayloadType convert(@NotNull String type) {
@@ -244,7 +253,7 @@ private String getPackagesConfigPath() {
 }
 
 //only one package
-private String getTempPath() {
+private String getTempDirectory() {
       return config.temp;
 }
 

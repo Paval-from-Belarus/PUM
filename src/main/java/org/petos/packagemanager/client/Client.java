@@ -23,6 +23,7 @@ import static org.petos.packagemanager.client.ClientService.*;
 import static org.petos.packagemanager.client.InputProcessor.*;
 import static org.petos.packagemanager.client.OutputProcessor.*;
 import static org.petos.packagemanager.client.PackageInstaller.*;
+import static org.petos.packagemanager.client.PackageStorage.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class Client {
@@ -145,7 +146,7 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
 }
 
 //this method install dependencies according the common conventional rules
-private void storeDependencies(Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
+private void storeDependencies(PackageInstaller.InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
       //todo: rewrite onto parallel stream or dispatchTask methods
       PackageAssembly assembly;
       try {
@@ -153,7 +154,7 @@ private void storeDependencies(Map<Integer, FullPackageInfoDTO> dependencies) th
 		  var payload = getRawAssembly(entry.getKey(), entry.getValue().version);
 		  if (payload.isPresent()) {
 			assembly = PackageAssembly.deserialize(payload.get());
-			installer.storeLocally(entry.getValue(), assembly);
+			session.storeLocally(entry.getValue(), assembly);
 		  }
 	    }
       } catch (PackageIntegrityException | PackageAssembly.VerificationException e) {
@@ -169,22 +170,22 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
       PackageAssembly assembly;
       CommitState commitState = CommitState.Failed;
       try {
-	    installer.initSession();
+	    var session = installer.initSession();
 	    output.sendMessage("", "Dependency installation...");
-	    storeDependencies(dependencies);
+	    storeDependencies(session, dependencies);
 	    var optional = getRawAssembly(id, info.version);//latest version
 	    output.sendMessage("", "Verification in progress...");
 	    if (optional.isPresent()) {
 		  assembly = PackageAssembly.deserialize(optional.get());
 		  output.sendMessage("", "Installation locally...");
-		  installer.storeLocally(info, assembly);
+		  session.storeLocally(info, assembly);
 		  output.sendMessage("", "Local transactions are running...");
 		  commitState = CommitState.Success;
 	    } else {
 		  output.sendMessage("", "Failed to load package");
 		  logger.warn("Package is not installed");
 	    }
-	    installer.commitSession(commitState);
+	    session.commit(commitState);
 	    if (commitState == CommitState.Success)
 		  output.sendMessage("Congratulations!", "Installed successfully!");
       } catch (PackageAssembly.VerificationException e) {
@@ -264,6 +265,9 @@ private void printShortInfo(ShortPackageInfoDTO[] packages) {
       }
 }
 
+/**
+ * convert Entries from FullPackageInfoDTO to Dependencies Map
+ * */
 private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
       assert info.dependencies != null;
       List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)

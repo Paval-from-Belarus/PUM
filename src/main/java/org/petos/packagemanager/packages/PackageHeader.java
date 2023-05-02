@@ -1,18 +1,17 @@
 package org.petos.packagemanager.packages;
 
+import org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PackageHeader {
 
 public final static char SIGN_HEAD = 0xAA33;
 public final static char SIGN_BODY = 0xFFFF;
 public final static char SIGN_TAIL = 0xCC55;
-public final static int MinBytesPerHeader = 26;
+public final static int EMPTY_HASH = -1;
+public final static int BYTES_PER_HEADER_CNT = 26;
 
 {
       signHead = SIGN_HEAD;
@@ -21,7 +20,7 @@ public final static int MinBytesPerHeader = 26;
       archiveType = 0;
       encryptionType = 0;
       payloadHash = 0;
-      headerHash = -1;
+      headerHash = EMPTY_HASH;
 }
 
 public PackageHeader(int id, int version) {
@@ -61,11 +60,11 @@ public char getArchive() {
 }
 
 public int size() {
-      return MinBytesPerHeader;
+      return BYTES_PER_HEADER_CNT;
 }
 
 public byte[] serialize() {
-      ByteBuffer buffer = ByteBuffer.allocate(MinBytesPerHeader);
+      ByteBuffer buffer = ByteBuffer.allocate(BYTES_PER_HEADER_CNT);
       buffer.putChar(signHead)
 	  .putInt(id)
 	  .putInt(version);
@@ -73,16 +72,30 @@ public byte[] serialize() {
 	  .putChar(encryptionType)
 	  .putChar(archiveType)
 	  .putInt(payloadHash)
-	  .putInt(headerHash);
+	  .putInt(EMPTY_HASH)
+	  .putChar(signTail);
       int headerHash = getHeaderHash(buffer.array());
-      buffer.putInt(buffer.capacity() - 6, headerHash);
-      buffer.putChar(signTail);
+      buffer.putInt(BYTES_PER_HEADER_CNT - 6, headerHash);
       return buffer.array();
 }
 
 //calculate header hash in assumption that headerHash is equal 0xFF...FF
-private int getHeaderHash(byte[] header) {
-      return 1;
+//the method uses crc32 algo
+private static int getHeaderHash(byte[] header) {
+      long hash = -1;//set to all bits equals 1
+      for (byte b : header) {
+	    hash ^= b;
+	    for (int j = 0; j < 8; j++) {
+		  if ((hash & 1L) != 0) {
+			hash = (hash >> 1) ^ 0xEDB88320L;
+		  } else {
+			hash = (hash >> 1);
+		  }
+	    }
+
+      }
+      int result = (int) (hash ^ 0xFFFFFFFFL);
+      return result;
 }
 
 
@@ -104,50 +117,34 @@ private int headerHash; //initially headerHash is equal 0xFFFF
 private char signTail;
 
 public static @Nullable PackageHeader deserialize(byte[] header) {
-      if (header.length < MinBytesPerHeader)
+      if (header.length < BYTES_PER_HEADER_CNT)
 	    return null;
-      char signHeader = (char) ((header[0] << 8) | (header[1]));
+      ByteBuffer buffer = ByteBuffer.allocate(BYTES_PER_HEADER_CNT);
+      buffer.put(header, 0, BYTES_PER_HEADER_CNT);
+      buffer.position(0);
+      char signHeader = buffer.getChar();
       if (signHeader != SIGN_HEAD)
 	    return null;
-      //check id
-      int id = (header[2] << 24) | (header[3] << 16) | (header[4] << 8) | (header[5]);
-      int version = (header[6] << 24) | (header[7] << 16) | (header[8] << 8) | (header[9]);
-      //dependencies
-      List<Integer> dependencies = new ArrayList<>();
-      int index = 10;
-      int sign;
-      do {
-	    sign = (header[index] << 8) | (header[index + 1]);
-	    if (sign == (short) SIGN_BODY) {
-		  index += 2;
-		  break;
-	    }
-	    sign = (header[index] << 24) | (header[index + 1] << 16) | (header[index + 2] << 8) | (header[index + 3]);
-	    index += 4;
-	    dependencies.add(sign);
-      } while (sign != (short) SIGN_BODY && index < 12 + dependencies.size() * 4);
-      if (sign != (short) SIGN_BODY)
+      int id = buffer.getInt();
+      int version = buffer.getInt();
+      char signBody = buffer.getChar();
+      if (signBody !=  SIGN_BODY){
 	    return null;
-      //additional fields
-      char encryption = (char) ((header[index] << 8) | (header[index + 1]));
-      index += 2;
-
-      char archive = (char) ((header[index] << 8) | (header[index + 1]));
-      index += 2;
-      //check payloadHash
-      int payloadHash = (header[index] << 24) | (header[index + 1] << 16) | (header[index + 2] << 8) | (header[index + 3]);
-      index += 4;
-      int headerHash = (header[index] << 24) | (header[index + 1] << 16) | (header[index + 2] << 8) | (header[index + 3]);
-      //check tailSign
-      index += 4;
-      sign = (header[index] << 8) | (header[index + 1]);
-      if (sign != (short) SIGN_TAIL)
+      }
+      char encryption = buffer.getChar();
+      char archive = buffer.getChar();
+      int payloadHash = buffer.getInt();
+      int headerHash = buffer.getInt(); //to check the header integrity
+      buffer.putInt(BYTES_PER_HEADER_CNT - 6, EMPTY_HASH);
+      if (headerHash != getHeaderHash(buffer.array())){
 	    return null;
-
+      }
+      char tailHash = buffer.getChar();
+      if (tailHash != SIGN_TAIL){
+	    return null;
+      }
       //initialization
       PackageHeader packageHeader = new PackageHeader(id, version);
-      IntBuffer depBuffer = IntBuffer.allocate(dependencies.size());
-      dependencies.forEach(depBuffer::put);
       packageHeader.setArchiveType(archive);
       packageHeader.setEncryptionType(encryption);
       packageHeader.setPayloadHash(payloadHash);

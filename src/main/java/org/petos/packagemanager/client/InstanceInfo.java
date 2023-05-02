@@ -30,7 +30,7 @@ public boolean similar(@NotNull String name){
       }
       return response;
 }
-public String getPath() {
+public String getStringPath() {
       return path;
 }
 
