@@ -3,6 +3,8 @@ package org.petos.packagemanager.client;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.petos.packagemanager.client.database.InstanceInfo;
+import org.petos.packagemanager.client.database.PackageInfo;
 import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.packages.PackageAssembly;
 
@@ -10,7 +12,6 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -22,20 +23,16 @@ import static org.petos.packagemanager.client.PackageStorage.PackageIntegrityExc
  */
 public class PackageInstaller {
 private static final Logger logger = LogManager.getLogger(PackageInstaller.class);
-public static class ManagerConfigurationException extends Exception {
-      ManagerConfigurationException(String msg) {
-	    super(msg);
-      }
-}
 
 public enum PayloadType {Binary, Library, Docs, Config, Unknown}
 
 public enum CommitState {Failed, Success}
 
-public class InstallerSession {
+public class InstallerSession implements AutoCloseable{
       private Path centralPath; //central file for which each dependency belongs
       private File configFile;
       private File exeFile;//the executable file
+      private boolean isManaged;
 
       /**
        * Store package in local file system
@@ -92,6 +89,7 @@ public class InstallerSession {
 	    } else {
 		  eraseSession();
 	    }
+	    isManaged = true;
       }
 
       private void checkSession() throws PackageIntegrityException {
@@ -153,8 +151,8 @@ public class InstallerSession {
 
       private void appendConfig(Integer packageId, Path instancePath, FullPackageInfoDTO dto) {
 	    String[] aliases = new String[dto.aliases.length + 1];
-	    System.arraycopy(dto.aliases, 0, aliases, 0, dto.aliases.length);
-	    aliases[dto.aliases.length] = dto.name;
+	    aliases[0] = dto.name;
+	    System.arraycopy(dto.aliases, 0, aliases, 1, dto.aliases.length);
 	    try {
 		  var info = new InstanceInfo(packageId, aliases, instancePath.toAbsolutePath().toString());
 		  Files.writeString(configFile.toPath(), info.toString(), StandardOpenOption.APPEND);
@@ -164,11 +162,18 @@ public class InstallerSession {
       }
 
       private InstallerSession() {
+      		isManaged = false;
       }
 
       private InstallerSession setConfigFile(File file) {
 	    this.configFile = file;
 	    return this;
+      }
+      //the close method should be invoked if all is wrong
+      @Override
+      public void close() throws PackageIntegrityException {
+	    if (!isManaged)
+		  commit(CommitState.Failed);//if Session was not closed even wrong ― wrong case)
       }
 }
 

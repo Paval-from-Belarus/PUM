@@ -177,7 +177,7 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 
 private void onPublishInfo(NetworkExchange exchange) {
       String jsonInfo = exchange.request().stringData();
-      ShortPackageInfoDTO info = fromJson(jsonInfo, ShortPackageInfoDTO.class);
+      PublishInfoDTO info = fromJson(jsonInfo, PublishInfoDTO.class);
       try {
 	    var id = storage.storePackageInfo(info);
 	    var buffer = ByteBuffer.allocate(4);

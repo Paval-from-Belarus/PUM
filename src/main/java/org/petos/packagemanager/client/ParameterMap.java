@@ -15,5 +15,10 @@ public ParameterMap(Map<ParameterType, List<InputParameter>> typeMap) {
 public @NotNull List<InputParameter> get(ParameterType type){
       return typeMap.get(type);
 }
+public boolean hasParameter(ParameterType type, String self){
+      var list = this.get(type);
+      return list.stream()
+          .anyMatch(p -> p.self().equals(self));
+}
 
 }

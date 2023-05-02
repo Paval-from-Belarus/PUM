@@ -1,10 +1,24 @@
 package org.petos.packagemanager.packages;
 
-import org.petos.packagemanager.database.PackageHat;
+import org.jetbrains.annotations.NotNull;
 
-public record ShortPackageInfoDTO(String name, String[] aliases, String payloadType) {
-      public static ShortPackageInfoDTO valueOf(PackageHat hat){
-	    String[] aliases = hat.getAliases().toArray(String[]::new);
-	    return new ShortPackageInfoDTO(hat.getName(), aliases, hat.getPayload().getName());
+public record ShortPackageInfoDTO(Integer id, @NotNull String name, @NotNull String version,
+				  @NotNull String[] aliases) {
+public boolean similar(String word) {
+      if (word == null || word.isEmpty())
+	    return false;
+      if (name.equals(word))
+	    return true;
+      boolean isFound = false;
+      for (String alias : aliases) {
+	    isFound = alias.equals(word);
+	    if (isFound)
+		  break;
       }
+      return isFound;
+}
+
+public static ShortPackageInfoDTO valueOf(Integer id, FullPackageInfoDTO dto) {
+      return new ShortPackageInfoDTO(id, dto.name, dto.version, dto.aliases);
+}
 }

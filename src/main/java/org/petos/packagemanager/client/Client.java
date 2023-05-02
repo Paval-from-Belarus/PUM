@@ -6,12 +6,12 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
 import org.petos.packagemanager.packages.DependencyInfoDTO;
-import org.petos.packagemanager.packages.PackageAssembly;
 import org.petos.packagemanager.packages.FullPackageInfoDTO;
+import org.petos.packagemanager.packages.PackageAssembly;
 import org.petos.packagemanager.packages.ShortPackageInfoDTO;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -19,14 +19,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-import static org.petos.packagemanager.client.ClientService.*;
+import static org.petos.packagemanager.client.ClientService.ServerAccessException;
 import static org.petos.packagemanager.client.InputProcessor.*;
-import static org.petos.packagemanager.client.OutputProcessor.*;
-import static org.petos.packagemanager.client.PackageInstaller.*;
+import static org.petos.packagemanager.client.OutputProcessor.QuestionType;
+import static org.petos.packagemanager.client.PackageInstaller.CommitState;
 import static org.petos.packagemanager.client.PackageStorage.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class Client {
+public enum DependencyResolution {Local, Global}
 public final int LATEST_VERSION = 0;
 public final int OLDEST_VERSION = -1;
 Logger logger = LogManager.getLogger(Client.class);
@@ -102,6 +103,15 @@ private void dispatchTask(Runnable task) {
 }
 
 private void onRemoveCommand(ParameterMap params) {
+      List<InputParameter> removables = params.get(ParameterType.Raw);
+      if (removables.isEmpty())
+	    throw new IllegalStateException("The package is not specified");
+}
+private void removePackage(String name){
+      InstallationState state = storage.getPackageState(name);
+      if (state != InstallationState.Updatable && state != InstallationState.Installed){
+	    output.sendError("", String.format("The package %s is not installed", name));
+      }
 
 }
 
@@ -109,13 +119,68 @@ private void onRepositoryCommand(ParameterMap params) {
 
 }
 
+private void onListCommand(ParameterMap params) throws IOException {
+      boolean isVerboseMode = params.hasParameter(ParameterType.Shorts, "v") ||
+				  params.hasParameter(ParameterType.Verbose, "verbose");
+      if (params.hasParameter(ParameterType.Verbose, "installed")) {
+	    showPackagesLocally(isVerboseMode);
+      } else {
+	    showPackagesAll();
+      }
+
+}
+
+private void showPackagesAll() {
+      try {
+	    ClientService service = defaultService();
+	    var request = new NetworkPacket(RequestType.GetAll, RequestCode.NO_CODE);
+	    service.setRequest(request)
+		.setResponseHandler(this::onListAllResponse);
+	    service.run();
+      } catch (ServerAccessException e) {
+	    output.sendError("Network error", "Server is busy");
+      }
+}
+
+private void showPackagesLocally(boolean isVerbose) {
+      System.out.println("Installed packages");
+      final int DUMMY_ID = 0;
+      var packages = storage.localPackages();
+      if (isVerbose) {
+	    packages.forEach(this::printPackageInfo);
+      } else {
+	    packages.stream()
+		.map(full -> ShortPackageInfoDTO.valueOf(DUMMY_ID, full))
+		.forEach(this::printShortInfo);
+      }
+      if (storage.getLastStatus() != OperationStatus.Success) {
+	    output.sendMessage("Integrity warning", "some packages are broken");
+      }
+}
+
+private void onListAllResponse(NetworkPacket response, Socket socket) throws IOException {
+      if (response.type() != ResponseType.Approve)
+	    throw new IllegalStateException("No payload to print");
+      String jsonInfo = response.stringData();
+      ShortPackageInfoDTO[] packages = new Gson().fromJson(jsonInfo, ShortPackageInfoDTO[].class);
+      System.out.format("Available packages:\n");
+      for (ShortPackageInfoDTO info : packages) {
+	    printShortInfo(info);
+      }
+}
+
 private void onInstallCommand(ParameterMap params) {
       var rawParams = params.get(ParameterType.Raw);
       if (rawParams.isEmpty() || rawParams.size() > 1)
 	    throw new IllegalArgumentException("Package is not specified");
+
       String packageName = rawParams.get(0).self();//raw parameter has only value
-//      if (!storage.isInstalledPackage(packageName))
-      dispatchTask(() -> installTask(packageName));
+      var installation = storage.getPackageState(packageName);
+      if (installation != InstallationState.Installed && installation != InstallationState.Updatable)
+	    installPackage(packageName);
+      else {
+	    output.sendMessage("", "Package is already installed");
+      }
 }
 
 /**
@@ -124,10 +189,9 @@ private void onInstallCommand(ParameterMap params) {
  * @return all dependencies that should be installed locally (without current info)
  */
 
-
 private void printPackageInfo(@NotNull FullPackageInfoDTO dto) {
-      String output = String.format("%-30s %-30s %-30s %-20s\nPayloadSize: %-20d\n",
-	  dto.name, dto.version, dto.licenseType, dto.payloadType, dto.payloadSize);
+      String output = String.format("%-40s\t%-15s\t%-10s\t%-10s\t%-30d\n",
+	  dto.name, dto.version, dto.payloadType, dto.licenseType, dto.payloadSize);
       System.out.print(output);
 
 }
@@ -169,8 +233,7 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
       output.sendMessage("", "Installation in progress...");
       PackageAssembly assembly;
       CommitState commitState = CommitState.Failed;
-      try {
-	    var session = installer.initSession();
+      try (var session = installer.initSession()) {
 	    output.sendMessage("", "Dependency installation...");
 	    storeDependencies(session, dependencies);
 	    var optional = getRawAssembly(id, info.version);//latest version
@@ -185,7 +248,7 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
 		  output.sendMessage("", "Failed to load package");
 		  logger.warn("Package is not installed");
 	    }
-	    session.commit(commitState);
+	    session.commit(CommitState.Success);
 	    if (commitState == CommitState.Success)
 		  output.sendMessage("Congratulations!", "Installed successfully!");
       } catch (PackageAssembly.VerificationException e) {
@@ -196,11 +259,17 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
       }
 }
 
-private void installTask(String packageName) {
+private void installPackage(String packageName) {
+      Optional<Integer> packageId = Optional.empty();
+      if (storage.getPackageState(packageName) == InstallationState.Cached) {
+	    packageId = storage.getCached(packageName)
+			    .map(ShortPackageInfoDTO::id);
+      }
+      if (packageId.isEmpty())
+	    packageId = getPackageId(packageName);
+      Optional<FullPackageInfoDTO> fullInfo =
+	  packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
       try {
-	    var packageId = getPackageId(packageName);
-	    var fullInfo =
-		packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
 	    if (fullInfo.isPresent()) {
 		  FullPackageInfoDTO dto = fullInfo.get();
 		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto);
@@ -239,39 +308,17 @@ private byte[] onRawAssemblyResponse(NetworkPacket response, Socket socket) {
 }
 
 
-private void onListCommand(ParameterMap params) throws IOException {
-      //params are ignored
-      ClientService service = defaultService();
-      var request = new NetworkPacket(RequestType.GetAll, RequestCode.NO_CODE);
-      service.setRequest(request)
-	  .setResponseHandler(this::onListAllResponse);
-      dispatchService(service);
+private void printShortInfo(ShortPackageInfoDTO info) {
+      System.out.format("%-40s\t%-10s\t%-30s\n",
+	  info.name(), info.version(), "PetOS Central");
 }
-
-private void onListAllResponse(NetworkPacket response, Socket socket) throws IOException {
-      if (response.type() != ResponseType.Approve)
-	    throw new IllegalStateException("No payload to print");
-      String jsonInfo = response.stringData();
-      ShortPackageInfoDTO[] packages = new Gson().fromJson(jsonInfo, ShortPackageInfoDTO[].class);
-      printShortInfo(packages);
-}
-
-private void printShortInfo(ShortPackageInfoDTO[] packages) {
-      System.out.format("Available packages\n | %40s | %40s | %40s\n",
-	  "Package name", "Payload type", "Repository");
-      for (ShortPackageInfoDTO info : packages) {
-	    System.out.format("| %40s | %40s | %40s", info.name(), info.payloadType(),
-		"PetOS Central");
-      }
-}
-
 /**
  * convert Entries from FullPackageInfoDTO to Dependencies Map
- * */
+ */
 private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
       assert info.dependencies != null;
       List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)
-						 .filter(d -> !storage.isInstalledPackage(d.packageId(), d.label()))
+						 .filter(d -> storage.getPackageState(d.packageId(), d.label()) == InstallationState.Installed)
 						 .toList();
       Map<Integer, FullPackageInfoDTO> dependencyMap = new HashMap<>();
       for (var dependency : dependencies) {

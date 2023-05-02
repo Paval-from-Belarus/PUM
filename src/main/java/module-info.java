@@ -11,4 +11,5 @@ module com.example.packagemanager {
       exports org.petos.packagemanager.packages;
       exports org.petos.packagemanager.client;
       opens org.petos.packagemanager.database;
+      exports org.petos.packagemanager.client.database;
 }

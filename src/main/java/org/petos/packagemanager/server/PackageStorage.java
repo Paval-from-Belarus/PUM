@@ -7,10 +7,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.database.*;
-import org.petos.packagemanager.packages.DependencyInfoDTO;
-import org.petos.packagemanager.packages.FullPackageInfoDTO;
-import org.petos.packagemanager.packages.PackageInstanceDTO;
-import org.petos.packagemanager.packages.ShortPackageInfoDTO;
+import org.petos.packagemanager.packages.*;
 
 import javax.persistence.Query;
 import java.io.File;
@@ -93,9 +90,13 @@ public void close() {
 
 public List<ShortPackageInfoDTO> shortInfoList() {
       List<PackageHat> hats = getPackageHatAll();
-      return hats.parallelStream()
-		 .map(ShortPackageInfoDTO::valueOf)
-		 .toList();
+      List<ShortPackageInfoDTO> list = new ArrayList<>();
+      for (PackageHat hat : hats) {
+	    Optional<PackageId> id = getPackageId(hat.getId());
+	    Optional<ShortPackageInfoDTO> info = id.flatMap(this::getShortInfo);
+	    info.ifPresent(list::add);
+      }
+      return list;
 }
 
 //The important assumption is that all database check is unsafe (doesn't check anything)
@@ -108,7 +109,7 @@ private void amendAliases(PackageId id, @NotNull Collection<String> aliases) thr
 }
 
 //todo: review implementation
-private void checkPackageUniqueness(ShortPackageInfoDTO info) throws StorageException {
+private void checkPackageUniqueness(PublishInfoDTO info) throws StorageException {
       Optional<PackageId> id = getPackageId(info.name());
       boolean isUnique = id.isEmpty();
       if (isUnique) {
@@ -217,12 +218,23 @@ public Optional<VersionId> mapVersion(PackageId id, String label) {
  */
 //todo: access to table with short info
 public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
-      var optional = getPackageHat(id);
-      ShortPackageInfoDTO result = null;
-      if (optional.isPresent()) {
-	    result = ShortPackageInfoDTO.valueOf(optional.get());
-      }
-      return Optional.ofNullable(result);
+      Optional<PackageHat> hat = getPackageHat(id);
+      return hat.map(h -> {
+	    Session session = dbFactory.openSession();
+	    session.beginTransaction();
+	    Query query =
+		session.createQuery("from PackageInfo where packageId= :id order by time desc")
+		    .setParameter("id", id.value())
+		    .setMaxResults(1);
+	    PackageInfo info = (PackageInfo) query.getSingleResult();
+	    session.getTransaction().commit();
+	    ShortPackageInfoDTO result = null;
+	    if (info != null) {
+		  result = new ShortPackageInfoDTO(id.value(), hat.get().getName(),
+		      info.getVersionLabel(), h.getAliases().toArray(String[]::new));
+	    }
+	    return result;
+      });
 }
 
 public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
@@ -275,7 +287,7 @@ public Optional<byte[]> getPayload(PackageId id, VersionId version) {
 
 //check package on uniqueness and store in database
 //return package
-public synchronized @NotNull PackageId storePackageInfo(ShortPackageInfoDTO info) throws StorageException {
+public synchronized @NotNull PackageId storePackageInfo(PublishInfoDTO info) throws StorageException {
       checkPackageUniqueness(info);//methods throw exception if something wrong
       return initPackageHat(info);
 }
@@ -432,7 +444,7 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
  * Assume that all checks are passed
  * To add this dto to database is safe
  */
-private @NotNull PackageId initPackageHat(@NotNull ShortPackageInfoDTO dto) throws StorageException {
+private @NotNull PackageId initPackageHat(@NotNull PublishInfoDTO dto) throws StorageException {
       Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
       PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
       hat.setPayload(payload);
