@@ -1,8 +1,8 @@
 package org.petos.packagemanager.client;
 
 import org.junit.jupiter.api.Test;
+import org.petos.packagemanager.client.database.InstanceInfo;
 
-import static org.junit.jupiter.api.Assertions.*;
 class InstanceInfoTest {
 
 @Test

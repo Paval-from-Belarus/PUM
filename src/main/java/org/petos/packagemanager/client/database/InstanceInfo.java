@@ -1,4 +1,4 @@
-package org.petos.packagemanager.client;
+package org.petos.packagemanager.client.database;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -6,16 +6,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+//conventionally, the first name in aliases is correct name
 public class InstanceInfo {
+public enum LinkState {Add, Remove}
 private final static int MIN_LETTERS_PER_INSTANCE = 19;
 private final Integer packageId;
-private final String[] aliases;
-private final String path;
-
+private final String[] aliases; //the first
+private final String path; //where the
+private int linksCnt;//by default no
 public InstanceInfo(Integer id, String[] aliases, String path) {
       this.packageId = id;
       this.aliases = aliases;
       this.path = path;
+}
+public int getLinksCnt(){
+      return linksCnt;
+}
+public void updateLinksCnt(LinkState link){
+      int delta = 1;
+      if (link == LinkState.Remove)
+	    delta = -1;
+      linksCnt = Math.max(linksCnt + delta, 0);
 }
 
 public String[] getAliases() {
@@ -47,7 +58,8 @@ public String toString() {
 	    strText.append(alias).append(",");
       strText.setLength(strText.length() - 1);
       strText.append("]");
-      strText.append("path=[").append(path).append("]\r\n");
+      strText.append("path=[").append(path).append("]");
+      strText.append("links=[").append(linksCnt).append("]\r\n");
       return strText.toString();
 }
 
@@ -71,11 +83,12 @@ public static List<InstanceInfo> valueOf(@NotNull String source) {
       for (String line : separated) {
 	    try {
 		  String[] parts = line.split("]");
-		  if (parts.length == 3) {
+		  if (parts.length == 4) {
 			String[] id = collectParams(parts[0]);
 			String[] aliases = collectParams(parts[1] + "]");
 			String[] path = collectParams(parts[2] + "]");
-			if (path.length == 1 && id.length == 1 && aliases.length != 0) {
+			String[] links = collectParams(parts[3] + "]");
+			if (links.length == 1 && path.length == 1 && id.length == 1 && aliases.length != 0) {
 			      list.add(new InstanceInfo(Integer.parseInt(id[0]), aliases, path[0]));
 			}
 

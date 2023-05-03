@@ -5,6 +5,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
+import org.petos.packagemanager.client.storage.InstallerSession;
+import org.petos.packagemanager.client.storage.PackageStorage;
+import org.petos.packagemanager.client.storage.RemovableSession;
 import org.petos.packagemanager.packages.DependencyInfoDTO;
 import org.petos.packagemanager.packages.FullPackageInfoDTO;
 import org.petos.packagemanager.packages.PackageAssembly;
@@ -18,16 +21,22 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Predicate;
 
 import static org.petos.packagemanager.client.ClientService.ServerAccessException;
 import static org.petos.packagemanager.client.InputProcessor.*;
 import static org.petos.packagemanager.client.OutputProcessor.QuestionType;
-import static org.petos.packagemanager.client.PackageInstaller.CommitState;
-import static org.petos.packagemanager.client.PackageStorage.*;
+import static org.petos.packagemanager.client.StorageSession.*;
+import static org.petos.packagemanager.client.storage.PackageStorage.*;
 import static org.petos.packagemanager.transfer.NetworkExchange.*;
 
 public class Client {
-public enum DependencyResolution {Local, Global}
+/**
+ * <code>Selective</code> mode is used to install package (select dependencies that are not installed)<br>
+ * <code>Local</code> mode is used to collect all available local dependencies<br>
+ * <code>Complete</code> mode is used to complete all dependencies whereas installed or not
+ */
+public enum ResolutionMode {Selective, Local, Complete}
 public final int LATEST_VERSION = 0;
 public final int OLDEST_VERSION = -1;
 Logger logger = LogManager.getLogger(Client.class);
@@ -36,7 +45,6 @@ private final int port;
 private Thread listenThread;
 private Thread userThread;
 private Configuration config;
-private PackageInstaller installer;
 private PackageStorage storage;
 private InputProcessor input;
 private OutputProcessor output;
@@ -57,8 +65,13 @@ private void initConfig() {
 	    String content = Files.readString(configPath);
 	    this.config = new Gson().fromJson(content, Configuration.class);
 	    this.config.init();
-	    installer = new PackageInstaller(this.config);
 	    storage = new PackageStorage(this.config);//throws
+//	    Class<?> storageClass = storage.getClass();
+//	    var methods = storageClass.getDeclaredMethods();
+//	    for (var method : methods){
+//		  System.out.println(method.getName() + ":" + method.getReturnType());
+//		  System.out.println(method.isSynthetic());
+//	    }
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");
       }
@@ -107,9 +120,27 @@ private void onRemoveCommand(ParameterMap params) {
       if (removables.isEmpty())
 	    throw new IllegalStateException("The package is not specified");
 }
+
 private void removePackage(String name){
       InstallationState state = storage.getPackageState(name);
-      if (state != InstallationState.Updatable && state != InstallationState.Installed){
+      if (state.isLocal()){
+	    try(var session = storage.initSession(RemovableSession.class)){
+		  var fullInfo = storage.getFullInfo(name);
+		  if (fullInfo.isPresent()){
+			//the dependency resotion is obligatory only to determine the integrity of package
+			Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(fullInfo.get(), ResolutionMode.Local);//only existing dependencies
+			//do something with session
+
+		  } else {
+			output.sendError("", String.format("The package %s is damaged", name));
+		  }
+	    } catch (PackageIntegrityException e){//apparently, broken dependencies
+		  output.sendError("", e.getMessage());
+	    } catch (ConfigurationException e) {
+		  //error on compilation time...
+		  throw new RuntimeException(e);
+	    }
+      } else {
 	    output.sendError("", String.format("The package %s is not installed", name));
       }
 
@@ -175,8 +206,8 @@ private void onInstallCommand(ParameterMap params) {
 	    throw new IllegalArgumentException("Package is not specified");
 
       String packageName = rawParams.get(0).self();//raw parameter has only value
-      var installation = storage.getPackageState(packageName);
-      if (installation != InstallationState.Installed && installation != InstallationState.Updatable)
+      var state = storage.getPackageState(packageName);
+      if (state.isRemote())
 	    installPackage(packageName);
       else {
 	    output.sendMessage("", "Package is already installed");
@@ -210,7 +241,7 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
 }
 
 //this method install dependencies according the common conventional rules
-private void storeDependencies(PackageInstaller.InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
+private void storeDependencies(InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
       //todo: rewrite onto parallel stream or dispatchTask methods
       PackageAssembly assembly;
       try {
@@ -233,7 +264,7 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
       output.sendMessage("", "Installation in progress...");
       PackageAssembly assembly;
       CommitState commitState = CommitState.Failed;
-      try (var session = installer.initSession()) {
+      try (var session = storage.initSession(InstallerSession.class)) {
 	    output.sendMessage("", "Dependency installation...");
 	    storeDependencies(session, dependencies);
 	    var optional = getRawAssembly(id, info.version);//latest version
@@ -255,24 +286,25 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
 	    output.sendMessage("Verification error", e.getMessage());
       } catch (PackageIntegrityException e) {
 	    logger.warn("Broken dependencies: " + e.getMessage());
-	    output.sendMessage("Broken dependencies", e.getMessage());
+	    output.sendError("Broken dependencies", e.getMessage());
+      } catch (ConfigurationException e) {
+	    output.sendError("Configuration error", "Impossible to start installation");
       }
 }
 
 private void installPackage(String packageName) {
       Optional<Integer> packageId = Optional.empty();
       if (storage.getPackageState(packageName) == InstallationState.Cached) {
-	    packageId = storage.getCached(packageName)
+	    packageId = storage.getCachedInfo(packageName)
 			    .map(ShortPackageInfoDTO::id);
       }
       if (packageId.isEmpty())
 	    packageId = getPackageId(packageName);
-      Optional<FullPackageInfoDTO> fullInfo =
-	  packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
+      Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
       try {
 	    if (fullInfo.isPresent()) {
 		  FullPackageInfoDTO dto = fullInfo.get();
-		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto);
+		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, ResolutionMode.Selective);
 		  if (hasUserAgreement(dto, dependencies.values())) {
 			startInstallation(packageId.get(), dto, dependencies);
 		  } else {
@@ -312,20 +344,32 @@ private void printShortInfo(ShortPackageInfoDTO info) {
       System.out.format("%-40s\t%-10s\t%-30s\n",
 	  info.name(), info.version(), "PetOS Central");
 }
+private boolean localResolutionPredicate(DependencyInfoDTO dto){
+      InstallationState state = storage.getPackageState(dto.packageId(), dto.label());
+      return state.isLocal();
+}
+public boolean selectiveResolutionPredicate(DependencyInfoDTO dto) {
+	InstallationState state = storage.getPackageState(dto.packageId(), dto.label());
+	return state.isRemote();
+}
 /**
  * convert Entries from FullPackageInfoDTO to Dependencies Map
  */
-private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info) throws PackageIntegrityException {
+private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO info, ResolutionMode mode) throws PackageIntegrityException {
       assert info.dependencies != null;
-      List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)
-						 .filter(d -> storage.getPackageState(d.packageId(), d.label()) == InstallationState.Installed)
-						 .toList();
+      List<Predicate<DependencyInfoDTO>> handlers = List.of(
+	  this::localResolutionPredicate, this::selectiveResolutionPredicate, (dto)-> true);//third method not implemented because is not purposely available
+	      List<DependencyInfoDTO> dependencies = Arrays.stream(info.dependencies)
+							 .filter(handlers.get(mode.ordinal()))
+							 .toList();
       Map<Integer, FullPackageInfoDTO> dependencyMap = new HashMap<>();
       for (var dependency : dependencies) {
-	    var fullInfo = getFullInfo(dependency.packageId(), dependency.label());
+	    var fullInfo = storage.getFullInfo(dependency.packageId(), dependency.label()); //attempt to fetch data from local database
+	    if (fullInfo.isEmpty())
+		  fullInfo = getFullInfo(dependency.packageId(), dependency.label()); //fetch the info from remote server
 	    if (fullInfo.isPresent()) {
 		  dependencyMap.put(dependency.packageId(), fullInfo.get());
-		  dependencyMap.putAll(resolveDependencies(fullInfo.get()));
+		  dependencyMap.putAll(resolveDependencies(fullInfo.get(), mode));
 	    } else {
 		  logger.warn("Broken dependency:" +
 				  dependency.label() + " id=" + dependency.packageId());

@@ -1,0 +1,3 @@
+id=[0]aliases=[PetOS Kernel,kernel]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs/PetOS Kernel]
+id=[2]aliases=[CDROM Driver,cdrom-driver]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs/CDROM Driver]
+id=[3]aliases=[Network Driver,network-driver]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs/Network Driver]
