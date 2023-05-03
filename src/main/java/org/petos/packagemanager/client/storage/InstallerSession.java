@@ -65,7 +65,7 @@ public void commit(CommitState state) throws PackageIntegrityException {
 	    try {
 		  String config = Files.readString(configFile.toPath());
 		  List<InstanceInfo> dependencies = InstanceInfo.valueOf(config);
-		  storage.rebuildConfig(dependencies);
+		  storage.rebuildConfig(dependencies, RebuildMode.Replace);
 		  storage.linkLibraries(centralPath, dependencies);
 		  //storage relink storage
 		  //it's known info that some packages are already installed

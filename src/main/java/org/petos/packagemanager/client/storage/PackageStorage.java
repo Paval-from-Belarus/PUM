@@ -29,6 +29,8 @@ import static org.petos.packagemanager.client.database.InstanceInfo.*;
 public class PackageStorage {
 public enum PayloadType {Binary, Library, Docs, Config, Unknown}
 
+public enum RebuildMode {Remove, Replace}
+
 public enum InstallationState {
       /**
        * <code>Installed</code> ― installed and can be removed<br>
@@ -57,7 +59,7 @@ public enum InstallationState {
       }
 
       public boolean isRemovable() {
-	    return attachment;
+	    return locality && !attachment;
       }
 }
 
@@ -140,7 +142,7 @@ public InstallationState getPackageState(String name) {
       return state;
 }
 
-private InstallationState getInstanceState(InstanceInfo info) {
+InstallationState getInstanceState(InstanceInfo info) {
       InstallationState state = InstallationState.Installed;
       if (info.getLinksCnt() != 0)
 	    state = InstallationState.Frozen;
@@ -266,10 +268,11 @@ private Optional<FullPackageInfoDTO> toExternalFormat(PackageInfo info) {
  * Update the info about installed packages (it's true that these packages are storing in local FS). If instances
  * are already exists, they will be replaced by new values
  */
-void rebuildConfig(List<InstanceInfo> instances) throws IOException {
+void rebuildConfig(List<InstanceInfo> instances, RebuildMode mode) throws IOException {
       Path packagesInfo = Path.of(config.infoPath);
-      for (var instance : instances) {
-	    installed.put(instance.getId(), instance);//replace whereas exists old nor
+      switch (mode) {
+	    case Remove -> instances.forEach(info -> installed.remove(info.getId()));
+	    case Replace -> instances.forEach(info -> installed.put(info.getId(), info));
       }
       StringBuilder output = new StringBuilder();
       installed.values().forEach(output::append);//invoke to string for each item
@@ -295,12 +298,11 @@ void linkLibraries(Path central, @NotNull List<InstanceInfo> instances) throws I
 			      instances.add(depInfo);
 			}
 		  }
-
 		  for (var dependency : instances) {
 			writer.write(dependency.getStringPath() + "\r\n");
 			dependency.updateLinksCnt(LinkState.Add);
 		  }
-		  rebuildConfig(instances);
+		  rebuildConfig(instances, RebuildMode.Replace);
 	    }
       }//also store linkPath in executable
 }
