@@ -15,11 +15,12 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.petos.packagemanager.client.storage.PackageStorage.*;
 
 public class InstallerSession implements StorageSession {
-InstallerSession(PackageStorage storage){
+InstallerSession(PackageStorage storage) {
       this.storage = storage;
       isManaged = false;
 }
@@ -66,6 +67,9 @@ public void commit(CommitState state) throws PackageIntegrityException {
 		  String config = Files.readString(configFile.toPath());
 		  List<InstanceInfo> dependencies = InstanceInfo.valueOf(config);
 		  storage.rebuildConfig(dependencies, RebuildMode.Replace);
+		  dependencies = dependencies.stream()
+				     .filter(d -> !d.getStringPath().equals(centralPath.toString()))
+				     .collect(Collectors.toList());
 		  storage.linkLibraries(centralPath, dependencies);
 		  //storage relink storage
 		  //it's known info that some packages are already installed
@@ -147,15 +151,18 @@ private void appendConfig(Integer packageId, Path instancePath, FullPackageInfoD
 	    throw new RuntimeException("Configuration file is not exists");
       }
 }
+
 private Path centralPath; //central file for which each dependency belongs
 private File configFile;
 private File exeFile;//the executable file
 private boolean isManaged;
 private final PackageStorage storage;
+
 InstallerSession setConfigFile(File file) {
       this.configFile = file;
       return this;
 }
+
 //the close method should be invoked if all is wrong
 @Override
 public void close() throws PackageIntegrityException {

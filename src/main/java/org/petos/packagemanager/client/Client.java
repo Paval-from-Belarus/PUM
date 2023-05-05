@@ -149,14 +149,15 @@ private void removePackage(String name) {
 	    try (var session = storage.initSession(RemovableSession.class)) {
 		  var fullInfo = storage.getFullInfo(name);
 		  if (fullInfo.isPresent()) {
+			session.removeLocally(fullInfo.get());//to mark dependencies as deletable
 			//the dependency resotion is obligatory only to determine the integrity of package
 			ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Removable, storage);
 			Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(fullInfo.get(), mode);//only existing dependencies
-			session.removeLocally(fullInfo.get());
 			for (var dto : dependencies.values()) {
 			      session.removeLocally(dto);
 			}
 			session.commit(CommitState.Success);
+			output.sendMessage("Success", "The package was removed successfully");
 		  } else {
 			output.sendError("", String.format("The package %s is damaged", name));
 		  }

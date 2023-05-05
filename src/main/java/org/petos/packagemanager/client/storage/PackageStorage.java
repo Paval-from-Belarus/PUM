@@ -29,7 +29,18 @@ import static org.petos.packagemanager.client.database.InstanceInfo.*;
 public class PackageStorage {
 public enum PayloadType {Binary, Library, Docs, Config, Unknown}
 
-public enum RebuildMode {Remove, Replace}
+public enum RebuildMode {
+      Remove, Replace, SilentReplace;
+      private boolean silent = false;
+
+      static {
+	    SilentReplace.silent = true;
+      }
+
+      public boolean isSilent() {
+	    return silent;
+      }
+}
 
 public enum InstallationState {
       /**
@@ -272,18 +283,38 @@ void rebuildConfig(List<InstanceInfo> instances, RebuildMode mode) throws IOExce
       Path packagesInfo = Path.of(config.infoPath);
       switch (mode) {
 	    case Remove -> instances.forEach(info -> installed.remove(info.getId()));
-	    case Replace -> instances.forEach(info -> installed.put(info.getId(), info));
+	    case Replace, SilentReplace -> instances.forEach(info -> installed.put(info.getId(), info));
       }
-      StringBuilder output = new StringBuilder();
-      installed.values().forEach(output::append);//invoke to string for each item
-      Files.writeString(packagesInfo, output.toString());
+      if (!mode.isSilent()){
+	    StringBuilder output = new StringBuilder();
+	    installed.values().forEach(output::append);//invoke to string for each item
+	    Files.writeString(packagesInfo, output.toString());
+      }
+}
+
+void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOException {
+      var packageInfo = getPackageInfo(central);
+      List<InstanceInfo> instanceList = new ArrayList<>();
+      if (packageInfo.isPresent()) {
+	    for (var depInfo : packageInfo.get().dependencies) {
+		  Optional<InstanceInfo> depInstance = getInstanceInfo(depInfo.packageId());
+		  if (depInstance.isPresent()) {
+			depInstance.get().updateLinksCnt(LinkState.Remove);
+			instanceList.add(depInstance.get());
+		  } else {
+			throw new PackageIntegrityException("Broken dependency");
+		  }
+	    }
+	    rebuildConfig(instanceList, RebuildMode.SilentReplace);
+      } else {
+	    throw new PackageIntegrityException("Package is already removed");
+      }
 }
 
 //each packages also holds info about self in package directory as conf.pum
 //At this moment, in central path stores configaration file
 //The configuration file has <code>Local format</code>
 //The result of thi function is OS relative form of ddl
-@NotNull
 void linkLibraries(Path central, @NotNull List<InstanceInfo> instances) throws IOException {
       assert installed != null;
       Path configPath = central.resolve("conf.pum");
@@ -424,7 +455,9 @@ private static class PackageWalker extends SimpleFileVisitor<Path> {
 
       @Override
       public FileVisitResult visitFile(Path filePath, BasicFileAttributes attrs) throws IOException {
-	    payloadSize += filePath.toFile().length();
+	    if (!filePath.endsWith("pum")) {
+		  payloadSize += filePath.toFile().length();
+	    }
 	    return FileVisitResult.CONTINUE;
       }
 }

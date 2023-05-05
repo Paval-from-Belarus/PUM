@@ -20,6 +20,7 @@ public void removeLocally(FullPackageInfoDTO dto) throws PackageIntegrityExcepti
       Optional<InstanceInfo> instance = storage.getInstanceInfo(dto.name);
       try {
             if (instance.isPresent() && storage.getInstanceState(instance.get()).isRemovable()){
+                  storage.unlinkLibraries(instance.get());
                   appendConfig(instance.get());
             } else {
                   throw new PackageIntegrityException("Non-removable package");

@@ -52,9 +52,11 @@ public record InputGroup(@NotNull UserInput type, @NotNull Map<ParameterType, Li
       public @NotNull List<InputParameter> verboseParams() {
 	    return typeMap.get(ParameterType.Verbose);
       }
-      public ParameterMap params(){
+
+      public ParameterMap params() {
 	    return new ParameterMap(typeMap());
       }
+
       @Override
       public String toString() {
 	    StringBuilder output = new StringBuilder("(type=" + type + ", map=\n");
@@ -158,10 +160,22 @@ public static class InputPattern {
 
 }
 
-private boolean isValidName(char letter) {
-      return letter != ' ' && letter != '-' && letter != '=';
+private boolean isValidName(char letter, boolean strictMode) {
+      boolean response = (strictMode && letter != '"') ||
+			 (!strictMode && letter != ' ' && letter != '-' && letter != '=');
+      return response;
 }
-
+private String strictSlice(char[] letters, int offset){
+      if (letters[offset] != '"')
+	    return "";
+      StringBuilder slice = new StringBuilder();
+      int i = offset + 1;
+      while (i < letters.length && letters[i] != '"'){
+	    slice.append(letters[i]);
+	    i += 1;
+      }
+      return slice.toString();
+}
 private boolean isValidValue(char letter) {
       return letter != ' ' && letter != '-';
 }
@@ -175,6 +189,7 @@ private @NotNull List<InputParameter> collectParams(String source) {
       char[] letters = source.toCharArray();
       for (int i = 0; i < letters.length; ) {
 	    int paramIndex = RAW_PARAMETER; //none
+	    boolean strictMode = false;
 	    if (letters[i] == '-') {
 		  int offset = 1;
 		  paramIndex = SHORT_PARAMETER;
@@ -186,13 +201,25 @@ private @NotNull List<InputParameter> collectParams(String source) {
 	    }
 	    StringBuilder nameBuilder = new StringBuilder();
 	    StringBuilder valueBuilder = new StringBuilder();
-	    while (i < letters.length && isValidName(letters[i])) { //attempt to extract self parameter name
+	    if (letters[i] == '"' && paramIndex == RAW_PARAMETER) {
+		  String slice = strictSlice(letters, i);
+		  i += slice.length() + 2;
+		  nameBuilder.append(slice);
+		  strictMode = true;
+	    }
+	    while (!strictMode && i < letters.length && isValidName(letters[i], false)) { //attempt to extract self parameter name
 		  nameBuilder.append(letters[i]);
 		  i += 1;
 	    }
 	    //the beginning of the parameter's value
-	    if (i < letters.length && letters[i] == '=') {
+	    //it's possible only in non strict mode
+	    if (!strictMode && i < letters.length && letters[i] == '=') {
 		  i += 1;
+		  if (letters[i] == '"'){
+			String slice = strictSlice(letters, i);
+			valueBuilder.append(slice);
+			i += slice.length() + 2;
+		  }
 		  while (i < letters.length && isValidValue(letters[i])) {
 			valueBuilder.append(letters[i]);
 			i += 1;
@@ -212,22 +239,23 @@ private @NotNull List<InputParameter> collectParams(String source) {
       return params;
 }
 
-private boolean belongsGroup(List<InputParameter> params, String[] patterns){
+private boolean belongsGroup(List<InputParameter> params, String[] patterns) {
       boolean isValid = true; //no params means valid
-      for (InputParameter param : params){
+      for (InputParameter param : params) {
 	    isValid = false;
-	    for (String label : patterns){
-		  if (label.equals(param.self())){
+	    for (String label : patterns) {
+		  if (label.equals(param.self())) {
 			isValid = true;
 			break;
 		  }
 	    }
-	    if (!isValid){
+	    if (!isValid) {
 		  break;
 	    }
       }
       return isValid;
 }
+
 private Optional<InputGroup> verifyGroup(@NotNull InputGroup group) {
       Optional<InputGroup> result = Optional.empty();
       InputPattern pattern = patternMap.get(group.type());
@@ -237,7 +265,7 @@ private Optional<InputGroup> verifyGroup(@NotNull InputGroup group) {
       final int VALIDATION_LENGTH = 2;
       int index = 0;
       boolean isValid = true;
-      while (isValid && index < VALIDATION_LENGTH){
+      while (isValid && index < VALIDATION_LENGTH) {
 	    isValid = belongsGroup(params.get(index), labels.get(index));
 	    index += 1;
       }
