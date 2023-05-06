@@ -13,8 +13,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.petos.packagemanager.client.storage.PackageStorage.*;
@@ -42,6 +44,7 @@ public void storeLocally(FullPackageInfoDTO dto, PackageAssembly assembly) throw
 		  PackageStorage.removeFiles(normalized);
 	    }
 	    Files.createDirectory(normalized);
+	    PackageStorage.storePackageInfo(normalized, dto, assembly);
 	    switch (type) {
 		  case Binary -> {
 			saveBinary(normalized, assembly, dto);
@@ -50,8 +53,6 @@ public void storeLocally(FullPackageInfoDTO dto, PackageAssembly assembly) throw
 			saveLibrary(normalized, assembly, dto);
 		  }
 	    }
-	    PackageInfo info = toLocalFormat(assembly, dto);
-	    storePackageInfo(normalized, info);
       } catch (IOException e) {
 	    throw new PackageIntegrityException("Payload installation error: " + e.getMessage());
       }
@@ -99,6 +100,8 @@ private void saveLibrary(@NotNull Path normalized, @NotNull PackageAssembly asse
 	    Files.write(libPath, assembly.getPayload());
 	    Files.setPosixFilePermissions(libPath, EnumSet.of(PosixFilePermission.OWNER_EXECUTE)); //or mark as shared library
 	    appendConfig(assembly.getId(), normalized, dto);
+	    List<InstanceInfo> libDependencies = mapDependencies(dto);
+	    storage.linkLibraries(normalized, libDependencies);
       } catch (IOException e) {
 	    throw new PackageIntegrityException("Library storage error");
       }
@@ -150,6 +153,17 @@ private void appendConfig(Integer packageId, Path instancePath, FullPackageInfoD
       } catch (IOException e) {
 	    throw new RuntimeException("Configuration file is not exists");
       }
+}
+
+//convert existing dependencies from PackageInfo to InstanceInfo
+private @NotNull List<InstanceInfo> mapDependencies(FullPackageInfoDTO dto) throws PackageIntegrityException {
+      List<InstanceInfo> instances = new ArrayList<>(dto.dependencies.length);
+      for (var dependency : dto.dependencies) {
+	    Optional<InstanceInfo> instance = storage.getInstanceInfo(dependency.packageId(), dependency.label());
+	    instance.map(instances::add)
+		.orElseThrow(() -> new PackageIntegrityException("Library dependency is broken"));
+      }
+      return instances;
 }
 
 private Path centralPath; //central file for which each dependency belongs

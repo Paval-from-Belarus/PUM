@@ -7,13 +7,13 @@ import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
 import org.petos.packagemanager.client.storage.InstallerSession;
 import org.petos.packagemanager.client.storage.PackageStorage;
+import org.petos.packagemanager.client.storage.Publisher;
 import org.petos.packagemanager.client.storage.RemovableSession;
-import org.petos.packagemanager.packages.DependencyInfoDTO;
-import org.petos.packagemanager.packages.FullPackageInfoDTO;
-import org.petos.packagemanager.packages.PackageAssembly;
-import org.petos.packagemanager.packages.ShortPackageInfoDTO;
+import org.petos.packagemanager.packages.*;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -38,10 +38,12 @@ public class Client {
 public enum ResolutionMode {
       Remote, Local, Removable;
       private PackageStorage storage = null;
-      public static ResolutionMode valueOf(ResolutionMode mode, PackageStorage storage){
+
+      public static ResolutionMode valueOf(ResolutionMode mode, PackageStorage storage) {
 	    mode.storage = storage;
 	    return mode;
       }
+
       public boolean isSuitable(DependencyInfoDTO dto) {
 	    if (storage == null)
 		  return false;
@@ -106,11 +108,13 @@ public void start() {
 
 private void dispatchInputGroup(@NotNull InputGroup group) {
       try {
+	    ParameterMap params = group.params();
 	    switch (group.type()) {
-		  case List -> onListCommand(group.params());
-		  case Install -> onInstallCommand(group.params());
-		  case Remove -> onRemoveCommand(group.params());
-		  case Repository -> onRepositoryCommand(group.params());
+		  case List -> onListCommand(params);
+		  case Install -> onInstallCommand(params);
+		  case Remove -> onRemoveCommand(params);
+		  case Repository -> onRepositoryCommand(params);
+		  case Publish -> onPublishCommand(params);
 	    }
       } catch (Exception e) {
 	    defaultErrorHandler(e);
@@ -134,11 +138,97 @@ private void dispatchTask(Runnable task) {
       task.run();
 }
 
+private void onPublishCommand(ParameterMap params) {
+      List<InputParameter> raws = params.get(ParameterType.Raw);
+      if (raws.size() != 1) {
+	    throw new IllegalStateException("Invalid count of publish file");
+      }
+      publishPackage(raws.get(0).self());
+
+}
+
+private void publishPackage(@NotNull String entityPath) {
+      Publisher publisher = fromConfigFile(entityPath);
+      Optional<Integer> packageId = publishPackageHat(publisher);
+      if (packageId.isPresent()) { //server save some additional info
+	    try(FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())){
+		Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
+		if (dto.isPresent()) {
+		      publishPayload(dto.get(), payloadStream);
+		      output.sendMessage("","Success");
+		}
+	    } catch (IOException e) {
+		  throw new IllegalStateException("Payload is not found");
+	    }
+      } else {
+	    throw new IllegalStateException("Server declines");
+      }
+}
+private Optional<Integer> publishPackageHat(Publisher entity) {
+      Wrapper<Integer> response = new Wrapper<>();//the default value is null
+      try {
+	    ClientService service = defaultService();
+	    NetworkPacket request = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
+	    PublishInfoDTO dto = extractPublishHat(entity);
+	    request.setPayload(PackageStorage.toJson(dto).getBytes(StandardCharsets.US_ASCII));
+	    service.setRequest(request)
+		.setResponseHandler((r, s) -> response.set(onPublishResponse(r, s)))
+		.setExceptionHandler(this::onPublishException);
+	    service.run();
+      } catch (ServerAccessException e) {
+	    output.sendError("Network error", "Server not response");
+      }
+      return Optional.ofNullable(response.get());
+}
+private void publishPayload(PackageInstanceDTO dto, FileInputStream payload) {
+
+}
+private @NotNull Integer onPublishResponse(@NotNull NetworkPacket response, Socket socket) {
+      Integer result = null;
+      boolean approved = (response.type(ResponseType.class).equals(ResponseType.Approve));
+      if (approved) {
+	    result = ByteBuffer.wrap(response.data()).getInt();
+      }
+      if (!approved && response.containsCode(VERBOSE_FORMAT))
+	    output.sendError("Publish error", NetworkPacket.bytesToString(response.data()));
+      return result;
+}
+
+private @NotNull Publisher fromConfigFile(@NotNull String entityPath) throws IllegalStateException {
+      File configFile = Path.of(entityPath).toFile();
+      if (!configFile.exists()) {
+	    throw new IllegalStateException("Publish config file is not exists");
+      }
+      Publisher publisher;
+      try {
+	    String configData = Files.readString(configFile.toPath());
+	    Optional<Publisher> optional = Publisher.valueOf(configData);
+	    if (optional.isPresent() && Path.of(optional.get().exePath).toFile().exists()) {
+		  publisher = optional.get();
+	    } else {
+		  throw new IllegalStateException("Publish file has incorrect format");
+	    }
+      } catch (IOException e) {
+	    throw new IllegalStateException("File error during publish config reading");
+      }
+      return publisher;
+}
+private void onPublishException(Exception e) {
+      if (e instanceof ServerAccessException) {
+	    output.sendError("Server says", e.getMessage());
+      } else {
+	    output.sendError("Unknown error", e.getMessage());
+      }
+}
+
+private static PublishInfoDTO extractPublishHat(Publisher entity) {
+      return new PublishInfoDTO(entity.name, entity.aliases, entity.type.toString());
+}
 private void onRemoveCommand(ParameterMap params) {
       List<InputParameter> removables = params.get(ParameterType.Raw);
       if (removables.isEmpty())
 	    throw new IllegalStateException("The package is not specified");
-      for (var removable : removables){
+      for (var removable : removables) {
 	    removePackage(removable.self());
       }
 }
@@ -466,6 +556,7 @@ private void defaultErrorHandler(Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());
 }
+
 private static byte[] toBytes(Integer value) {
       return ByteBuffer.allocate(4).putInt(value).array();
 }

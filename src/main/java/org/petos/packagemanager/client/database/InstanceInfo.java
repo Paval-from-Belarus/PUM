@@ -101,7 +101,7 @@ public static List<InstanceInfo> valueOf(@NotNull String source) {
 
 //collect params upon the next the first occurrence of `]` letter
 //parameter is any sequence of letter besides space and coma
-private static String[] collectParams(@NotNull String line) {
+public static String[] collectParams(@NotNull String line) {
       String[] params = line.split("( *, *)|(])");
       int index = 0;
       for (char letter : params[0].toCharArray()) {

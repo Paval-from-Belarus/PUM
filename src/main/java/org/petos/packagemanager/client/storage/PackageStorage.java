@@ -8,10 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.petos.packagemanager.client.Configuration;
 import org.petos.packagemanager.client.database.InstanceInfo;
 import org.petos.packagemanager.client.database.PackageInfo;
-import org.petos.packagemanager.packages.DependencyInfoDTO;
-import org.petos.packagemanager.packages.FullPackageInfoDTO;
-import org.petos.packagemanager.packages.PackageAssembly;
-import org.petos.packagemanager.packages.ShortPackageInfoDTO;
+import org.petos.packagemanager.packages.*;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -28,6 +25,7 @@ import static org.petos.packagemanager.client.database.InstanceInfo.*;
 
 public class PackageStorage {
 public enum PayloadType {Binary, Library, Docs, Config, Unknown}
+public enum LicenceType {MIT, GNU, Apache, Bear}
 
 public enum RebuildMode {
       Remove, Replace, SilentReplace;
@@ -110,7 +108,6 @@ private OperationStatus lastStatus;
 public OperationStatus getLastStatus() {
       return lastStatus;
 }
-
 
 public void replaceCacheInfo(ShortPackageInfoDTO[] shortInfo) throws ConfigurationException {
       if (cachedInfo != null) {
@@ -198,7 +195,11 @@ public @NotNull <T> T initSession(Class<T> classType) throws ConfigurationExcept
 	    throw new ConfigurationException("Illegal session class");
       return session;
 }
-
+public Optional<PackageInstanceDTO> collectPublishInstance(Integer id, Publisher entity) {
+      DependencyInfoDTO[] dependencies = new DependencyInfoDTO[entity.dependencies.length];
+      PackageInstanceDTO dto = new PackageInstanceDTO(id, entity.version, dependencies);
+      return Optional.empty();
+}
 public Optional<FullPackageInfoDTO> getFullInfo(Integer id, String version) {
       var localInfo = getPackageInfo(id);
       Optional<FullPackageInfoDTO> fullInfo = Optional.empty();
@@ -218,12 +219,12 @@ public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
       return info.flatMap(this::toExternalFormat);
 }
 
-public static void storePackageInfo(Path configDir, PackageInfo info) throws IOException {
+public static void storePackageInfo(Path configDir, FullPackageInfoDTO dto, PackageAssembly assembly) throws  IOException {
+      PackageInfo info = toLocalFormat(assembly, dto);
       String jsonInfo = toJson(info);
       Files.writeString(configDir.resolve("conf.pum"), jsonInfo);
 }
-
-static PackageInfo toLocalFormat(PackageAssembly assembly, FullPackageInfoDTO dto) {
+private static PackageInfo toLocalFormat(PackageAssembly assembly, FullPackageInfoDTO dto) {
       var info = new PackageInfo();
       info.packageId = assembly.getId();
       info.versionId = assembly.getVersion();
@@ -315,6 +316,7 @@ void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOE
 //At this moment, in central path stores configaration file
 //The configuration file has <code>Local format</code>
 //The result of thi function is OS relative form of ddl
+//todo: link installed dependencies too (ie, if we link central package, link and closed dependencies)
 void linkLibraries(Path central, @NotNull List<InstanceInfo> instances) throws IOException {
       assert installed != null;
       Path configPath = central.resolve("conf.pum");
@@ -343,7 +345,7 @@ Path normalizePath(String name, PayloadType type) {
       Path destPath = null;
       switch (type) {
 	    case Binary -> {
-		  destPath = Path.of(config.packages).resolve(name);
+		  destPath = Path.of(config.programs).resolve(name);
 	    }
 	    case Library -> {
 		  destPath = Path.of(config.libraries).resolve(name);
@@ -410,6 +412,7 @@ Optional<PackageInfo> getPackageInfo(@NotNull String name) {
       return instance.flatMap(this::getPackageInfo);
 }
 
+//todo: add VersionLabel too
 Optional<PackageInfo> getPackageInfo(@NotNull Integer id) {
       var instance = getInstanceInfo(id);
       return instance.flatMap(this::getPackageInfo);
@@ -423,6 +426,9 @@ Optional<InstanceInfo> getInstanceInfo(@NotNull String name) {
 
 Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id) {
       return Optional.ofNullable(installed.get(id));
+}
+Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id, String version) {
+      return getInstanceInfo(id);
 }
 
 private Optional<PackageInfo> getPackageInfo(InstanceInfo instance) {
