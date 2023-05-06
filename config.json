@@ -1,6 +1,6 @@
 {
-"programs": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs",
-"libraries": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/libraries",
-"temp": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/temp",
-"packagesInfo": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/usr/programs/pum/packages"
+"programs": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs",
+"libraries": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/libraries",
+"temp": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/temp",
+"packagesInfo": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/pum/packages"
 }

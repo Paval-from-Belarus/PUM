@@ -38,6 +38,6 @@ build/
 ### Mac OS ###
 .DS_Store
 ### Project FS
-client/*
+Client/localpc/*
 **/*.exe
 **/*.zip
