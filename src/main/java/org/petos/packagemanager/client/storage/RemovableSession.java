@@ -16,6 +16,7 @@ import static org.petos.packagemanager.client.storage.PackageStorage.*;
 
 public class RemovableSession implements StorageSession {
 private Path centralPath; //the path of main package
+private boolean isManaged;
 public void removeLocally(FullPackageInfoDTO dto) throws PackageIntegrityException {
       Optional<InstanceInfo> instance = storage.getInstanceInfo(dto.name);
       try {
@@ -43,16 +44,17 @@ public void commit(CommitState state) throws PackageIntegrityException {
                   }
                   storage.rebuildConfig(list, RebuildMode.Remove);
             }
-            clearConfig();
+            if (!isManaged)
+                  clearConfig();
       } catch(IOException e){
             throw new PackageIntegrityException("Some packages cannot be removed");
       }
 }
 private void clearConfig(){
       try{
+            isManaged = true;
             Files.deleteIfExists(configFile.toPath());
       } catch (IOException ignored){
-
       }
 }
 private void appendConfig(InstanceInfo removable) throws IOException {
@@ -64,6 +66,7 @@ RemovableSession setConfig(File configFile){
 }
 RemovableSession(PackageStorage storage) {
       this.storage = storage;
+      this.isManaged = false;
 }
 private final PackageStorage storage;
 private File configFile;

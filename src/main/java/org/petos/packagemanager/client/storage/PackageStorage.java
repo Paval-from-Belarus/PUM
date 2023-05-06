@@ -25,6 +25,7 @@ import static org.petos.packagemanager.client.database.InstanceInfo.*;
 
 public class PackageStorage {
 public enum PayloadType {Binary, Library, Docs, Config, Unknown}
+
 public enum LicenceType {MIT, GNU, Apache, Bear}
 
 public enum RebuildMode {
@@ -109,6 +110,11 @@ public OperationStatus getLastStatus() {
       return lastStatus;
 }
 
+public Optional<Integer> mapPackage(String name) {
+      Optional<InstanceInfo> instance = getInstanceInfo(name);
+      return instance.map(InstanceInfo::getId);
+}
+
 public void replaceCacheInfo(ShortPackageInfoDTO[] shortInfo) throws ConfigurationException {
       if (cachedInfo != null) {
 	    cachedInfo.clear();
@@ -159,9 +165,9 @@ InstallationState getInstanceState(InstanceInfo info) {
 
 public InstallationState getPackageState(@NotNull Integer id, @NotNull String version) {
       InstallationState state = InstallationState.NotInstalled;
-      var packageInfo = getPackageInfo(id);
-      if (packageInfo.isPresent() && packageInfo.get().equals(id, version)) {
-	    var instance = getInstanceInfo(id);
+      var packageInfo = getPackageInfo(id, version);
+      if (packageInfo.isPresent()) {
+	    var instance = getInstanceInfo(id, version);
 	    if (instance.isPresent()) {
 		  state = getInstanceState(instance.get());
 	    }
@@ -195,15 +201,28 @@ public @NotNull <T> T initSession(Class<T> classType) throws ConfigurationExcept
 	    throw new ConfigurationException("Illegal session class");
       return session;
 }
+
 public Optional<PackageInstanceDTO> collectPublishInstance(Integer id, Publisher entity) {
       DependencyInfoDTO[] dependencies = new DependencyInfoDTO[entity.dependencies.length];
-      PackageInstanceDTO dto = new PackageInstanceDTO(id, entity.version, dependencies);
-      return Optional.empty();
+      PackageInstanceDTO dto = null;
+      int index = 0;
+      for (PublisherDependency info : entity.dependencies) {
+	    Optional<Integer> depId = mapPackage(info.name());
+	    if (depId.isPresent()) {
+		  dependencies[index++] = new DependencyInfoDTO(depId.get(), info.version());
+	    } else {
+		  break;
+	    }
+      }
+      if (index == dependencies.length)
+	    dto = new PackageInstanceDTO(id, entity.version, dependencies);
+      return Optional.ofNullable(dto);
 }
+
 public Optional<FullPackageInfoDTO> getFullInfo(Integer id, String version) {
-      var localInfo = getPackageInfo(id);
+      var localInfo = getPackageInfo(id, version);
       Optional<FullPackageInfoDTO> fullInfo = Optional.empty();
-      if (localInfo.isPresent() && localInfo.get().version.equals(version)) {
+      if (localInfo.isPresent()) {
 	    fullInfo = localInfo.flatMap(this::toExternalFormat);
       }
       return fullInfo;
@@ -215,15 +234,16 @@ public Optional<FullPackageInfoDTO> getFullInfo(String name) {
 }
 
 public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
-      var info = getPackageInfo(dto.id());
+      var info = getPackageInfo(dto.id(), dto.version());
       return info.flatMap(this::toExternalFormat);
 }
 
-public static void storePackageInfo(Path configDir, FullPackageInfoDTO dto, PackageAssembly assembly) throws  IOException {
+static void storePackageInfo(Path configDir, FullPackageInfoDTO dto, PackageAssembly assembly) throws IOException {
       PackageInfo info = toLocalFormat(assembly, dto);
       String jsonInfo = toJson(info);
       Files.writeString(configDir.resolve("conf.pum"), jsonInfo);
 }
+
 private static PackageInfo toLocalFormat(PackageAssembly assembly, FullPackageInfoDTO dto) {
       var info = new PackageInfo();
       info.packageId = assembly.getId();
@@ -286,7 +306,7 @@ void rebuildConfig(List<InstanceInfo> instances, RebuildMode mode) throws IOExce
 	    case Remove -> instances.forEach(info -> installed.remove(info.getId()));
 	    case Replace, SilentReplace -> instances.forEach(info -> installed.put(info.getId(), info));
       }
-      if (!mode.isSilent()){
+      if (!mode.isSilent()) {
 	    StringBuilder output = new StringBuilder();
 	    installed.values().forEach(output::append);//invoke to string for each item
 	    Files.writeString(packagesInfo, output.toString());
@@ -298,7 +318,7 @@ void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOE
       List<InstanceInfo> instanceList = new ArrayList<>();
       if (packageInfo.isPresent()) {
 	    for (var depInfo : packageInfo.get().dependencies) {
-		  Optional<InstanceInfo> depInstance = getInstanceInfo(depInfo.packageId());
+		  Optional<InstanceInfo> depInstance = getInstanceInfo(depInfo.packageId(), depInfo.label());
 		  if (depInstance.isPresent()) {
 			depInstance.get().updateLinksCnt(LinkState.Remove);
 			instanceList.add(depInstance.get());
@@ -412,9 +432,9 @@ Optional<PackageInfo> getPackageInfo(@NotNull String name) {
       return instance.flatMap(this::getPackageInfo);
 }
 
-//todo: add VersionLabel too
-Optional<PackageInfo> getPackageInfo(@NotNull Integer id) {
-      var instance = getInstanceInfo(id);
+
+Optional<PackageInfo> getPackageInfo(@NotNull Integer id, @NotNull String version) {
+      var instance = getInstanceInfo(id, version);
       return instance.flatMap(this::getPackageInfo);
 }
 
@@ -424,11 +444,8 @@ Optional<InstanceInfo> getInstanceInfo(@NotNull String name) {
 		 .findAny();
 }
 
-Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id) {
+Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id, @NotNull String version) {
       return Optional.ofNullable(installed.get(id));
-}
-Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id, String version) {
-      return getInstanceInfo(id);
 }
 
 private Optional<PackageInfo> getPackageInfo(InstanceInfo instance) {

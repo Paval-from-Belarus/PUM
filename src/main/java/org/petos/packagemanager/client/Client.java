@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.petos.packagemanager.client.OutputProcessor.QuestionResponse;
 import org.petos.packagemanager.client.storage.InstallerSession;
 import org.petos.packagemanager.client.storage.PackageStorage;
@@ -12,9 +13,7 @@ import org.petos.packagemanager.client.storage.RemovableSession;
 import org.petos.packagemanager.packages.*;
 import org.petos.packagemanager.transfer.NetworkPacket;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -151,19 +150,22 @@ private void publishPackage(@NotNull String entityPath) {
       Publisher publisher = fromConfigFile(entityPath);
       Optional<Integer> packageId = publishPackageHat(publisher);
       if (packageId.isPresent()) { //server save some additional info
-	    try(FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())){
-		Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
-		if (dto.isPresent()) {
-		      publishPayload(dto.get(), payloadStream);
-		      output.sendMessage("","Success");
-		}
+	    try (FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())) {
+		  Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
+		  if (dto.isPresent()) {
+			publishPayload(dto.get(), payloadStream);
+			output.sendMessage("", "Success");
+		  } else {
+			output.sendError("Broken dependencies", "PUM cannot resolve mentioned dependencies");
+		  }
 	    } catch (IOException e) {
-		  throw new IllegalStateException("Payload is not found");
+		  output.sendError("", "Payload is not found");
 	    }
       } else {
-	    throw new IllegalStateException("Server declines");
+	    output.sendMessage("Publisher format error", "Aliases (or package's name) are busy. Licence is not correct");
       }
 }
+
 private Optional<Integer> publishPackageHat(Publisher entity) {
       Wrapper<Integer> response = new Wrapper<>();//the default value is null
       try {
@@ -176,14 +178,42 @@ private Optional<Integer> publishPackageHat(Publisher entity) {
 		.setExceptionHandler(this::onPublishException);
 	    service.run();
       } catch (ServerAccessException e) {
-	    output.sendError("Network error", "Server not response");
+	    output.sendError("Network error", "Server doesn't response");
       }
       return Optional.ofNullable(response.get());
 }
-private void publishPayload(PackageInstanceDTO dto, FileInputStream payload) {
 
+private Optional<Integer> publishPayload(PackageInstanceDTO dto, FileInputStream fileStream) {
+      Wrapper<Integer> version = new Wrapper<>();
+      ClientService service;
+      try {
+	    service = defaultService();
+      } catch (ServerAccessException e) {
+	    output.sendError("Network error", "Server doesn't response");
+	    return Optional.empty();
+      }
+      NetworkPacket request = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
+      request.setPayload(PackageStorage.toJson(dto).getBytes(StandardCharsets.US_ASCII));
+      service.setRequest(request)
+	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
+	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
+	  .setExceptionHandler(this::onPublishException);
+      service.run();
+      return Optional.ofNullable(version.get());
 }
-private @NotNull Integer onPublishResponse(@NotNull NetworkPacket response, Socket socket) {
+
+private void writePayload(FileInputStream payloadStream, OutputStream socketStream) throws IOException {
+      byte[] buffer = new byte[65536 >> 1]; //the half of TCP segment
+      int cbRead;
+      do {
+	    cbRead = payloadStream.read(buffer);
+	    socketStream.write(buffer, 0, cbRead);
+      } while (cbRead != 0);
+}
+
+//each time on publish request server return Integer value
+//PackageId or VersionId
+private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response, Socket socket) {
       Integer result = null;
       boolean approved = (response.type(ResponseType.class).equals(ResponseType.Approve));
       if (approved) {
@@ -213,6 +243,7 @@ private @NotNull Publisher fromConfigFile(@NotNull String entityPath) throws Ill
       }
       return publisher;
 }
+
 private void onPublishException(Exception e) {
       if (e instanceof ServerAccessException) {
 	    output.sendError("Server says", e.getMessage());
@@ -224,6 +255,7 @@ private void onPublishException(Exception e) {
 private static PublishInfoDTO extractPublishHat(Publisher entity) {
       return new PublishInfoDTO(entity.name, entity.aliases, entity.type.toString());
 }
+
 private void onRemoveCommand(ParameterMap params) {
       List<InputParameter> removables = params.get(ParameterType.Raw);
       if (removables.isEmpty())

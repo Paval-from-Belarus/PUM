@@ -15,7 +15,7 @@ public String[] aliases;
 public String version;
 public String exePath;
 public LicenceType licence;
-public InstanceInfo[] dependencies;
+public PublisherDependency[] dependencies;
 public Publisher(String name, PayloadType type) {
 	this.name = name;
 	this.type = type;
@@ -27,7 +27,7 @@ private boolean hasProperties(){
       if (aliases == null)
 	    aliases = new String[0];
       if (dependencies == null)
-	    dependencies = new InstanceInfo[0];
+	    dependencies = new PublisherDependency[0];
       response = name != null && type != null && exePath != null && version != null;
       return response;
 }
