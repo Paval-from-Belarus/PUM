@@ -38,6 +38,7 @@ build/
 ### Mac OS ###
 .DS_Store
 ### Project FS
-Client/localpc/*
+Client/local/*
 **/*.exe
 **/*.zip
+**/*.pum
