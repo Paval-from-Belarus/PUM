@@ -33,7 +33,6 @@
 		<mapping class="database.PackageHat" />
 		<mapping class="database.PackageInfo" />
 		<mapping class="database.Payload" />
-		<mapping class="database.AuthorInfo"/>
 	</session-factory>
 </hibernate-configuration>
 

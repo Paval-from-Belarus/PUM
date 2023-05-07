@@ -12,6 +12,8 @@ public class PackageHat {
 private Integer id;
 private String name;
 private boolean valid;
+@Column(name= "AUTHOR_ID")
+private Integer authorId;
 @ManyToOne
 @JoinColumn(name= "payloadType")
 private Payload payload;
@@ -68,5 +70,13 @@ public boolean isValid() {
 
 public void setValid(boolean valid) {
       this.valid = valid;
+}
+
+public Integer getAuthorId() {
+      return authorId;
+}
+
+public void setAuthorId(Integer authorId) {
+      this.authorId = authorId;
 }
 }

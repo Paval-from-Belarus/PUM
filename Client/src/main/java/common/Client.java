@@ -216,7 +216,10 @@ private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response, Soc
 }
 
 private @NotNull Publisher fromConfigFile(@NotNull String entityPath) throws IllegalStateException {
-      File configFile = Path.of(entityPath).toFile();
+      Path configPath = Path.of(entityPath);
+      if (!configPath.endsWith(".pum"))
+	    configPath = Path.of(entityPath + ".pum");
+      File configFile = configPath.toFile();
       if (!configFile.exists()) {
 	    throw new IllegalStateException("Publish config file is not exists");
       }
@@ -288,7 +291,6 @@ private void removePackage(String name) {
 private void onRepositoryCommand(ParameterMap params) {
 
 }
-
 private void onListCommand(ParameterMap params) throws IOException {
       boolean isVerboseMode = params.hasParameter(ParameterType.Shorts, "v") ||
 				  params.hasParameter(ParameterType.Verbose, "verbose");

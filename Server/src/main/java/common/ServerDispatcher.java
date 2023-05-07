@@ -7,11 +7,14 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
+import security.Author;
 import transfer.NetworkExchange;
 import transfer.NetworkExchange.RequestType;
 
+import javax.persistence.AttributeOverride;
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -39,6 +42,7 @@ public void accept(NetworkExchange exchange) throws Exception {
 	    case GetVersion -> onVersionInfo(exchange);
 	    case PublishInfo -> onPublishInfo(exchange);
 	    case PublishPayload -> onPublishPayload(exchange);
+	    case Authorize -> onAuthorizeRequest(exchange);
 	    case DeprecateVersion -> onDeprecateVersion(exchange);
 	    default -> throw new IllegalStateException("Illegal command");
       }
@@ -178,18 +182,22 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      String jsonInfo = exchange.request().stringData();
-      PublishInfoDTO info = fromJson(jsonInfo, PublishInfoDTO.class);
-      try {
-	    var id = storage.storePackageInfo(info);
-	    var buffer = ByteBuffer.allocate(4);
-	    buffer.putInt(id.value());
-	    exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
-		buffer.array());
-      } catch (StorageException e) {
-	    String error = e.getMessage();
-	    exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		error.getBytes(StandardCharsets.US_ASCII));
+      Integer rawAuthorId = ByteBuffer.wrap(exchange.request().data()).getInt();
+      var authorId = storage.getAuthorId(rawAuthorId);
+      if (authorId.isPresent()) {
+	    String jsonInfo = exchange.request().stringData(4);
+	    PublishInfoDTO info = fromJson(jsonInfo, PublishInfoDTO.class);
+	    try {
+		  var id = storage.storePackageInfo(authorId.get(), info);
+		  var buffer = ByteBuffer.allocate(4);
+		  buffer.putInt(id.value());
+		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
+		      buffer.array());
+	    } catch (StorageException e) {
+		  String error = e.getMessage();
+		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
+		      error.getBytes(StandardCharsets.US_ASCII));
+	    }
       }
 }
 
@@ -197,12 +205,18 @@ private void onPublishInfo(NetworkExchange exchange) {
  *
  */
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      String jsonInfo = exchange.request().stringData();
+      Integer authorId = ByteBuffer.wrap(exchange.request().data()).getInt();
+      var author = storage.getAuthorId(authorId);
+      if (author.isEmpty()){
+	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    return;
+      }
+      String jsonInfo = exchange.request().stringData(4);
       PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
       byte[] payload = readBytes(exchange);
       if (dto != null && payload != null) {
 	    try {
-		  var version = storage.storePayload(dto, payload);
+		  var version = storage.storePayload(author.get(), dto, payload);
 		  var buffer = ByteBuffer.allocate(4);//int
 		  buffer.putInt(version.value());
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
@@ -211,6 +225,33 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
 		      e.getMessage().getBytes(StandardCharsets.US_ASCII));
 	    }
+      } else {
+	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+      }
+}
+
+private void onAuthorizeRequest(NetworkExchange exchange) {
+      String base64Line = exchange.request().stringData();
+      Optional<Author> author = Author.valueOf(base64Line);
+      if (author.isPresent()) {
+	    Optional<AuthorId> id = storage.getAuthorId(author.get());
+	    try {
+		  int code = INT_FORMAT;
+		  if (id.isEmpty()) { //attempt to register Author
+			storage.authorize(author.get());
+			id = storage.getAuthorId(author.get());
+			code |= CREATED;
+		  }
+		  if (id.isPresent()) {
+			ByteBuffer buffer = ByteBuffer.allocate(4);
+			buffer.putInt(id.get().value());
+			exchange.setResponse(ResponseType.Approve, code,
+			    buffer.array());
+		  }
+	    } catch (StorageException e) {
+		  exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    }
+
       } else {
 	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
       }

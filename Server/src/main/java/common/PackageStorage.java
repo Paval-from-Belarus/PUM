@@ -8,12 +8,16 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import packages.*;
+import security.Author;
 
 import javax.persistence.Query;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.*;
 
 public class PackageStorage {
@@ -63,6 +67,12 @@ public static class VersionId {
       }
 }
 
+public record AuthorId(Integer value) {
+      private static AuthorId valueOf(Integer id) {
+	    return new AuthorId(id);
+      }
+}
+
 public static class StorageException extends Exception {
       StorageException(String message) {
 	    super(message);
@@ -108,35 +118,36 @@ private void amendAliases(PackageId id, @NotNull Collection<String> aliases) thr
 	    throw new StorageException("Aliases already defined");
 }
 
-//todo: review implementation
-private void checkPackageUniqueness(PublishInfoDTO info) throws StorageException {
-      Optional<PackageId> id = getPackageId(info.name());
-      boolean isUnique = id.isEmpty();
-      if (isUnique) {
-	    for (String alias : info.aliases()) {
-		  isUnique = getPackageId(alias).isEmpty();
-		  if (!isUnique)
-			break;
+//it's forbidden for everyone to change existing PackageHat (if it's not valid)
+private void checkPermissions(PublishInfoDTO info) throws StorageException {
+      List<String> aliases = Arrays.asList(info.aliases());
+      aliases.add(info.name());
+      boolean isPermitted = true;
+      for (String alias : aliases) {
+	    Optional<PackageId> id = getPackageId(alias);
+	    Optional<PackageHat> hat = id.flatMap(this::getPackageHat);
+	    if (hat.isPresent()) {
+		  isPermitted = false;
+		  break;
 	    }
       }
-      if (!isUnique)
+      if (!isPermitted)
 	    throw new StorageException("Package name is busy");
 }
 
-private void checkInstanceUniqueness(PackageInstanceDTO instance) throws StorageException {
-      Optional<PackageId> id = getPackageId(instance.packageId());
-      boolean isUnique = id.isPresent();
-      if (isUnique) {
+private void checkInstance(AuthorId author, PackageInstanceDTO dto) throws StorageException {
+      Optional<PackageId> id = getPackageId(dto.packageId());
+      boolean isValidInstance = id.isPresent();
+      if (isValidInstance) {
 	    Session session = dbFactory.openSession();
 	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageInfo where packageId= :package and versionLabel= :label");
-	    query.setParameter("package", instance.packageId());
-	    query.setParameter("label", instance.version());
-	    List<PackageInfo> list = query.getResultList();
+	    Query query = session.createQuery("from PackageHat where authorId= :author");
+	    query.setParameter("author", author);
+	    List<PackageHat> hats = query.getResultList();
 	    session.getTransaction().commit();
-	    isUnique = list.size() == 0;
+	    isValidInstance = (hats == null) || hats.stream().anyMatch(h -> h.getId().equals(dto.packageId()));
       }
-      if (!isUnique)
+      if (!isValidInstance)
 	    throw new StorageException("Version label is busy");
 }
 
@@ -153,6 +164,56 @@ public Optional<PackageId> getPackageId(int value) {
       if (optional.isEmpty())
 	    id = null;
       return Optional.ofNullable(id);
+}
+
+public Optional<AuthorId> getAuthorId(Integer id) {
+      AuthorId authorId = null;
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      AuthorInfo author = session.get(AuthorInfo.class, id);
+      session.getTransaction().commit();
+      if (author != null)
+	    authorId = AuthorId.valueOf(id);
+      return Optional.ofNullable(authorId);
+}
+
+public Optional<AuthorId> getAuthorId(Author author) {
+      AuthorId result = null;
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      Query query = session.createQuery("from AuthorInfo where name= :name and email= :email");
+      query.setParameter("name", author.author()).setParameter("email", author.email());
+      AuthorInfo localAuthor = (AuthorInfo) query.getSingleResult();
+      session.getTransaction().commit();
+      if (localAuthor != null) {
+	    byte[] salt = Base64.getDecoder().decode(localAuthor.getSalt());
+	    String hash = getHashCode(author.token(), salt);
+	    if (hash.equals(localAuthor.getHash())) {
+		  result = AuthorId.valueOf(localAuthor.getId());
+	    }
+      }
+      return Optional.ofNullable(result);
+}
+
+public void authorize(Author author) throws StorageException {
+      AuthorInfo localAuthor;
+      Session session = dbFactory.openSession();
+      session.beginTransaction();
+      Query query = session.createQuery("from AuthorInfo where name= :name and email= :email");
+      query.setParameter("name", author.author()).setParameter("email", author.email());
+      localAuthor = (AuthorInfo) query.getSingleResult();
+      session.getTransaction().commit();
+      if (localAuthor == null) {
+	    byte[] salt = getSalt();
+	    String hash = getHashCode(author.token(), salt);
+	    String stringSalt = Base64.getEncoder().encodeToString(salt);
+	    localAuthor = AuthorInfo.valueOf(author.author(), hash, stringSalt);
+	    session.beginTransaction();
+	    session.save(localAuthor);
+	    session.getTransaction().commit();
+      } else {
+	    throw new StorageException("The same author is already defined");
+      }
 }
 
 /**
@@ -192,6 +253,7 @@ public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
       }
       return result;
 }
+
 
 public Optional<VersionId> mapVersion(PackageId id, String label) {
       Session session = dbFactory.openSession();
@@ -287,9 +349,9 @@ public Optional<byte[]> getPayload(PackageId id, VersionId version) {
 
 //check package on uniqueness and store in database
 //return package
-public synchronized @NotNull PackageId storePackageInfo(PublishInfoDTO info) throws StorageException {
-      checkPackageUniqueness(info);//methods throw exception if something wrong
-      return initPackageHat(info);
+public synchronized @NotNull PackageId storePackageInfo(AuthorId author, PublishInfoDTO dto) throws StorageException {
+      checkPermissions(dto);//methods throw exception if something wrong
+      return initPackageHat(author, dto);
 }
 
 /**
@@ -297,9 +359,9 @@ public synchronized @NotNull PackageId storePackageInfo(PublishInfoDTO info) thr
  *
  * @throws StorageException if packageFamily by PackageId is not exists
  */
-public VersionId storePayload(@NotNull PackageInstanceDTO dto, @NotNull byte[] payload) throws StorageException {
-      checkInstanceUniqueness(dto);
-      //todo: add option to update payload by PackageInstance
+public VersionId storePayload(@NotNull AuthorId author, @NotNull PackageInstanceDTO dto, @NotNull byte[] payload) throws StorageException {
+      checkInstance(author, dto);
+      //replace with simple rules
       return initPackageInfo(dto, payload);
 }
 
@@ -431,9 +493,9 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
 	    }
 	    Session session = dbFactory.openSession();
 	    session.beginTransaction();
-	    session.save(info);
+	    session.saveOrUpdate(info);
 	    session.getTransaction().commit();
-	    validatePackageHat(id, true);
+	    validatePackageHat(id, true); //now it's forbidden to change PackageHat
       } else {
 	    throw new StorageException("Invalid package id");
       }
@@ -444,13 +506,16 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
  * Assume that all checks are passed
  * To add this dto to database is safe
  */
-private @NotNull PackageId initPackageHat(@NotNull PublishInfoDTO dto) throws StorageException {
+private @NotNull PackageId initPackageHat(@NotNull AuthorId author, @NotNull PublishInfoDTO dto) throws StorageException {
       Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
       PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
       hat.setPayload(payload);
+      hat.setAuthorId(author.value());
       Session session = dbFactory.openSession();
       session.beginTransaction();
-      session.save(hat);
+      session.saveOrUpdate(hat);
+      session.getTransaction().commit();
+      session.beginTransaction();
       Query query = session.createQuery("from PackageHat where name= :packageName");
       query.setParameter("packageName", hat.getName());
       hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
@@ -464,7 +529,7 @@ private @NotNull PackageId initPackageHat(@NotNull PublishInfoDTO dto) throws St
       } else {
 	    String log = String.format("Package hat is not saved: %s", dto.name());
 	    logger.error(log);
-	    throw new StorageException("Impossible to save package hat " + hat.getName());
+	    throw new StorageException("Impossible to save package hat " + dto.name());
       }
       return id;
 }
@@ -497,6 +562,7 @@ private @NotNull Licence fetchLicense(String type) throws StorageException {
       return licence;
 }
 
+//todo: if PackageHat is downgraded to invalid, it means Package is deprecated and should be removed in future
 private void validatePackageHat(PackageId id, boolean isValid) {
       Session session = dbFactory.openSession();
       session.beginTransaction();
@@ -546,6 +612,32 @@ private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
       List<PackageInfo> family = query.getResultList();
       session.getTransaction().commit();
       return family;
+}
+
+private static @NotNull String getHashCode(String token, byte[] salt) {
+      byte[] bytes;
+      try {
+	    MessageDigest md = MessageDigest.getInstance("SHA-256");
+	    md.update(salt);
+	    bytes = md.digest(token.getBytes());
+	    md.reset();
+      } catch (NoSuchAlgorithmException e) {
+	    //unreachable case...
+	    throw new IllegalStateException("Internal error");
+      }
+      Base64.Encoder encoder = Base64.getEncoder();
+      return encoder.encodeToString(bytes);
+}
+
+private static @NotNull byte[] getSalt() {
+      byte[] salt = new byte[16];
+      try {
+	    SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+	    random.nextBytes(salt);
+      } catch (NoSuchAlgorithmException e) {
+	    throw new RuntimeException(e);
+      }
+      return salt;
 }
 
 private static final String DEFAULT_LICENSE = "GNU";

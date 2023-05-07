@@ -38,7 +38,7 @@ public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, Unknown
        * Those requests should be following sequentially
        * PublishInfo is used to public common info about package
        * */
-      PublishInfo, PublishPayload,
+      Authorize, PublishInfo, PublishPayload,
       DeprecateVersion,
       @Deprecated UnPublish, @Deprecated GetFamily} //it's not recommended to use unpubslish request because can break local dependencies
 //let's image that no UnPublish request (almost)
@@ -64,7 +64,7 @@ public static final int VERSION_INFO_FORMAT = STR_FORMAT;
 public static final int PUBLISH_INFO_RESPONSE = INT_FORMAT;
 public static final int PUBLISH_PAYLOAD_RESPONSE = INT_FORMAT;
 //Success codes
-public static final int CREATED = 8;
+public static final int CREATED = 512;
 //Errors codes
 public static final int INTERNAL_ERROR = 128;
 public static final int ILLEGAL_REQUEST = 256;

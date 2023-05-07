@@ -8,13 +8,18 @@ import java.util.Optional;
 import static storage.PackageStorage.*;
 
 public class Publisher {
-public final String name;
-public final PayloadType type;
+public String author;
+public String email;
+public String name;
+public PayloadType type;
 public String[] aliases;
 public String version;
 public String exePath;
 public LicenceType licence;
 public PublisherDependency[] dependencies;
+public Publisher(){
+
+}
 public Publisher(String name, PayloadType type) {
 	this.name = name;
 	this.type = type;
