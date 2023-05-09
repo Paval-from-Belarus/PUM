@@ -15,43 +15,28 @@ public class PackageHat {
 @GeneratedValue(strategy = GenerationType.AUTO)
 @Getter @Setter
 private Integer id;
+@Setter
+@Getter
 private String name;
+@Setter
+@Getter
 private boolean valid;
+@Setter
+@Getter
 @Column(name = "AUTHOR_ID")
 private Integer authorId;
+@Setter
+@Getter
 @ManyToOne
 @JoinColumn(name = "payloadType")
 private Payload payload;
+@Setter
+@Getter
 @ElementCollection
 @CollectionTable(name = "PACKAGES_ALIASES", joinColumns = @JoinColumn(name = "id"))
 @Column(name = "alias")
 private Set<String> aliases;
 
-
-
-public String getName() {
-      return name;
-}
-
-public void setName(String name) {
-      this.name = name;
-}
-
-public Set<String> getAliases() {
-      return aliases;
-}
-
-public void setAliases(Set<String> aliases) {
-      this.aliases = aliases;
-}
-
-public Payload getPayload() {
-      return payload;
-}
-
-public void setPayload(Payload payload) {
-      this.payload = payload;
-}
 
 public static PackageHat valueOf(String name, String[] aliases) {
       PackageHat hat = new PackageHat();
@@ -63,19 +48,4 @@ public static PackageHat valueOf(String name, String[] aliases) {
       return hat;
 }
 
-public boolean isValid() {
-      return valid;
-}
-
-public void setValid(boolean valid) {
-      this.valid = valid;
-}
-
-public Integer getAuthorId() {
-      return authorId;
-}
-
-public void setAuthorId(Integer authorId) {
-      this.authorId = authorId;
-}
 }

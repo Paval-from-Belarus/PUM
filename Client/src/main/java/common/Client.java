@@ -139,11 +139,11 @@ private void onPublishCommand(ParameterMap params) {
 
 }
 
-private Optional<Integer> getAuthorId(Publisher publisher, String token) {
-      if (token.length() < Author.PREF_TOKEN_LENGTH) {
+private Optional<Integer> getAuthorId(Author author) {
+      if (author.token().length() < Author.PREF_TOKEN_LENGTH) {
 	    output.sendError("Authentication error", "The token is too small");
       }
-      Author author = new Author(publisher.author, publisher.email, token);
+//      Author author = new Author(publisher.author, publisher.email, token);
       Wrapper<Integer> id = new Wrapper<>();
       try {
 	    ClientService service = defaultService();
@@ -181,11 +181,35 @@ private @NotNull Integer onAuthorizeResponse(NetworkPacket response, Socket sock
       return result;
 }
 
+//todo: rewrite whole function
+//especially part with getting foreign packageName
 private void publishPackage(@NotNull String entityPath) {
       Publisher publisher = fromConfigFile(entityPath);
-      String token = (String) output.sendQuestion("Enter your token", QuestionType.Input).value();
-      Optional<Integer> authorId = getAuthorId(publisher, token);
-      Optional<Integer> packageId = authorId.flatMap(id -> publishPackageHat(id, publisher));
+      Author author;
+      if (storage.getSavedAuthor(publisher.author).isEmpty()) {
+	    String token = (String) output.sendQuestion("Enter your token", QuestionType.Input).value();
+	    author = new Author(publisher.author, publisher.email, token);
+      } else {
+	    author = storage.getSavedAuthor(publisher.author).get();
+      }
+      Optional<Integer> authorId = getAuthorId(author);
+      if (authorId.isPresent() && storage.getSavedAuthor(author.name()).isEmpty()) {
+	    var response = output.sendQuestion("Remember publisher?", QuestionType.YesNo);
+	    if (response.value(Boolean.class)) {
+		  try {
+			storage.remember(author);
+		  } catch (IOException ignored) {
+		  }
+	    }
+      }
+      if (authorId.isEmpty()) {
+	    return; // the last method cannot be failed
+      }
+      Optional<Integer> packageId = getPackageId(publisher.name);
+      if (packageId.isEmpty()) {
+	    output.sendMessage("", "Attempt to publish common package info");
+	    packageId = authorId.flatMap(id -> publishPackageHat(id, publisher));
+      }
       if (packageId.isPresent()) { //server save some additional info
 	    try (FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())) {
 		  Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
@@ -199,7 +223,7 @@ private void publishPackage(@NotNull String entityPath) {
 		  output.sendError("", "Payload is not found");
 	    }
       } else {
-	    output.sendMessage("Publisher format error", "Aliases (or package's name) are busy. Licence is not correct");
+	    output.sendMessage("Format error", "Aliases (or package's name) are busy. Licence is not correct");
       }
 }
 
@@ -235,17 +259,16 @@ private Optional<Integer> publishPayload(Integer authorId, PackageInstanceDTO dt
 	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
 	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
 	  .setExceptionHandler(this::onPublishException);
-//      service.run();
+      service.run();
       return Optional.ofNullable(version.get());
 }
 
 private void writePayload(FileInputStream payloadStream, OutputStream socketStream) throws IOException {
       byte[] buffer = new byte[65536 >> 1]; //the half of TCP segment
       int cbRead;
-      do {
-	    cbRead = payloadStream.read(buffer);
+      while ((cbRead = payloadStream.read(buffer)) > 0) {
 	    socketStream.write(buffer, 0, cbRead);
-      } while (cbRead != 0);
+      }
 }
 
 //each time on publish request server return Integer value

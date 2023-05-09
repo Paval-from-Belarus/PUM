@@ -209,14 +209,13 @@ private void onPublishInfo(NetworkExchange exchange) {
  *
  */
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      int rawAuthorId = exchange.request().intFrom(0);
-      var authorId = storage.getAuthorId(rawAuthorId);
+      NetworkPacket request = exchange.request();
+      var authorId = storage.getAuthorId(request.intFrom(0));
       if (authorId.isEmpty()) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
 	    return;
       }
-      String jsonInfo = exchange.request().stringFrom(4);
-      PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
+      PackageInstanceDTO dto = fromJson(request.stringFrom(4), PackageInstanceDTO.class);
       byte[] payload = null;
       if (dto != null) {
 	    payload = readBytes(exchange, dto.getPayloadSize());
@@ -228,7 +227,7 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 		      NetworkPacket.toBytes(version.value()));
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		      e.getMessage().getBytes(StandardCharsets.US_ASCII));
+		      NetworkPacket.toBytes(e.getMessage()));
 	    }
       } else {
 	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);

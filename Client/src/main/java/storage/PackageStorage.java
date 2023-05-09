@@ -9,15 +9,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import packages.*;
+import security.Author;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -101,8 +99,23 @@ public PackageStorage(Configuration config) throws IOException {
       installed =
 	  InstanceInfo.valueOf(content).parallelStream()
 	      .collect(Collectors.toMap(InstanceInfo::getId, info -> info));
-}
+      initPublishers();
 
+}
+private void initPublishers() throws IOException {
+      localPublishers = new HashMap<>();
+      String content = Files.readString(Path.of(config.publishers));
+      String[] publishers = content.split("\n");
+      for (String piece : publishers) {
+	    var optional = Author.valueOf(piece);
+	    optional.ifPresent(author -> localPublishers.put(author.name(), author));
+      }
+      if (publishers.length != localPublishers.size()) {
+	    StringBuilder strText = new StringBuilder();
+	     localPublishers.values().forEach(author -> strText.append(author.stringify()));
+	     Files.writeString(Path.of(config.publishers), strText.toString());
+      }
+}
 
 private List<ShortPackageInfoDTO> cachedInfo;
 private List<InstanceInfo> brokenPackages; //the list of packages that cannot be resolved
@@ -336,7 +349,20 @@ void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOE
 	    throw new PackageIntegrityException("Package is already removed");
       }
 }
+public Optional<Author> getSavedAuthor(String authorName) {
+      return Optional.ofNullable(localPublishers.get(authorName));
+}
+public void remember(Author author) throws IOException {
+        if (!localPublishers.containsKey(author.name())) {
+	      File publishers = Path.of(config.publishers).toFile();
+	      if (!publishers.exists()) {
+		    Files.createFile(publishers.toPath());
+	      }
+	      Files.writeString(publishers.toPath(), author.stringify() + "\n", StandardOpenOption.APPEND);
+	      localPublishers.put(author.name(), author);
+	}
 
+}
 //each packages also holds info about self in package directory as conf.pum
 //At this moment, in central path stores configaration file
 //The configuration file has <code>Local format</code>
@@ -527,6 +553,7 @@ private Path getCachePath() {
 }
 
 private static Configuration config;
+private Map<String, Author> localPublishers;
 private Map<Integer, InstanceInfo> installed;
 private static final Gson gson = new Gson();
 private final String CACHE_FILE_NAME = "pum.cache";
