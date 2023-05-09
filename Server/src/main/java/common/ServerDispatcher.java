@@ -63,7 +63,7 @@ private void onAllPackages(NetworkExchange exchange) throws IOException {
 
 private void onPackageId(NetworkExchange exchange) {
       String alias = exchange.request().stringData();
-      var optional = storage.getPackageId(alias);
+      var optional = storage.toPackageId(alias);
       if (optional.isPresent()) {
 	    ByteBuffer buffer = ByteBuffer.allocate(4);
 	    buffer.putInt(optional.get().value());
@@ -181,20 +181,27 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      int rawAuthorId = exchange.request().intFrom(0);
-      var authorId = storage.getAuthorId(rawAuthorId);
-      if (authorId.isPresent()) {
-	    String jsonInfo = exchange.request().stringFrom(4);
-	    PublishInfoDTO info = fromJson(jsonInfo, PublishInfoDTO.class);
+      NetworkPacket request = exchange.request();
+      var authorId = storage.getAuthorId(request.intFrom(0));
+      PublishInfoDTO info = fromJson(request.stringFrom(4), PublishInfoDTO.class);
+      if (authorId.isPresent() && info != null) {
+	    Optional<PackageId> packageId = storage.toPackageId(info.name());
 	    try {
-		  var id = storage.storePackageInfo(authorId.get(), info);
+		  PackageId id;
+		  if (packageId.isPresent()){
+			storage.updatePackageInfo(authorId.get(), packageId.get(), info);
+			id = packageId.get();
+		  } else {
+			id = storage.storePackageInfo(authorId.get(), info);
+		  }
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
 		      NetworkPacket.toBytes(id.value()));
 	    } catch (StorageException e) {
-		  String error = e.getMessage();
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		      error.getBytes(StandardCharsets.US_ASCII));
+		      NetworkPacket.toBytes(e.getMessage()));
 	    }
+      } else {
+	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
       }
 }
 

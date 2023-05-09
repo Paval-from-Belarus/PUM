@@ -235,7 +235,7 @@ private Optional<Integer> publishPayload(Integer authorId, PackageInstanceDTO dt
 	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
 	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
 	  .setExceptionHandler(this::onPublishException);
-      service.run();
+//      service.run();
       return Optional.ofNullable(version.get());
 }
 
