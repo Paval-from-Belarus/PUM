@@ -1,5 +1,6 @@
 module org.petos.packagemanager.Server {
       requires annotations;
+      requires static lombok;
       requires com.google.gson;
       requires org.apache.logging.log4j;
       requires java.sql;

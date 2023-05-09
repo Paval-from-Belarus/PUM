@@ -1,34 +1,32 @@
 package database;
 
 
+import lombok.Getter;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "PACKAGES_HATS")
 public class PackageHat {
 @Id
 @GeneratedValue(strategy = GenerationType.AUTO)
+@Getter @Setter
 private Integer id;
 private String name;
 private boolean valid;
-@Column(name= "AUTHOR_ID")
+@Column(name = "AUTHOR_ID")
 private Integer authorId;
 @ManyToOne
-@JoinColumn(name= "payloadType")
+@JoinColumn(name = "payloadType")
 private Payload payload;
 @ElementCollection
 @CollectionTable(name = "PACKAGES_ALIASES", joinColumns = @JoinColumn(name = "id"))
 @Column(name = "alias")
 private Set<String> aliases;
 
-public void setId(Integer id) {
-      this.id = id;
-}
-
-public Integer getId() {
-      return id;
-}
 
 
 public String getName() {
@@ -46,21 +44,22 @@ public Set<String> getAliases() {
 public void setAliases(Set<String> aliases) {
       this.aliases = aliases;
 }
-public void setAliases(String[] aliases){
-      this.aliases = new HashSet<>();
-      this.aliases.addAll(Arrays.asList(aliases));
-}
 
 public Payload getPayload() {
       return payload;
 }
+
 public void setPayload(Payload payload) {
       this.payload = payload;
 }
-public static PackageHat valueOf(String name, String[] aliases){
+
+public static PackageHat valueOf(String name, String[] aliases) {
       PackageHat hat = new PackageHat();
       hat.setName(name);
-      hat.setAliases(aliases);
+      Set<String> set = Arrays.stream(aliases)
+                            .filter(alias -> !alias.isEmpty())
+                            .collect(Collectors.toSet());
+      hat.setAliases(set);
       return hat;
 }
 
