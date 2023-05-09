@@ -8,7 +8,7 @@ import java.util.*;
 @Table(name = "PACKAGES_HATS")
 public class PackageHat {
 @Id
-@GeneratedValue(strategy = GenerationType.AUTO )
+@GeneratedValue(strategy = GenerationType.AUTO)
 private Integer id;
 private String name;
 private boolean valid;

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
+import security.Author;
 import storage.*;
 import transfer.NetworkPacket;
 
@@ -23,6 +24,7 @@ import static common.OutputProcessor.*;
 import static storage.PackageStorage.*;
 import static storage.StorageSession.*;
 import static transfer.NetworkExchange.*;
+import static transfer.NetworkPacket.toBytes;
 
 
 public class Client {
@@ -137,14 +139,58 @@ private void onPublishCommand(ParameterMap params) {
 
 }
 
+private Optional<Integer> getAuthorId(Publisher publisher, String token) {
+      if (token.length() < Author.PREF_TOKEN_LENGTH) {
+	    output.sendError("Authentication error", "The token is too small");
+      }
+      Author author = new Author(publisher.author, publisher.email, token);
+      Wrapper<Integer> id = new Wrapper<>();
+      try {
+	    ClientService service = defaultService();
+	    NetworkPacket packet = new NetworkPacket(RequestType.Authorize, STR_FORMAT);
+	    packet.setPayload(author.stringify());
+	    service.setRequest(packet).setExceptionHandler(this::handleAuthException)
+		.setResponseHandler((p, s) -> id.set(onAuthorizeResponse(p, s)));
+	    service.run();
+      } catch (IOException e) {
+	    output.sendError("Network error", "Server doesn't response");
+      }
+      return Optional.ofNullable(id.get());
+}
+
+private void handleAuthException(Exception e) {
+      if (e instanceof ServerAccessException) {
+	    output.sendError("Server says", e.getMessage());
+      } else if (e instanceof IOException) {
+	    output.sendError("IO Error", e.getMessage());
+      } else {
+	    output.sendError("Internal error", e.getMessage());
+      }
+}
+
+private @NotNull Integer onAuthorizeResponse(NetworkPacket response, Socket socket) throws ServerAccessException {
+      int result;
+      if (response.type(ResponseType.class) == ResponseType.Approve && response.payloadSize() == 4) {
+	    result = ByteBuffer.wrap(response.data()).getInt();
+      } else {
+	    if (response.containsCode(FORBIDDEN)) {
+		  throw new ServerAccessException("Invalid credentials");
+	    }
+	    throw new IllegalStateException("Server declines");
+      }
+      return result;
+}
+
 private void publishPackage(@NotNull String entityPath) {
       Publisher publisher = fromConfigFile(entityPath);
-      Optional<Integer> packageId = publishPackageHat(publisher);
+      String token = (String) output.sendQuestion("Enter your token", QuestionType.Input).value();
+      Optional<Integer> authorId = getAuthorId(publisher, token);
+      Optional<Integer> packageId = authorId.flatMap(id -> publishPackageHat(id, publisher));
       if (packageId.isPresent()) { //server save some additional info
 	    try (FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())) {
 		  Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
 		  if (dto.isPresent()) {
-			publishPayload(dto.get(), payloadStream);
+			publishPayload(authorId.get(), dto.get(), payloadStream);
 			output.sendMessage("", "Success");
 		  } else {
 			output.sendError("Broken dependencies", "PUM cannot resolve mentioned dependencies");
@@ -157,13 +203,13 @@ private void publishPackage(@NotNull String entityPath) {
       }
 }
 
-private Optional<Integer> publishPackageHat(Publisher entity) {
+private Optional<Integer> publishPackageHat(Integer authorId, Publisher entity) {
       Wrapper<Integer> response = new Wrapper<>();//the default value is null
       try {
 	    ClientService service = defaultService();
 	    NetworkPacket request = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
 	    PublishInfoDTO dto = extractPublishHat(entity);
-	    request.setPayload(toJson(dto).getBytes(StandardCharsets.US_ASCII));
+	    request.setPayload(toBytes(authorId), toBytes(toJson(dto)));
 	    service.setRequest(request)
 		.setResponseHandler((r, s) -> response.set(onPublishResponse(r, s)))
 		.setExceptionHandler(this::onPublishException);
@@ -174,7 +220,7 @@ private Optional<Integer> publishPackageHat(Publisher entity) {
       return Optional.ofNullable(response.get());
 }
 
-private Optional<Integer> publishPayload(PackageInstanceDTO dto, FileInputStream fileStream) {
+private Optional<Integer> publishPayload(Integer authorId, PackageInstanceDTO dto, FileInputStream fileStream) {
       Wrapper<Integer> version = new Wrapper<>();
       ClientService service;
       try {
@@ -184,7 +230,7 @@ private Optional<Integer> publishPayload(PackageInstanceDTO dto, FileInputStream
 	    return Optional.empty();
       }
       NetworkPacket request = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
-      request.setPayload(toJson(dto).getBytes(StandardCharsets.US_ASCII));
+      request.setPayload(toBytes(authorId), toBytes(toJson(dto)));
       service.setRequest(request)
 	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
 	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
@@ -211,7 +257,7 @@ private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response, Soc
 	    result = ByteBuffer.wrap(response.data()).getInt();
       }
       if (!approved && response.containsCode(VERBOSE_FORMAT))
-	    output.sendError("Publish error", NetworkPacket.bytesToString(response.data()));
+	    output.sendError("Publish error", NetworkPacket.toString(response.data()));
       return result;
 }
 
@@ -291,6 +337,7 @@ private void removePackage(String name) {
 private void onRepositoryCommand(ParameterMap params) {
 
 }
+
 private void onListCommand(ParameterMap params) throws IOException {
       boolean isVerboseMode = params.hasParameter(ParameterType.Shorts, "v") ||
 				  params.hasParameter(ParameterType.Verbose, "verbose");
@@ -459,7 +506,8 @@ private void installAppPackage(String packageName) {
 	    output.sendError("Package integrity Error", e.getMessage());
       }
 }
-private boolean isApplication(FullPackageInfoDTO dto){
+
+private boolean isApplication(FullPackageInfoDTO dto) {
       return convert(dto.payloadType) == PayloadType.Application;
 }
 
@@ -467,7 +515,7 @@ private Optional<byte[]> getRawAssembly(Integer id, String label) {
       Wrapper<byte[]> payload = new Wrapper<>();
       try {
 	    var request = new NetworkPacket(RequestType.GetPayload, RequestCode.STR_FORMAT);
-	    request.setPayload(toBytes(id), label.getBytes(StandardCharsets.US_ASCII));
+	    request.setPayload(toBytes(id), toBytes(label));
 	    ClientService service = defaultService();
 	    service.setRequest(request)
 		.setResponseHandler((r, s) -> payload.set(onRawAssemblyResponse(r, s)));
@@ -544,13 +592,13 @@ private int onPackageIdResponse(NetworkPacket response, Socket socket) {
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, String label) {
       var request = new NetworkPacket(RequestType.GetInfo, RequestCode.STR_FORMAT);
-      request.setPayload(toBytes(id), label.getBytes(StandardCharsets.US_ASCII));
+      request.setPayload(toBytes(id), toBytes(label));
       return getFullInfo(request);
 }
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, Integer version) {
       var request = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
-      request.setPayload(toBytes(id), toBytes(version)); //second param is version offset
+      request.setPayload(toBytes(id, version)); //second param is version offset
       return getFullInfo(request);
 }
 
@@ -583,10 +631,6 @@ private Optional<FullPackageInfoDTO> getFullInfo(NetworkPacket request) {
 private void defaultErrorHandler(Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());
-}
-
-private static byte[] toBytes(Integer value) {
-      return ByteBuffer.allocate(4).putInt(value).array();
 }
 
 public static void main(String[] args) {

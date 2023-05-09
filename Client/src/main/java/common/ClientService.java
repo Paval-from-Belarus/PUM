@@ -78,7 +78,7 @@ private Optional<NetworkPacket> getResponse(InputStream input) throws IOExceptio
 public void run() {
       try (DataOutputStream output = new DataOutputStream(socket.getOutputStream());
 	   DataInputStream input = new DataInputStream(socket.getInputStream())) {
-	    output.write(request.rawPacket());
+	    output.write(request.construct());
 	    tailWriter.write(output);
 	    Optional<NetworkPacket> packet;
 	    do {

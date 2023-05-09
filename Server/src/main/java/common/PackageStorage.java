@@ -21,7 +21,6 @@ import java.security.SecureRandom;
 import java.util.*;
 
 public class PackageStorage {
-
 public static class PackageId {
       private final int value;
 
@@ -99,12 +98,14 @@ public void close() {
 }
 
 public List<ShortPackageInfoDTO> shortInfoList() {
-      List<PackageHat> hats = getPackageHatAll();
       List<ShortPackageInfoDTO> list = new ArrayList<>();
-      for (PackageHat hat : hats) {
-	    Optional<PackageId> id = getPackageId(hat.getId());
-	    Optional<ShortPackageInfoDTO> info = id.flatMap(this::getShortInfo);
-	    info.ifPresent(list::add);
+      try (Session session = dbFactory.openSession()) {
+	    List<PackageHat> hats = getPackageHatAll();
+	    for (PackageHat hat : hats) {
+		  Optional<PackageId> id = getPackageId(hat.getId());
+		  Optional<ShortPackageInfoDTO> info = id.flatMap(this::getShortInfo);
+		  info.ifPresent(list::add);
+	    }
       }
       return list;
 }
@@ -139,13 +140,14 @@ private void checkInstance(AuthorId author, PackageInstanceDTO dto) throws Stora
       Optional<PackageId> id = getPackageId(dto.packageId());
       boolean isValidInstance = id.isPresent();
       if (isValidInstance) {
-	    Session session = dbFactory.openSession();
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageHat where authorId= :author");
-	    query.setParameter("author", author);
-	    List<PackageHat> hats = query.getResultList();
-	    session.getTransaction().commit();
-	    isValidInstance = (hats == null) || hats.stream().anyMatch(h -> h.getId().equals(dto.packageId()));
+	    try (Session session = dbFactory.openSession()) {
+		  session.beginTransaction();
+		  Query query = session.createQuery("from PackageHat where authorId= :author");
+		  query.setParameter("author", author);
+		  List<PackageHat> hats = query.getResultList();
+		  session.getTransaction().commit();
+		  isValidInstance = (hats == null) || hats.stream().anyMatch(h -> h.getId().equals(dto.packageId()));
+	    }
       }
       if (!isValidInstance)
 	    throw new StorageException("Version label is busy");
@@ -168,23 +170,19 @@ public Optional<PackageId> getPackageId(int value) {
 
 public Optional<AuthorId> getAuthorId(Integer id) {
       AuthorId authorId = null;
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      AuthorInfo author = session.get(AuthorInfo.class, id);
-      session.getTransaction().commit();
-      if (author != null)
-	    authorId = AuthorId.valueOf(id);
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    AuthorInfo author = session.get(AuthorInfo.class, id);
+	    session.getTransaction().commit();
+	    if (author != null)
+		  authorId = AuthorId.valueOf(id);
+      }
       return Optional.ofNullable(authorId);
 }
 
 public Optional<AuthorId> getAuthorId(Author author) {
       AuthorId result = null;
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from AuthorInfo where name= :name and email= :email");
-      query.setParameter("name", author.author()).setParameter("email", author.email());
-      AuthorInfo localAuthor = (AuthorInfo) query.getSingleResult();
-      session.getTransaction().commit();
+      AuthorInfo localAuthor = getAuthorInfo(author).orElse(null);
       if (localAuthor != null) {
 	    byte[] salt = Base64.getDecoder().decode(localAuthor.getSalt());
 	    String hash = getHashCode(author.token(), salt);
@@ -196,23 +194,19 @@ public Optional<AuthorId> getAuthorId(Author author) {
 }
 
 public void authorize(Author author) throws StorageException {
-      AuthorInfo localAuthor;
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from AuthorInfo where name= :name and email= :email");
-      query.setParameter("name", author.author()).setParameter("email", author.email());
-      localAuthor = (AuthorInfo) query.getSingleResult();
-      session.getTransaction().commit();
-      if (localAuthor == null) {
+      AuthorInfo localAuthor = getAuthorInfo(author).orElse(null);
+      if (localAuthor == null && author.token().length() >= Author.PREF_TOKEN_LENGTH) {
 	    byte[] salt = getSalt();
 	    String hash = getHashCode(author.token(), salt);
 	    String stringSalt = Base64.getEncoder().encodeToString(salt);
-	    localAuthor = AuthorInfo.valueOf(author.author(), hash, stringSalt);
-	    session.beginTransaction();
-	    session.save(localAuthor);
-	    session.getTransaction().commit();
+	    localAuthor = AuthorInfo.valueOf(author.name(), hash, stringSalt);
+	    try (Session session = dbFactory.openSession()) {
+		  session.beginTransaction();
+		  session.save(localAuthor);
+		  session.getTransaction().commit();
+	    }
       } else {
-	    throw new StorageException("The same author is already defined");
+	    throw new StorageException("The same name is already defined");
       }
 }
 
@@ -231,13 +225,15 @@ public void authorize(Author author) throws StorageException {
  */
 public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
       final int MAX_PACKAGES_CNT = 10;//only ten latest packages are available
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where packageId= :familyId order by time desc");
-      query.setParameter("familyId", id.value());
-      query.setMaxResults(MAX_PACKAGES_CNT);
-      List<PackageInfo> infoList = query.getResultList();
-      session.getTransaction().commit();
+      List<PackageInfo> infoList;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageInfo where packageId= :familyId order by time desc");
+	    query.setParameter("familyId", id.value());
+	    query.setMaxResults(MAX_PACKAGES_CNT);
+	    infoList = query.getResultList();
+	    session.getTransaction().commit();
+      }
       int maxOffset = infoList.size() - 1;
       if (versionOffset != -1) {
 	    versionOffset = Math.max(versionOffset, 0); //not negative
@@ -256,19 +252,15 @@ public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
 
 
 public Optional<VersionId> mapVersion(PackageId id, String label) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where packageId= :packageId and versionLabel= :label");
-      query.setParameter("label", label);
-      query.setParameter("packageId", id.value());
-      PackageInfo instance = (PackageInfo) query.getSingleResult();
-      session.getTransaction().commit();
-      Optional<VersionId> result = Optional.empty();
-      if (instance != null) {
-	    VersionId version = VersionId.valueOf(instance.getVersionId());
-	    result = Optional.of(version);
+      Optional<PackageInfo> instance;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageInfo where packageId= :packageId and versionLabel= :label");
+	    query.setParameter("label", label).setParameter("packageId", id.value());
+	    instance = query.getResultList().stream().findAny();
+	    session.getTransaction().commit();
       }
-      return result;
+      return instance.map(info -> VersionId.valueOf(info.getVersionId()));
 }
 //assume: aliases are unique
 
@@ -282,18 +274,19 @@ public Optional<VersionId> mapVersion(PackageId id, String label) {
 public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
       Optional<PackageHat> hat = getPackageHat(id);
       return hat.map(h -> {
-	    Session session = dbFactory.openSession();
-	    session.beginTransaction();
-	    Query query =
-		session.createQuery("from PackageInfo where packageId= :id order by time desc")
-		    .setParameter("id", id.value())
-		    .setMaxResults(1);
-	    PackageInfo info = (PackageInfo) query.getSingleResult();
-	    session.getTransaction().commit();
+	    Optional<PackageInfo> info;
+	    try (Session session = dbFactory.openSession()) {
+		  session.beginTransaction();
+		  Query query =
+		      session.createQuery("from PackageInfo where packageId= :id order by time desc")
+			  .setParameter("id", id.value()).setMaxResults(1);
+		  info = query.getResultList().stream().findAny();
+		  session.getTransaction().commit();
+	    }
 	    ShortPackageInfoDTO result = null;
-	    if (info != null) {
+	    if (info.isPresent()) {
 		  result = new ShortPackageInfoDTO(id.value(), hat.get().getName(),
-		      info.getVersionLabel(), h.getAliases().toArray(String[]::new));
+		      info.get().getVersionLabel(), h.getAliases().toArray(String[]::new));
 	    }
 	    return result;
       });
@@ -367,14 +360,15 @@ public VersionId storePayload(@NotNull AuthorId author, @NotNull PackageInstance
 
 //todo: here should be database trigger
 private @NotNull VersionId nextVersionId(PackageId id) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where packageId= :id order by time desc");
-      query.setParameter("id", id);
-      query.setMaxResults(1);
-      List<PackageInfo> infoList = query.getResultList();
-      session.getTransaction().commit();
+      List<PackageInfo> infoList;
       VersionId version;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageInfo where packageId= :id order by time desc");
+	    query.setParameter("id", id).setMaxResults(1);
+	    infoList = query.getResultList();
+	    session.getTransaction().commit();
+      }
       if (!infoList.isEmpty()) {
 	    var info = infoList.get(0);
 	    version = VersionId.valueOf(info.getVersionId() + 1);//there should be trigger in database
@@ -491,10 +485,11 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
 	    } catch (IOException e) {
 		  throw new StorageException("Error during file saving");
 	    }
-	    Session session = dbFactory.openSession();
-	    session.beginTransaction();
-	    session.saveOrUpdate(info);
-	    session.getTransaction().commit();
+	    try (Session session = dbFactory.openSession()) {
+		  session.beginTransaction();
+		  session.saveOrUpdate(info);
+		  session.getTransaction().commit();
+	    }
 	    validatePackageHat(id, true); //now it's forbidden to change PackageHat
       } else {
 	    throw new StorageException("Invalid package id");
@@ -509,18 +504,19 @@ private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payloa
 private @NotNull PackageId initPackageHat(@NotNull AuthorId author, @NotNull PublishInfoDTO dto) throws StorageException {
       Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
       PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
+      PackageId id;
       hat.setPayload(payload);
       hat.setAuthorId(author.value());
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      session.saveOrUpdate(hat);
-      session.getTransaction().commit();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageHat where name= :packageName");
-      query.setParameter("packageName", hat.getName());
-      hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
-      session.getTransaction().commit();
-      PackageId id;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    session.saveOrUpdate(hat);
+	    session.getTransaction().commit();
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageHat where name= :packageName");
+	    query.setParameter("packageName", hat.getName());
+	    hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
+	    session.getTransaction().commit();
+      }
       if (hat != null) {
 	    id = PackageId.valueOf(hat.getId());
 	    Collection<String> aliases = hat.getAliases();
@@ -538,12 +534,13 @@ private @NotNull PackageId initPackageHat(@NotNull AuthorId author, @NotNull Pub
 //Additional DataBase's entity such as Payload or License should be
 private @NotNull Payload fetchPayload(String payloadType) throws StorageException {
       Payload payload;
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from Payload where name= :payloadType");
-      query.setParameter("payloadType", payloadType);
-      payload = (Payload) query.getSingleResult();
-      session.getTransaction().commit();
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from Payload where name= :payloadType");
+	    query.setParameter("payloadType", payloadType);
+	    payload = (Payload) query.getSingleResult();
+	    session.getTransaction().commit();
+      }
       if (payload == null)
 	    throw new StorageException("Invalid payload type");
       return payload;
@@ -551,12 +548,13 @@ private @NotNull Payload fetchPayload(String payloadType) throws StorageExceptio
 
 private @NotNull Licence fetchLicense(String type) throws StorageException {
       Licence licence;
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from Licence where name= :licenceType");
-      query.setParameter("licenceType", type);
-      licence = (Licence) query.getSingleResult();
-      session.getTransaction().commit();
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from Licence where name= :licenceType");
+	    query.setParameter("licenceType", type);
+	    licence = (Licence) query.getSingleResult();
+	    session.getTransaction().commit();
+      }
       if (licence == null)
 	    throw new StorageException("Invalid license type");
       return licence;
@@ -564,53 +562,76 @@ private @NotNull Licence fetchLicense(String type) throws StorageException {
 
 //todo: if PackageHat is downgraded to invalid, it means Package is deprecated and should be removed in future
 private void validatePackageHat(PackageId id, boolean isValid) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageHat where id= :packageId");
-      PackageHat hat = (PackageHat) query.getSingleResult();
-      hat.setValid(isValid);
-      session.update(hat);
-      session.getTransaction().commit();
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageHat where id= :packageId");
+	    query.setParameter("packageId", id);
+	    PackageHat hat = (PackageHat) query.getSingleResult();
+	    hat.setValid(isValid);
+	    session.update(hat);
+	    session.getTransaction().commit();
+      }
 }
 
 private Optional<PackageHat> getPackageHat(PackageId id) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
-      query.setParameter("packageId", id.value());
-      PackageHat result = (PackageHat) query.getSingleResult();
-      session.getTransaction().commit();
-      return Optional.ofNullable(result);
+      Optional<PackageHat> result;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
+	    query.setParameter("packageId", id.value());
+	    result = query.getResultList().stream().findAny();
+	    session.getTransaction().commit();
+      }
+      return result;
 }
 
 private @NotNull List<PackageHat> getPackageHatAll() {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageHat where valid= true");
-      query.setFirstResult(0);
-      List<PackageHat> hats = query.getResultList();
-      session.getTransaction().commit();
+      List<PackageHat> hats;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageHat where valid= true");
+	    query.setFirstResult(0);
+	    hats = query.getResultList();
+	    session.getTransaction().commit();
+      }
       return hats;
 }
 
 private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where id= :instanceId");
-      query.setParameter("instanceId", InstanceId.valueOf(id.value(), version.value()));
-      PackageInfo info = (PackageInfo) query.getSingleResult();
-      session.getTransaction().commit();
-      return Optional.ofNullable(info);
+      Optional<PackageInfo> info;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageInfo where id= :instanceId");
+	    query.setParameter("instanceId", InstanceId.valueOf(id.value(), version.value()));
+	    info = query.getResultList().stream().findAny();
+	    session.getTransaction().commit();
+      }
+      return info;
 }
+
+private Optional<AuthorInfo> getAuthorInfo(Author author) {
+      Optional<AuthorInfo> localAuthor;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from AuthorInfo where name= :name");
+	    query.setParameter("name", author.name());
+	    localAuthor = query.getResultList().stream().findAny();
+	    session.getTransaction().commit();
+      }
+      return localAuthor;
+}
+
 
 //todo: limit request to instances with specific count
 private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
-      Session session = dbFactory.openSession();
-      session.beginTransaction();
-      Query query = session.createQuery("from PackageInfo where id= :familyId");
-      query.setParameter("familyId", id.value());
-      List<PackageInfo> family = query.getResultList();
-      session.getTransaction().commit();
+      List<PackageInfo> family;
+      try (Session session = dbFactory.openSession()) {
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageInfo where id= :familyId");
+	    query.setParameter("familyId", id.value());
+	    family = query.getResultList();
+	    session.getTransaction().commit();
+      }
       return family;
 }
 

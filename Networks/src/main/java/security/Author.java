@@ -3,22 +3,21 @@ package security;
 import org.jetbrains.annotations.NotNull;
 import transfer.NetworkPacket;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 
-public record Author(String author, String email, String token) {
+public record Author(@NotNull String name, @NotNull String email, @NotNull String token) {
+      public static int PREF_TOKEN_LENGTH = 40;
       public String stringify(){
             Base64.Encoder encoder = Base64.getEncoder();
             byte[][] bytesList = new byte[][]{
-                author.getBytes(StandardCharsets.US_ASCII), email.getBytes(StandardCharsets.US_ASCII),
+                name.getBytes(StandardCharsets.US_ASCII), email.getBytes(StandardCharsets.US_ASCII),
                 token.getBytes(StandardCharsets.US_ASCII)
             };
             StringBuilder strText = new StringBuilder();
             for (var bytes : bytesList) {
-                  strText.append(NetworkPacket.bytesToString(encoder.encode(bytes))).append("#");
+                  strText.append(NetworkPacket.toString(encoder.encode(bytes))).append("#");
             }
             strText.setLength(strText.length() - 1);
             return strText.toString();
@@ -32,7 +31,7 @@ public record Author(String author, String email, String token) {
                   int index = 0;
                   for (String line : parts) {
                         byte[] converted = decoder.decode(line.getBytes(StandardCharsets.US_ASCII));
-                        params[index++] = NetworkPacket.bytesToString(converted);
+                        params[index++] = NetworkPacket.toString(converted);
                   }
                   result = new Author(params[0], params[1], params[2]);
             }

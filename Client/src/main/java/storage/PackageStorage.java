@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import packages.*;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -20,7 +21,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.stream.Collectors;
-
 
 
 public class PackageStorage {
@@ -215,8 +215,12 @@ public Optional<PackageInstanceDTO> collectPublishInstance(Integer id, Publisher
 		  break;
 	    }
       }
-      if (index == dependencies.length)
+      File payload = Path.of(entity.exePath).toFile();
+      if (index == dependencies.length && payload.exists()) {
 	    dto = new PackageInstanceDTO(id, entity.version, dependencies);
+	    dto.setLicense(entity.licence.toString());
+	    dto.setPayloadSize((int) payload.length()); //the current limitation is payload size
+      }
       return Optional.ofNullable(dto);
 }
 
@@ -438,6 +442,7 @@ Optional<PackageInfo> getPackageInfo(@NotNull Integer id, @NotNull String versio
       var instance = getInstanceInfo(id, version);
       return instance.flatMap(this::getPackageInfo);
 }
+
 //Check around
 Optional<InstanceInfo> getInstanceInfo(@NotNull String name) {
       return installed.values().stream()

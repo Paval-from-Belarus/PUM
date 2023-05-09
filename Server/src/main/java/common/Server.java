@@ -82,7 +82,7 @@ static class ClientService implements Runnable {
 	    byte[] collected = connection.collect();
 	    int payloadSize = collected.length + response.payloadSize();
 	    response.setPayloadSize(payloadSize);
-	    output.write(response.rawPacket());
+	    output.write(response.construct());
 	    output.write(collected);
       }
 

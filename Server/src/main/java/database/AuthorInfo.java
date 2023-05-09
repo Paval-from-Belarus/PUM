@@ -6,12 +6,22 @@ import javax.persistence.*;
 @Table(name="PUBLISHERS_INFO")
 public class AuthorInfo {
 @Id
-@GeneratedValue
-private int id;
+@GeneratedValue(strategy = GenerationType.AUTO)
+private Integer id;
+@Column(name="AUTHOR")
 private String name;
 private String email;
 private String hash;
 private String salt;
+public static AuthorInfo valueOf(String name, String hash, String salt) {
+      AuthorInfo author = new AuthorInfo();
+      author.name = name;
+      author.hash = hash;
+      author.salt = salt;
+      author.email = "";
+      return author;
+}
+
 public int getId() {
       return id;
 }
@@ -24,8 +34,8 @@ public String getName() {
       return name;
 }
 
-public void setName(String name) {
-      this.name = name;
+public void setName(String author) {
+      this.name = author;
 }
 
 public String getEmail() {
@@ -40,8 +50,8 @@ public String getHash() {
       return hash;
 }
 
-public void setHash(String token) {
-      this.hash = token;
+public void setHash(String hash) {
+      this.hash = hash;
 }
 
 public String getSalt() {
@@ -50,13 +60,5 @@ public String getSalt() {
 
 public void setSalt(String salt) {
       this.salt = salt;
-}
-public static AuthorInfo valueOf(String name, String hash, String salt) {
-      AuthorInfo author = new AuthorInfo();
-      author.name = name;
-      author.hash = hash;
-      author.salt = salt;
-      author.email = "";
-      return author;
 }
 }

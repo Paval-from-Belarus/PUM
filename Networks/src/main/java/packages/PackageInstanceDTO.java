@@ -1,5 +1,6 @@
 package packages;
 
+
 /**
  *This class is used as upper interface for PackageStorage
  *To convert database representation to finite client
@@ -10,6 +11,7 @@ private final Integer packageId;
 private final String version;
 private final DependencyInfoDTO[] dependencies;
 private String license;
+private int payloadSize;
 
 /**
  * @param dependencies is any alias (or package name) of dependency that should be used to install package.
@@ -21,6 +23,7 @@ public PackageInstanceDTO(Integer id, String version, DependencyInfoDTO[] depend
       this.packageId = id;
       this.version = version;
       this.dependencies = dependencies;
+      this.payloadSize = 0;
       this.license = DEFAULT_LICENCE;
 }
 public String version() {
@@ -31,14 +34,23 @@ public DependencyInfoDTO[] dependencies() {
       return dependencies;
 }
 
+public Integer packageId() {
+      return packageId;
+}
+
 public String getLicense() {
       return license;
 }
+
 public void setLicense(String license) {
       this.license = license;
 }
 
-public Integer packageId() {
-      return packageId;
+public int getPayloadSize() {
+      return payloadSize;
+}
+
+public void setPayloadSize(int payloadSize) {
+      this.payloadSize = payloadSize;
 }
 }

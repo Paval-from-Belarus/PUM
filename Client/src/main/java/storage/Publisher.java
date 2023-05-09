@@ -32,6 +32,8 @@ private boolean hasProperties(){
 	    aliases = new String[0];
       if (dependencies == null)
 	    dependencies = new PublisherDependency[0];
+      if (email == null)
+	    email = "";
       response = name != null && type != null && exePath != null && version != null;
       return response;
 }

@@ -10,11 +10,10 @@ import packages.*;
 import security.Author;
 import transfer.NetworkExchange;
 import transfer.NetworkExchange.RequestType;
+import transfer.NetworkPacket;
 
-import javax.persistence.AttributeOverride;
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -98,7 +97,7 @@ private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
 			versionId = storage.mapVersion(packageId, offset);
 		  }
 		  case RequestCode.STR_FORMAT -> {
-			String label = exchange.request().stringData(4);//int offset
+			String label = exchange.request().stringFrom(4);//int offset
 			versionId = storage.mapVersion(packageId, label);
 		  }
 		  default -> versionId = Optional.empty();
@@ -158,9 +157,9 @@ private void writeBytes(NetworkExchange exchange, @NotNull byte[] payload) throw
       output.write(payload);
 }
 
-private byte[] readBytes(NetworkExchange exchange) throws IOException {
+private byte[] readBytes(NetworkExchange exchange, Integer cbRead) throws IOException {
       DataInputStream input = new DataInputStream(exchange.getInputStream());
-      return input.readAllBytes();
+      return input.readNBytes(cbRead);
 }
 
 private void onPayload(NetworkExchange exchange) throws IOException {
@@ -182,17 +181,15 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      Integer rawAuthorId = ByteBuffer.wrap(exchange.request().data()).getInt();
+      int rawAuthorId = exchange.request().intFrom(0);
       var authorId = storage.getAuthorId(rawAuthorId);
       if (authorId.isPresent()) {
-	    String jsonInfo = exchange.request().stringData(4);
+	    String jsonInfo = exchange.request().stringFrom(4);
 	    PublishInfoDTO info = fromJson(jsonInfo, PublishInfoDTO.class);
 	    try {
 		  var id = storage.storePackageInfo(authorId.get(), info);
-		  var buffer = ByteBuffer.allocate(4);
-		  buffer.putInt(id.value());
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
-		      buffer.array());
+		      NetworkPacket.toBytes(id.value()));
 	    } catch (StorageException e) {
 		  String error = e.getMessage();
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
@@ -205,18 +202,21 @@ private void onPublishInfo(NetworkExchange exchange) {
  *
  */
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      Integer authorId = ByteBuffer.wrap(exchange.request().data()).getInt();
-      var author = storage.getAuthorId(authorId);
-      if (author.isEmpty()){
+      int rawAuthorId = exchange.request().intFrom(0);
+      var authorId = storage.getAuthorId(rawAuthorId);
+      if (authorId.isEmpty()) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
 	    return;
       }
-      String jsonInfo = exchange.request().stringData(4);
+      String jsonInfo = exchange.request().stringFrom(4);
       PackageInstanceDTO dto = fromJson(jsonInfo, PackageInstanceDTO.class);
-      byte[] payload = readBytes(exchange);
+      byte[] payload = null;
+      if (dto != null) {
+	    payload = readBytes(exchange, dto.getPayloadSize());
+      }
       if (dto != null && payload != null) {
 	    try {
-		  var version = storage.storePayload(author.get(), dto, payload);
+		  var version = storage.storePayload(authorId.get(), dto, payload);
 		  var buffer = ByteBuffer.allocate(4);//int
 		  buffer.putInt(version.value());
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
