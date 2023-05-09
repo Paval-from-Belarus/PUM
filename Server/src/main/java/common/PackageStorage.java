@@ -100,10 +100,10 @@ public void close() {
 public List<ShortPackageInfoDTO> shortInfoList() {
       List<ShortPackageInfoDTO> list = new ArrayList<>();
       try (Session session = dbFactory.openSession()) {
-	    List<PackageHat> hats = getPackageHatAll();
+	    List<PackageHat> hats = getPackageHatAll(session);
 	    for (PackageHat hat : hats) {
-		  Optional<PackageId> id = getPackageId(hat.getId());
-		  Optional<ShortPackageInfoDTO> info = id.flatMap(this::getShortInfo);
+		  PackageId id = PackageId.valueOf(hat.getId());
+		  Optional<ShortPackageInfoDTO> info = getShortInfo(id);
 		  info.ifPresent(list::add);
 	    }
       }
@@ -121,15 +121,17 @@ private void amendAliases(PackageId id, @NotNull Collection<String> aliases) thr
 
 //it's forbidden for everyone to change existing PackageHat (if it's not valid)
 private void checkPermissions(PublishInfoDTO info) throws StorageException {
-      List<String> aliases = Arrays.asList(info.aliases());
+      List<String> aliases = new ArrayList<>(Arrays.asList(info.aliases()));
       aliases.add(info.name());
       boolean isPermitted = true;
-      for (String alias : aliases) {
-	    Optional<PackageId> id = getPackageId(alias);
-	    Optional<PackageHat> hat = id.flatMap(this::getPackageHat);
-	    if (hat.isPresent()) {
-		  isPermitted = false;
-		  break;
+      try (Session session = dbFactory.openSession()) {
+	    for (String alias : aliases) {
+		  Optional<PackageId> packageId = getPackageId(alias);
+		  Optional<PackageHat> hat = packageId.flatMap(id -> getPackageHat(session, id));
+		  if (hat.isPresent()) {
+			isPermitted = false;
+			break;
+		  }
 	    }
       }
       if (!isPermitted)
@@ -162,9 +164,11 @@ public Optional<PackageId> getPackageId(String aliasName) {
  */
 public Optional<PackageId> getPackageId(int value) {
       PackageId id = PackageId.valueOf(value);
-      var optional = getPackageHat(id);
-      if (optional.isEmpty())
-	    id = null;
+      try (Session session = dbFactory.openSession()) {
+	    var optional = getPackageHat(session, id);
+	    if (optional.isEmpty())
+		  id = null;
+      }
       return Optional.ofNullable(id);
 }
 
@@ -182,31 +186,33 @@ public Optional<AuthorId> getAuthorId(Integer id) {
 
 public Optional<AuthorId> getAuthorId(Author author) {
       AuthorId result = null;
-      AuthorInfo localAuthor = getAuthorInfo(author).orElse(null);
-      if (localAuthor != null) {
-	    byte[] salt = Base64.getDecoder().decode(localAuthor.getSalt());
-	    String hash = getHashCode(author.token(), salt);
-	    if (hash.equals(localAuthor.getHash())) {
-		  result = AuthorId.valueOf(localAuthor.getId());
+      try (Session session = dbFactory.openSession()) {
+	    AuthorInfo localAuthor = getAuthorInfo(session, author).orElse(null);
+	    if (localAuthor != null) {
+		  byte[] salt = Base64.getDecoder().decode(localAuthor.getSalt());
+		  String hash = getHashCode(author.token(), salt);
+		  if (hash.equals(localAuthor.getHash())) {
+			result = AuthorId.valueOf(localAuthor.getId());
+		  }
 	    }
       }
       return Optional.ofNullable(result);
 }
 
 public void authorize(Author author) throws StorageException {
-      AuthorInfo localAuthor = getAuthorInfo(author).orElse(null);
-      if (localAuthor == null && author.token().length() >= Author.PREF_TOKEN_LENGTH) {
-	    byte[] salt = getSalt();
-	    String hash = getHashCode(author.token(), salt);
-	    String stringSalt = Base64.getEncoder().encodeToString(salt);
-	    localAuthor = AuthorInfo.valueOf(author.name(), hash, stringSalt);
-	    try (Session session = dbFactory.openSession()) {
+      try (Session session = dbFactory.openSession()) {
+	    AuthorInfo localAuthor = getAuthorInfo(session, author).orElse(null);
+	    if (localAuthor == null && author.token().length() >= Author.PREF_TOKEN_LENGTH) {
+		  byte[] salt = getSalt();
+		  String hash = getHashCode(author.token(), salt);
+		  String stringSalt = Base64.getEncoder().encodeToString(salt);
+		  localAuthor = AuthorInfo.valueOf(author.name(), hash, stringSalt);
 		  session.beginTransaction();
 		  session.save(localAuthor);
 		  session.getTransaction().commit();
+	    } else {
+		  throw new StorageException("The same name is already defined");
 	    }
-      } else {
-	    throw new StorageException("The same name is already defined");
       }
 }
 
@@ -225,27 +231,26 @@ public void authorize(Author author) throws StorageException {
  */
 public Optional<VersionId> mapVersion(PackageId id, int versionOffset) {
       final int MAX_PACKAGES_CNT = 10;//only ten latest packages are available
-      List<PackageInfo> infoList;
+      Optional<VersionId> result = Optional.empty();
       try (Session session = dbFactory.openSession()) {
 	    session.beginTransaction();
 	    Query query = session.createQuery("from PackageInfo where packageId= :familyId order by time desc");
 	    query.setParameter("familyId", id.value());
 	    query.setMaxResults(MAX_PACKAGES_CNT);
-	    infoList = query.getResultList();
+	    List<PackageInfo> infoList = query.getResultList();
 	    session.getTransaction().commit();
-      }
-      int maxOffset = infoList.size() - 1;
-      if (versionOffset != -1) {
-	    versionOffset = Math.max(versionOffset, 0); //not negative
-	    versionOffset = Math.min(versionOffset, maxOffset); //any correct offset
-      } else {
-	    versionOffset = maxOffset;
-      }
-      Optional<VersionId> result = Optional.empty();
-      if (infoList.size() != 0) { //last assertion should be erased
-	    int version = infoList.get(versionOffset).getVersionId();
-	    VersionId versionId = VersionId.valueOf(version);
-	    result = Optional.of(versionId);
+	    int maxOffset = infoList.size() - 1;
+	    if (versionOffset != -1) {
+		  versionOffset = Math.max(versionOffset, 0); //not negative
+		  versionOffset = Math.min(versionOffset, maxOffset); //any correct offset
+	    } else {
+		  versionOffset = maxOffset;
+	    }
+	    if (infoList.size() != 0) { //last assertion should be erased
+		  int version = infoList.get(versionOffset).getVersionId();
+		  VersionId versionId = VersionId.valueOf(version);
+		  result = Optional.of(versionId);
+	    }
       }
       return result;
 }
@@ -272,34 +277,30 @@ public Optional<VersionId> mapVersion(PackageId id, String label) {
  */
 //todo: access to table with short info
 public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
-      Optional<PackageHat> hat = getPackageHat(id);
-      return hat.map(h -> {
-	    Optional<PackageInfo> info;
-	    try (Session session = dbFactory.openSession()) {
-		  session.beginTransaction();
-		  Query query =
-		      session.createQuery("from PackageInfo where packageId= :id order by time desc")
-			  .setParameter("id", id.value()).setMaxResults(1);
-		  info = query.getResultList().stream().findAny();
-		  session.getTransaction().commit();
-	    }
-	    ShortPackageInfoDTO result = null;
-	    if (info.isPresent()) {
-		  result = new ShortPackageInfoDTO(id.value(), hat.get().getName(),
-		      info.get().getVersionLabel(), h.getAliases().toArray(String[]::new));
-	    }
-	    return result;
-      });
+      Optional<ShortPackageInfoDTO> dto = Optional.empty();
+      try (Session session = dbFactory.openSession()) {
+	    Optional<PackageHat> hat = getPackageHat(session, id);
+	    Optional<PackageInfo> optionalInfo;
+	    session.beginTransaction();
+	    Query query =
+		session.createQuery("from PackageInfo where packageId= :id order by time desc")
+		    .setParameter("id", id.value()).setMaxResults(1);
+	    optionalInfo = query.getResultList().stream().findAny();
+	    session.getTransaction().commit();
+	    dto = optionalInfo.map(info -> new ShortPackageInfoDTO(id.value(), hat.get().getName(),
+		info.getVersionLabel(), hat.get().getAliases().toArray(String[]::new)));
+      }
+      return dto;
 }
 
 public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
-      var optionalInfo = getInstanceInfo(id, version);
-      var optionalHat = getPackageHat(id);
       FullPackageInfoDTO dto = null;
-      if (optionalHat.isPresent() && optionalInfo.isPresent()) {
-	    PackageHat hat = optionalHat.get();
-	    PackageInfo info = optionalInfo.get();
-	    try {
+      try (Session session = dbFactory.openSession()) {
+	    var optionalInfo = getInstanceInfo(session, id, version);
+	    var optionalHat = getPackageHat(session, id);
+	    if (optionalHat.isPresent() && optionalInfo.isPresent()) {
+		  PackageHat hat = optionalHat.get();
+		  PackageInfo info = optionalInfo.get();
 		  dto = new FullPackageInfoDTO();
 		  dto.version = info.getVersionLabel();
 		  dto.aliases = hat.getAliases().toArray(new String[0]);
@@ -309,32 +310,34 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 		  dto.payloadSize = (int) Files.size(Path.of(info.getPayloadPath()));
 		  dto.dependencies = collectDependencies(info).toArray(new DependencyInfoDTO[0]);
 		  //todo: exhause max file size to Long
-	    } catch (StorageException | IOException e) {
-		  logger.error("Broken dependency" +
-				   "Id= " + info.getPackageId() +
-				   "Version=" + info.getVersionLabel());
+
 	    }
+      } catch (StorageException | IOException e) {
+	    logger.error("Broken dependency" +
+			     "Id= " + id +
+			     "Version=" + version);
       }
       return Optional.ofNullable(dto);
 }
-
 
 /**
  * The terrible thing is that memory can be finished by a many simultaneously connection
  * Should be replaced by OutputStream
  */
 public Optional<byte[]> getPayload(PackageId id, VersionId version) {
-      var optional = getInstanceInfo(id, version);
       byte[] bytes = null;
-      if (optional.isPresent()) {
-	    var info = optional.get();
-	    File payload = new File(info.getPayloadPath());
-	    try {
-		  if (payload.exists() && payload.canRead()) {
-			bytes = Files.readAllBytes(payload.toPath());
+      try (Session session = dbFactory.openSession()) {
+	    var optional = getInstanceInfo(session, id, version);
+	    if (optional.isPresent()) {
+		  var info = optional.get();
+		  File payload = new File(info.getPayloadPath());
+		  try {
+			if (payload.exists() && payload.canRead()) {
+			      bytes = Files.readAllBytes(payload.toPath());
+			}
+		  } catch (IOException e) {
+			logger.error("Impossible to read package payload: " + e.getMessage());
 		  }
-	    } catch (IOException e) {
-		  logger.error("Impossible to read package payload: " + e.getMessage());
 	    }
       }
       return Optional.ofNullable(bytes);
@@ -342,7 +345,8 @@ public Optional<byte[]> getPayload(PackageId id, VersionId version) {
 
 //check package on uniqueness and store in database
 //return package
-public synchronized @NotNull PackageId storePackageInfo(AuthorId author, PublishInfoDTO dto) throws StorageException {
+public synchronized @NotNull PackageId storePackageInfo(AuthorId author, PublishInfoDTO dto) throws
+    StorageException {
       checkPermissions(dto);//methods throw exception if something wrong
       return initPackageHat(author, dto);
 }
@@ -437,10 +441,9 @@ private void removeVersion(PackageId id, VersionId version) {
       }).start();
 }
 
-private void removePackageAll(PackageId id) {
-      var optionalHat = getPackageHat(id);
+private void removePackageAll(@NotNull Session session, PackageId id) {
+      var optionalHat = getPackageHat(session, id);
       if (optionalHat.isPresent()) {
-	    Session session = dbFactory.openSession();
 	    session.beginTransaction();
 	    session.getTransaction().commit();
       } else {
@@ -448,6 +451,72 @@ private void removePackageAll(PackageId id) {
       }
 }
 
+/**
+ * All checks are passed
+ */
+private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payload) throws StorageException {
+      VersionId version;
+      try (Session session = dbFactory.openSession()) {
+	    Licence licence = fetchLicense(session, dto.getLicense());
+	    Optional<PackageId> optionalId = getPackageId(dto.packageId());
+	    if (optionalId.isPresent()) {
+		  PackageId id = optionalId.get();
+		  version = nextVersionId(id);
+		  PackageInfo info = PackageInfo.valueOf(id.value(), version.value());
+		  info.setVersionLabel(dto.version());
+		  info.setLicence(licence);
+		  try {
+			Path path = toPayloadPath(dto);
+			Files.write(path, payload);
+			info.setPayloadPath(path.toString());
+		  } catch (IOException e) {
+			throw new StorageException("Error during file saving");
+		  }
+		  session.beginTransaction();
+		  session.saveOrUpdate(info);
+		  session.getTransaction().commit();
+		  validatePackageHat(session, id, true); //now it's forbidden to change PackageHat
+	    } else {
+		  throw new StorageException("Invalid package id");
+	    }
+      }
+      return version;
+}
+
+/**
+ * Assume that all checks are passed
+ * To add this dto to database is safe
+ */
+private @NotNull PackageId initPackageHat(@NotNull AuthorId author, @NotNull PublishInfoDTO dto) throws StorageException {
+      PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
+      PackageId id;
+      try (Session session = dbFactory.openSession()) {
+	    Payload payload = fetchPayload(session, dto.payloadType()); //throws StorageException
+	    hat.setPayload(payload);
+	    hat.setAuthorId(author.value());
+	    session.beginTransaction();
+	    session.saveOrUpdate(hat);
+	    session.getTransaction().commit();
+	    session.beginTransaction();
+	    Query query = session.createQuery("from PackageHat where name= :packageName");
+	    query.setParameter("packageName", hat.getName());
+	    hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
+	    session.getTransaction().commit();
+	    if (hat != null) {
+		  id = PackageId.valueOf(hat.getId());
+		  Collection<String> aliases = hat.getAliases();
+		  aliases.add(hat.getName());
+		  amendAliases(id, aliases);
+	    } else {
+		  String log = String.format("Package hat is not saved: %s", dto.name());
+		  logger.error(log);
+		  throw new StorageException("Impossible to save package hat " + dto.name());
+	    }
+      }
+      return id;
+}
+
+@SessionMethod
 private List<DependencyInfoDTO> collectDependencies(@NotNull PackageInfo info) throws StorageException {
       List<DependencyInfoDTO> list = new ArrayList<>();
       for (var dependency : info.getDependencies()) {
@@ -465,173 +534,94 @@ private List<DependencyInfoDTO> collectDependencies(@NotNull PackageInfo info) t
       return list;
 }
 
-/**
- * All checks are passed
- */
-private VersionId initPackageInfo(@NotNull PackageInstanceDTO dto, byte[] payload) throws StorageException {
-      Licence licence = fetchLicense(dto.getLicense());
-      Optional<PackageId> optionalId = getPackageId(dto.packageId());
-      VersionId version;
-      if (optionalId.isPresent()) {
-	    PackageId id = optionalId.get();
-	    version = nextVersionId(id);
-	    PackageInfo info = PackageInfo.valueOf(id.value(), version.value());
-	    info.setVersionLabel(dto.version());
-	    info.setLicence(licence);
-	    try {
-		  Path path = toPayloadPath(dto);
-		  Files.write(path, payload);
-		  info.setPayloadPath(path.toString());
-	    } catch (IOException e) {
-		  throw new StorageException("Error during file saving");
-	    }
-	    try (Session session = dbFactory.openSession()) {
-		  session.beginTransaction();
-		  session.saveOrUpdate(info);
-		  session.getTransaction().commit();
-	    }
-	    validatePackageHat(id, true); //now it's forbidden to change PackageHat
-      } else {
-	    throw new StorageException("Invalid package id");
-      }
-      return version;
-}
-
-/**
- * Assume that all checks are passed
- * To add this dto to database is safe
- */
-private @NotNull PackageId initPackageHat(@NotNull AuthorId author, @NotNull PublishInfoDTO dto) throws StorageException {
-      Payload payload = fetchPayload(dto.payloadType()); //throws StorageException
-      PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
-      PackageId id;
-      hat.setPayload(payload);
-      hat.setAuthorId(author.value());
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    session.saveOrUpdate(hat);
-	    session.getTransaction().commit();
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageHat where name= :packageName");
-	    query.setParameter("packageName", hat.getName());
-	    hat = (PackageHat) query.getSingleResult(); //replace hat with database entity
-	    session.getTransaction().commit();
-      }
-      if (hat != null) {
-	    id = PackageId.valueOf(hat.getId());
-	    Collection<String> aliases = hat.getAliases();
-	    aliases.add(hat.getName());
-	    amendAliases(id, aliases);
-      } else {
-	    String log = String.format("Package hat is not saved: %s", dto.name());
-	    logger.error(log);
-	    throw new StorageException("Impossible to save package hat " + dto.name());
-      }
-      return id;
-}
-
-
 //Additional DataBase's entity such as Payload or License should be
-private @NotNull Payload fetchPayload(String payloadType) throws StorageException {
-      Payload payload;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from Payload where name= :payloadType");
-	    query.setParameter("payloadType", payloadType);
-	    payload = (Payload) query.getSingleResult();
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private @NotNull Payload fetchPayload(@NotNull Session session, String payloadType) throws StorageException {
+      session.beginTransaction();
+      Query query = session.createQuery("from Payload where name= :payloadType");
+      query.setParameter("payloadType", payloadType);
+      Payload payload = (Payload) query.getSingleResult();
+      session.getTransaction().commit();
       if (payload == null)
 	    throw new StorageException("Invalid payload type");
       return payload;
 }
 
-private @NotNull Licence fetchLicense(String type) throws StorageException {
-      Licence licence;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from Licence where name= :licenceType");
-	    query.setParameter("licenceType", type);
-	    licence = (Licence) query.getSingleResult();
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private @NotNull Licence fetchLicense(@NotNull Session session, String type) throws StorageException {
+      session.beginTransaction();
+      Query query = session.createQuery("from Licence where name= :licenceType");
+      query.setParameter("licenceType", type);
+      Licence licence = (Licence) query.getSingleResult();
+      session.getTransaction().commit();
       if (licence == null)
 	    throw new StorageException("Invalid license type");
       return licence;
 }
 
 //todo: if PackageHat is downgraded to invalid, it means Package is deprecated and should be removed in future
-private void validatePackageHat(PackageId id, boolean isValid) {
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageHat where id= :packageId");
-	    query.setParameter("packageId", id);
-	    PackageHat hat = (PackageHat) query.getSingleResult();
-	    hat.setValid(isValid);
-	    session.update(hat);
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private void validatePackageHat(@NotNull Session session, PackageId id, boolean isValid) {
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageHat where id= :packageId");
+      query.setParameter("packageId", id);
+      PackageHat hat = (PackageHat) query.getSingleResult();
+      hat.setValid(isValid);
+      session.update(hat);
+      session.getTransaction().commit();
 }
 
-private Optional<PackageHat> getPackageHat(PackageId id) {
-      Optional<PackageHat> result;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
-	    query.setParameter("packageId", id.value());
-	    result = query.getResultList().stream().findAny();
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private Optional<PackageHat> getPackageHat(@NotNull Session session, PackageId id) {
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageHat where id= :packageId and valid= true");
+      query.setParameter("packageId", id.value());
+      Optional<PackageHat> result = query.getResultList().stream().findAny();
+      session.getTransaction().commit();
       return result;
 }
 
-private @NotNull List<PackageHat> getPackageHatAll() {
-      List<PackageHat> hats;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageHat where valid= true");
-	    query.setFirstResult(0);
-	    hats = query.getResultList();
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private @NotNull List<PackageHat> getPackageHatAll(@NotNull Session session) {
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageHat where valid= true");
+      query.setFirstResult(0);
+      List<PackageHat> hats = query.getResultList();
+      session.getTransaction().commit();
       return hats;
 }
 
-private Optional<PackageInfo> getInstanceInfo(PackageId id, VersionId version) {
+@SessionMethod
+private Optional<PackageInfo> getInstanceInfo(@NotNull Session session, PackageId id, VersionId version) {
       Optional<PackageInfo> info;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageInfo where id= :instanceId");
-	    query.setParameter("instanceId", InstanceId.valueOf(id.value(), version.value()));
-	    info = query.getResultList().stream().findAny();
-	    session.getTransaction().commit();
-      }
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageInfo where id= :instanceId");
+      query.setParameter("instanceId", InstanceId.valueOf(id.value(), version.value()));
+      info = query.getResultList().stream().findAny();
+      session.getTransaction().commit();
       return info;
 }
 
-private Optional<AuthorInfo> getAuthorInfo(Author author) {
-      Optional<AuthorInfo> localAuthor;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from AuthorInfo where name= :name");
-	    query.setParameter("name", author.name());
-	    localAuthor = query.getResultList().stream().findAny();
-	    session.getTransaction().commit();
-      }
+@SessionMethod
+private Optional<AuthorInfo> getAuthorInfo(@NotNull Session session, @NotNull Author author) {
+      session.beginTransaction();
+      Query query = session.createQuery("from AuthorInfo where name= :name");
+      query.setParameter("name", author.name());
+      Optional<AuthorInfo> localAuthor = query.getResultList().stream().findAny();
+      session.getTransaction().commit();
       return localAuthor;
 }
 
 
 //todo: limit request to instances with specific count
-private @NotNull List<PackageInfo> getInstanceInfoAll(PackageId id) {
+@SessionMethod
+private @NotNull List<PackageInfo> getInstanceInfoAll(@NotNull Session session, PackageId id) {
       List<PackageInfo> family;
-      try (Session session = dbFactory.openSession()) {
-	    session.beginTransaction();
-	    Query query = session.createQuery("from PackageInfo where id= :familyId");
-	    query.setParameter("familyId", id.value());
-	    family = query.getResultList();
-	    session.getTransaction().commit();
-      }
+      session.beginTransaction();
+      Query query = session.createQuery("from PackageInfo where id= :familyId");
+      query.setParameter("familyId", id.value());
+      family = query.getResultList();
+      session.getTransaction().commit();
       return family;
 }
 
@@ -670,12 +660,14 @@ private void init() {
 //@SuppressWarnings("unchecked")
 private void initNameMapper() {
       nameMapper = new NameMapper();
-      List<PackageHat> hats = getPackageHatAll();
-      for (PackageHat hat : hats) {
-	    PackageId id = PackageId.valueOf(hat.getId());
-	    //don't check any addition because database is supposed to be correct
-	    nameMapper.add(id, hat.getName());
-	    nameMapper.addAll(id, hat.getAliases());
+      try (Session session = dbFactory.openSession()) {
+	    List<PackageHat> hats = getPackageHatAll(session);
+	    for (PackageHat hat : hats) {
+		  PackageId id = PackageId.valueOf(hat.getId());
+		  //don't check any addition because database is supposed to be correct
+		  nameMapper.add(id, hat.getName());
+		  nameMapper.addAll(id, hat.getAliases());
+	    }
       }
 }
 }

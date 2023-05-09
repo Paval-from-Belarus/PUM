@@ -217,10 +217,8 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
       if (dto != null && payload != null) {
 	    try {
 		  var version = storage.storePayload(authorId.get(), dto, payload);
-		  var buffer = ByteBuffer.allocate(4);//int
-		  buffer.putInt(version.value());
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
-		      buffer.array());
+		      NetworkPacket.toBytes(version.value()));
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
 		      e.getMessage().getBytes(StandardCharsets.US_ASCII));
@@ -243,10 +241,8 @@ private void onAuthorizeRequest(NetworkExchange exchange) {
 			code |= CREATED;
 		  }
 		  if (id.isPresent()) {
-			ByteBuffer buffer = ByteBuffer.allocate(4);
-			buffer.putInt(id.get().value());
 			exchange.setResponse(ResponseType.Approve, code,
-			    buffer.array());
+			    NetworkPacket.toBytes(id.get().value()));
 		  }
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, FORBIDDEN);
