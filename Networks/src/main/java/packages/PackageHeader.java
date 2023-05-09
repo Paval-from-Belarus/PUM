@@ -16,8 +16,6 @@ public final static int BYTES_PER_HEADER_CNT = 26;
       signHead = SIGN_HEAD;
       signBody = SIGN_BODY;
       signTail = SIGN_TAIL;
-      archiveType = 0;
-      encryptionType = 0;
       payloadHash = 0;
       headerHash = EMPTY_HASH;
 }
@@ -73,16 +71,16 @@ public byte[] serialize() {
 	  .putInt(payloadHash)
 	  .putInt(EMPTY_HASH)
 	  .putChar(signTail);
-      int headerHash = getHeaderHash(buffer.array());
+      int headerHash = getControlSum(buffer.array());
       buffer.putInt(BYTES_PER_HEADER_CNT - 6, headerHash);
       return buffer.array();
 }
 
 //calculate header hash in assumption that headerHash is equal 0xFF...FF
 //the method uses crc32 algo
-private static int getHeaderHash(byte[] header) {
+static int getControlSum(byte[] payload) {
       long hash = -1;//set to all bits equals 1
-      for (byte b : header) {
+      for (byte b : payload) {
 	    hash ^= b;
 	    for (int j = 0; j < 8; j++) {
 		  if ((hash & 1L) != 0) {
@@ -113,7 +111,7 @@ private char encryptionType;
 private char archiveType;
 private int payloadHash;
 private int headerHash; //initially headerHash is equal 0xFFFF
-private char signTail;
+private final char signTail;
 
 public static @Nullable PackageHeader deserialize(byte[] header) {
       if (header.length < BYTES_PER_HEADER_CNT)
@@ -135,7 +133,7 @@ public static @Nullable PackageHeader deserialize(byte[] header) {
       int payloadHash = buffer.getInt();
       int headerHash = buffer.getInt(); //to check the header integrity
       buffer.putInt(BYTES_PER_HEADER_CNT - 6, EMPTY_HASH);
-      if (headerHash != getHeaderHash(buffer.array())){
+      if (headerHash != getControlSum(buffer.array())){
 	    return null;
       }
       char tailHash = buffer.getChar();

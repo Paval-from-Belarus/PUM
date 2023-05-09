@@ -459,7 +459,7 @@ private void storeDependencies(InstallerSession session, Map<Integer, FullPackag
 	    for (var entry : dependencies.entrySet()) {
 		  var payload = getRawAssembly(entry.getKey(), entry.getValue().version);
 		  if (payload.isPresent()) {
-			assembly = PackageAssembly.deserialize(payload.get());
+			assembly = PackageAssembly.deserialize(payload.get(), PackageAssembly.EncryptionType.None);
 			session.storeLocally(entry.getValue(), assembly);
 		  }
 	    }
@@ -481,7 +481,7 @@ private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer,
 	    var optional = getRawAssembly(id, info.version);//latest version
 	    output.sendMessage("", "Verification in progress...");
 	    if (optional.isPresent()) {
-		  assembly = PackageAssembly.deserialize(optional.get());
+		  assembly = PackageAssembly.deserialize(optional.get(), PackageAssembly.EncryptionType.None);
 		  output.sendMessage("", "Installation locally...");
 		  session.storeLocally(info, assembly);
 		  output.sendMessage("", "Local transactions are running...");
