@@ -703,7 +703,7 @@ private static @NotNull String getHashCode(String token, byte[] salt) {
 private static @NotNull byte[] getSalt() {
       byte[] salt = new byte[16];
       try {
-	    SecureRandom random = SecureRandom.getInstance("SHA1PRNG");
+	    SecureRandom random = SecureRandom.getInstance("SHA1PRNG"); //replace to DRBG
 	    random.nextBytes(salt);
       } catch (NoSuchAlgorithmException e) {
 	    throw new RuntimeException(e);

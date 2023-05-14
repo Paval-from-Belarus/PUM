@@ -116,7 +116,9 @@ public boolean hasData() {
 public boolean containsCode(int code) {
       return (packetCode | code) == packetCode;
 }
-
+public static boolean containsCode(int complex, int simple) {
+      return (complex & simple) != 0;
+}
 public final byte[] data() {
       return this.data;
 }
@@ -139,6 +141,9 @@ public @NotNull String stringFrom(int offset) {
 }
 public int intFrom(int offset) {
       return ByteBuffer.wrap(data()).getInt(offset);
+}
+public int code(int mask) {
+      return packetCode & mask;
 }
 public int code() {
       return packetCode;

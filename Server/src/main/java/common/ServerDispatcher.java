@@ -11,6 +11,7 @@ import security.Author;
 import transfer.NetworkExchange;
 import transfer.NetworkExchange.RequestType;
 import transfer.NetworkPacket;
+import transfer.TransferFormat;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -23,6 +24,12 @@ import static transfer.NetworkExchange.PACKAGE_ID_RESPONSE;
 
 
 public class ServerDispatcher implements ServerController {
+public static class UnsupportedRequestException extends Exception {
+      UnsupportedRequestException(String msg) {
+	    super(msg);
+      }
+}
+
 private static final Logger logger = LogManager.getLogger(Server.class);
 private final PackageStorage storage;
 
@@ -72,7 +79,7 @@ private void onPackageId(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
-
+//todo: asymmetric to symmetric handshake
 /**
  * There method resolves three kinds of request:<br><ol>
  * <li>PackageId handle and Version label</li>
@@ -91,7 +98,7 @@ private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
       if (optional.isPresent()) {
 	    var packageId = optional.get();
 	    Optional<VersionId> versionId;
-	    switch (exchange.request().code()) {
+	    switch (exchange.request().code(RequestCode.PAYLOAD_FORMAT_MASK)) {
 		  case RequestCode.INT_FORMAT -> {
 			int offset = buffer.getInt();
 			versionId = storage.mapVersion(packageId, offset);
@@ -125,7 +132,6 @@ private void onPackageInfo(NetworkExchange exchange) {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
-
 
 /**
  * Specific request to check the version integrity
@@ -162,18 +168,38 @@ private byte[] readBytes(NetworkExchange exchange, Integer cbRead) throws IOExce
       return input.readNBytes(cbRead);
 }
 
+private Optional<TransferFormat> getTransferFormat(NetworkExchange exchange) throws UnsupportedRequestException {
+      NetworkPacket packet = exchange.request();
+      Optional<TransferFormat> format = Optional.empty();
+      if (packet.containsCode(RequestCode.TRANSFER_FORMAT)) {
+	    try {
+		  byte[] bytesFormat = readBytes(exchange, TransferFormat.TRANSFER_BYTES_CNT);
+		  format = Optional.of(TransferFormat.construct(bytesFormat));
+	    } catch (IOException | IllegalStateException e) {
+		  logger.warn("Attempt to pass illegal transfer format");
+	    }
+      }
+      return format;
+}
+
 private void onPayload(NetworkExchange exchange) throws IOException {
       var optional = onPackageRequest(exchange);
       if (optional.isPresent()) {
-	    var request = optional.get();
-	    Optional<byte[]> payload = storage.getPayload(request.id(), request.version());
-	    PackageHeader header = new PackageHeader(request.id().value(), request.version().value());
-	    if (payload.isPresent()) {
-		  var assembly = PackageAssembly.valueOf(header, payload.get());
-		  writeBytes(exchange, assembly.serialize());
-		  exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
-	    } else {
-		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+	    try {
+		  var format = getTransferFormat(exchange);
+		  var request = optional.get();
+		  Optional<byte[]> payload = storage.getPayload(request.id(), request.version());
+		  PackageHeader header = new PackageHeader(request.id().value(), request.version().value());
+		  if (payload.isPresent()) {
+			var assembly = PackageAssembly.valueOf(header, payload.get());
+			format.ifPresent(f -> f.apply(assembly));
+			writeBytes(exchange, assembly.serialize());
+			exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
+		  } else {
+			exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+		  }
+	    } catch (UnsupportedRequestException e) {
+		  exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
 	    }
       } else {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
@@ -188,7 +214,7 @@ private void onPublishInfo(NetworkExchange exchange) {
 	    Optional<PackageId> packageId = storage.toPackageId(info.name());
 	    try {
 		  PackageId id;
-		  if (packageId.isPresent()){
+		  if (packageId.isPresent()) {
 			storage.updatePackageInfo(authorId.get(), packageId.get(), info);
 			id = packageId.get();
 		  } else {

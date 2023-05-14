@@ -7,8 +7,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
 import security.Author;
+import security.Encryptor;
 import storage.*;
 import transfer.NetworkPacket;
+import transfer.TransferFormat;
 
 import java.io.*;
 import java.net.Socket;
@@ -21,6 +23,7 @@ import java.util.*;
 import static common.ClientService.*;
 import static common.InputProcessor.*;
 import static common.OutputProcessor.*;
+import static security.Encryptor.*;
 import static storage.PackageStorage.*;
 import static storage.StorageSession.*;
 import static transfer.NetworkExchange.*;
@@ -55,7 +58,9 @@ public enum ResolutionMode {
 	    return response;
       }
 }
-
+private enum UpdateMode {
+      Stable, Upgrade
+}
 public final int LATEST_VERSION = 0;
 public final int OLDEST_VERSION = -1;
 Logger logger = LogManager.getLogger(Client.class);
@@ -67,7 +72,8 @@ private Configuration config;
 private PackageStorage storage;
 private InputProcessor input;
 private OutputProcessor output;
-
+private Encryptor.Encryption encryption = Encryption.Aes;
+private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
 public Client(int port, String domain) throws ConfigFormatException {
       this.serverUri = domain;
       this.port = port;
@@ -128,6 +134,31 @@ private void dispatchService(ClientService service) {
 //this method is supposed to be multithreading
 private void dispatchTask(Runnable task) {
       task.run();
+}
+private void onUpdateCommand(ParameterMap params) {
+      List<InputParameter> raw = params.get(ParameterType.Raw);
+      if (raw.size() < 1){
+	    throw new IllegalStateException("Package name is not specified");
+      }
+      raw.forEach(r -> updatePackage(r.self(), UpdateMode.Stable));
+}
+private void updatePackage(String name, UpdateMode mode) {
+      InstallationState state = storage.getPackageState(name);
+      if (state.isRemovable()) { //it can remove then I can and update
+//	    StorageSession session = storage.initSession()
+      }
+}
+private void updateStableVersion(String name) {
+//      ClientService service = defaultService();
+      Optional<VersionInfoDTO> version = storage.getVersionInfo(name);
+
+      if (version.isPresent()) {
+	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
+
+
+      } else {
+
+      }
 }
 
 private void onPublishCommand(ParameterMap params) {
@@ -454,13 +485,11 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
 //this method install dependencies according the common conventional rules
 private void storeDependencies(InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
       //todo: rewrite onto parallel stream or dispatchTask methods
-      PackageAssembly assembly;
       try {
 	    for (var entry : dependencies.entrySet()) {
-		  var payload = getRawAssembly(entry.getKey(), entry.getValue().version);
-		  if (payload.isPresent()) {
-			assembly = PackageAssembly.deserialize(payload.get(), PackageAssembly.EncryptionType.None);
-			session.storeLocally(entry.getValue(), assembly);
+		  var rawAssembly = getRawAssembly(entry.getKey(), entry.getValue().version, session.getEncryption());
+		  if (rawAssembly.isPresent()) {
+			session.storeLocally(entry.getValue(), rawAssembly.get());
 		  }
 	    }
       } catch (PackageIntegrityException | PackageAssembly.VerificationException e) {
@@ -473,17 +502,16 @@ private void storeDependencies(InstallerSession session, Map<Integer, FullPackag
 //This method is final in sequence of installation
 private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer, FullPackageInfoDTO> dependencies) {
       output.sendMessage("", "Installation in progress...");
-      PackageAssembly assembly;
       CommitState commitState = CommitState.Failed;
       try (var session = storage.initSession(InstallerSession.class)) {
+	    session.setEncryption(encryption);
 	    output.sendMessage("", "Dependency installation...");
 	    storeDependencies(session, dependencies);
-	    var optional = getRawAssembly(id, info.version);//latest version
+	    var optional = getRawAssembly(id, info.version, session.getEncryption());//latest version
 	    output.sendMessage("", "Verification in progress...");
 	    if (optional.isPresent()) {
-		  assembly = PackageAssembly.deserialize(optional.get(), PackageAssembly.EncryptionType.None);
 		  output.sendMessage("", "Installation locally...");
-		  session.storeLocally(info, assembly);
+		  session.storeLocally(info, optional.get());
 		  output.sendMessage("", "Local transactions are running...");
 		  commitState = CommitState.Success;
 	    } else {
@@ -534,14 +562,20 @@ private boolean isApplication(FullPackageInfoDTO dto) {
       return convert(dto.payloadType) == PayloadType.Application;
 }
 
-private Optional<byte[]> getRawAssembly(Integer id, String label) {
+/**
+ * @param type also holds the public key for encryption
+ * */
+private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption type) {
       Wrapper<byte[]> payload = new Wrapper<>();
       try {
-	    var request = new NetworkPacket(RequestType.GetPayload, RequestCode.STR_FORMAT);
+	    var request = new NetworkPacket(RequestType.GetPayload,
+		RequestCode.STR_FORMAT | RequestCode.TRANSFER_FORMAT);
 	    request.setPayload(toBytes(id), toBytes(label));
 	    ClientService service = defaultService();
 	    service.setRequest(request)
 		.setResponseHandler((r, s) -> payload.set(onRawAssemblyResponse(r, s)));
+	    TransferFormat format = new TransferFormat(getArchive(), type);
+	    service.setTailWriter((output) -> output.write(format.toBytes()));
 	    service.run();
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
@@ -654,6 +688,9 @@ private Optional<FullPackageInfoDTO> getFullInfo(NetworkPacket request) {
 private void defaultErrorHandler(Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());
+}
+private PackageAssembly.ArchiveType getArchive() {
+      return this.archive;
 }
 
 public static void main(String[] args) {

@@ -4,13 +4,16 @@ import database.InstanceInfo;
 import org.jetbrains.annotations.NotNull;
 import packages.FullPackageInfoDTO;
 import packages.PackageAssembly;
+import security.Encryptor;
 
+import javax.crypto.SecretKey;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.security.*;
 import java.util.ArrayList;
 import java.util.EnumSet;
 
@@ -23,7 +26,33 @@ import static storage.PackageStorage.*;
 public class InstallerSession implements StorageSession {
 InstallerSession(PackageStorage storage) {
       this.storage = storage;
+      this.encryption = Encryptor.Encryption.None;
+      this.archive = PackageAssembly.ArchiveType.None;
       isManaged = false;
+}
+
+public Encryptor.Encryption getEncryption() {
+      getForeignKey().ifPresent(encryption::detachKey);
+      return this.encryption;
+}
+
+public InstallerSession setEncryption(@NotNull Encryptor.Encryption type) {
+      this.encryption = type;
+      if (type.isAsymmetric()) {
+	    var pair = Encryptor.generatePair(type);
+	    localKey = pair.getPrivate();
+	    foreignKey = pair.getPublic();
+      }
+      if (type.isSymmetric()) {
+	    var secret = Encryptor.generateSecret(type);
+	    localKey = secret;
+	    foreignKey = secret; //the stupid but fast
+      }
+      return this;
+}
+public InstallerSession setArchive(@NotNull PackageAssembly.ArchiveType archive) {
+      this.archive = archive;
+      return this;
 }
 
 /**
@@ -31,8 +60,10 @@ InstallerSession(PackageStorage storage) {
  * and add package's info to local registry<br>
  * The following methods are fully depends on OS. As rule, the following sample is very primitive and generalized
  */
-public void storeLocally(FullPackageInfoDTO dto, PackageAssembly assembly) throws PackageIntegrityException {
+public void storeLocally(FullPackageInfoDTO dto, byte[] rawAssembly) throws PackageIntegrityException, PackageAssembly.VerificationException {
       checkSession();
+      getLocalKey().ifPresent(encryption::detachKey);
+      PackageAssembly assembly = PackageAssembly.deserialize(rawAssembly, encryption);
       PayloadType type = convert(dto.payloadType);
       if (type == PayloadType.Unknown)
 	    throw new PackageIntegrityException("Unknown package type");
@@ -164,13 +195,21 @@ private @NotNull List<InstanceInfo> mapDependencies(FullPackageInfoDTO dto) thro
       }
       return instances;
 }
-
+private Optional<Key> getForeignKey() {
+      return Optional.ofNullable(foreignKey);
+}
+private Optional<Key> getLocalKey() {
+ 	return Optional.ofNullable(localKey);
+}
 private Path centralPath; //central file for which each dependency belongs
 private File configFile;
 private File exeFile;//the executable file
 private boolean isManaged;
 private final PackageStorage storage;
-
+private Encryptor.Encryption encryption;
+private Key localKey;
+private Key foreignKey;
+private PackageAssembly.ArchiveType archive;
 InstallerSession setConfigFile(File file) {
       this.configFile = file;
       return this;

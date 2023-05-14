@@ -33,7 +33,11 @@ public enum ResponseType {Approve, Decline}
  * the server response has two values: versionID (handle) and versionLabel (String). By this way, is possible to upgrade each package
  * Convert
  */
-public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, Unknown,
+public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, getOptions, Unknown,
+      /**
+       * Upgrade the network protocol to use symmetric encryption
+       * */
+      UpgradeSecure,
       /**
        * Those requests should be following sequentially
        * PublishInfo is used to public common info about package
@@ -43,10 +47,12 @@ public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, Unknown
       @Deprecated UnPublish, @Deprecated GetFamily} //it's not recommended to use unpubslish request because can break local dependencies
 //let's image that no UnPublish request (almost)
 public static class RequestCode {
+public static final int PAYLOAD_FORMAT_MASK = 3;//for int and str format
 public static final int NO_CODE = 0;
 public static final int INT_FORMAT = 1;
 public static final int STR_FORMAT = 2;
 public static final int TAIL_FORMAT = 4; //after common message (in NetworkPackage) also binary data is available
+public static final int TRANSFER_FORMAT = 8;
 }
 //Common codes
 public static final int NO_PAYLOAD = 1;

@@ -250,7 +250,19 @@ public Optional<FullPackageInfoDTO> getFullInfo(String name) {
       var localInfo = getPackageInfo(name);
       return localInfo.flatMap(this::toExternalFormat);
 }
-
+public Optional<VersionInfoDTO> getVersionInfo(String name) {
+      var dto = getFullInfo(name);
+      var instance = getInstanceInfo(name);
+      Optional<VersionInfoDTO> version = Optional.empty();
+      if (dto.isPresent() && instance.isPresent()) {
+//	    version = Optional.of(new VersionInfoDTO());
+	    version = getVersionInfo(dto.get(), instance.get());
+      }
+      return version;
+}
+private Optional<VersionInfoDTO> getVersionInfo(FullPackageInfoDTO dto, InstanceInfo instance) {
+	return Optional.empty();
+}
 public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
       var info = getPackageInfo(dto.id(), dto.version());
       return info.flatMap(this::toExternalFormat);

@@ -6,15 +6,10 @@ import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import com.aayushatharva.brotli4j.encoder.Encoder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import security.Encryptor;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.security.auth.Destroyable;
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.security.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -40,37 +35,18 @@ private static final int BODY_SIGN = 0xCCEEDDFF;
 
 public enum AssemblyType {Library, Application}
 
-public enum EncryptionType {
-      None, RSA;
-      KeyPair pair;
-      public PrivateKey getPrivate(){
-	    return pair.getPrivate();
-      }
-      public PublicKey getPublic(){
-	    return pair.getPublic();
-      }
-      public static EncryptionType secretOf(EncryptionType type, PrivateKey secret) {
-	    type.pair = new KeyPair(null, secret);
-	    return type;
-      }
-
-      public static EncryptionType publicityOf(EncryptionType type, PublicKey publicKey) {
-	    type.pair = new KeyPair(publicKey, null);
-	    return type;
-      }
-}
-
 public enum ArchiveType {None, GZip, Brotli, LZ77}
 
-private EncryptionType encryption = EncryptionType.None;
+private final Encryptor encryptor;
 private ArchiveType archive = ArchiveType.None;
 
 private PackageAssembly(PackageHeader header, byte[] payload) {
       header.setArchiveType((char) ArchiveType.None.ordinal());
-      header.setEncryptionType((char) EncryptionType.None.ordinal());
+      header.setEncryptionType((char) Encryptor.Encryption.None.ordinal());
       //no encryption and no archive
       this.header = header;
       this.payload = payload;
+      this.encryptor = new Encryptor(Encryptor.Encryption.None);
 }
 
 public PackageAssembly setArchive(ArchiveType type) {
@@ -79,9 +55,15 @@ public PackageAssembly setArchive(ArchiveType type) {
       return this;
 }
 
-public PackageAssembly setEncrypt(EncryptionType type) {
-      encryption = type;
-      header.setEncryptionType((char) (encryption.ordinal()));
+/**
+ * This method attemp to change the old encryption to new
+ * If chosen encryption is not available, the last is present
+ * */
+public PackageAssembly setEncryption(@NotNull Encryptor.Encryption type) {
+      if (Encryptor.validate(type, payload)) {
+	    encryptor.setType(type);
+	    header.setEncryptionType((char) (encryptor.getType()).ordinal());
+      }
       return this;
 }
 
@@ -135,65 +117,54 @@ public static @NotNull byte[] decompress(byte[] compressed, ArchiveType archive)
 	    };
 	    result = input.readAllBytes();
       } catch (IOException e) {
-	    throw new VerificationException("The decompression failed");
-      }
-      return result;
-}
-
-private void encrypt() {
-      if (encryption != EncryptionType.RSA)
-	    return;
-      try {
-	    Cipher cipher = Cipher.getInstance("RSA");
-	    cipher.init(Cipher.ENCRYPT_MODE, encryption.getPublic());
-	    payload = cipher.doFinal(payload);
-      } catch (GeneralSecurityException e) {
-	    throw new RuntimeException(e);
-      }
-//      } catch (NoSuchPaddingException e) {
-//	    throw new RuntimeException(e);
-//      } catch (IllegalBlockSizeException e) {
-//	    throw new RuntimeException(e);
-//      } catch (NoSuchAlgorithmException e) {
-//	    throw new RuntimeException(e);
-//      } catch (BadPaddingException e) {
-//	    throw new RuntimeException(e);
-//      } catch (InvalidKeyException e) {
-//	    throw new RuntimeException(e);
-//      }
-}
-
-public static @NotNull byte[] decrypt(byte[] payload, PrivateKey key) throws VerificationException {
-      byte[] result;
-      try {
-	    Cipher cipher = Cipher.getInstance("RSA");
-	    cipher.init(Cipher.DECRYPT_MODE, key);
-	    result = cipher.doFinal(payload);
-      } catch (GeneralSecurityException e) {
 	    throw new VerificationException(e);
       }
       return result;
 }
 
-public static @NotNull PackageAssembly deserialize(byte[] rawData, EncryptionType encryption) throws VerificationException {
+private void encrypt() {
+      this.payload = encryptor.encrypt(payload);
+}
+
+public static @NotNull byte[] decrypt(byte[] payload, Encryptor.Encryption type) throws VerificationException {
+      Encryptor encryptor = new Encryptor(type);
+      return encryptor.decrypt(payload);
+}
+
+private static @Nullable Encryptor.Encryption getCompatible(@NotNull PackageHeader header, Encryptor.Encryption type) {
+ boolean isCompatible = header.getEncryption() < Encryptor.Encryption.values().length;
+Encryptor.Encryption packageEncryption = null;
+ Encryptor.Encryption result = null;
+ if (isCompatible) {
+       packageEncryption = Encryptor.Encryption.values()[header.getEncryption()];
+       isCompatible = type.isCompatible(packageEncryption);
+ }
+ if (isCompatible) {
+       result = packageEncryption;
+ }
+ return result;
+}
+
+public static @NotNull PackageAssembly deserialize(byte[] rawData, @NotNull Encryptor.Encryption type) throws VerificationException {
       PackageHeader header = PackageHeader.deserialize(rawData);
       PackageAssembly result;
-      if (header != null) {
+      Encryptor.Encryption compatible;
+      if (header != null && (compatible = getCompatible(header, type)) != null) {
 	    byte[] payload = new byte[rawData.length - header.size()];//probably no payload
 	    System.arraycopy(rawData, header.size(), payload, 0, payload.length);
-	    payload = decrypt(payload, encryption.getPrivate()); //throws
+	    payload = decrypt(payload, compatible);
 	    payload = decompress(payload, convertArchive(header.getArchive())); //throws
 	    result = new PackageAssembly(header, payload);
       } else {
-	    throw new VerificationException("The package header is damaged");
+	    String msg = "Unknown cause of exception";
+	    if (header == null) {
+		  msg = "The package header is damaged";
+	    } else if (header.getEncryption() != type.ordinal()) {
+		  msg = "The encryption type is not corresponds";
+	    }
+	    throw new VerificationException(msg);
       }
       return result;
-}
-
-private static @NotNull EncryptionType convertEncryption(int index) {
-      if (index >= EncryptionType.values().length)
-	    index = EncryptionType.None.ordinal();
-      return EncryptionType.values()[index];
 }
 
 private static @NotNull ArchiveType convertArchive(int index) {
