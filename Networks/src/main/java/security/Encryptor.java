@@ -9,11 +9,9 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.*;
-import java.security.spec.KeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Map;
 
 public class Encryptor {
+//todo: if want to use Encryption in multithreading ― replace signle method to two: foreign_key and local_key
 public enum Encryption {
       None, Rsa, Aes;
       @Getter

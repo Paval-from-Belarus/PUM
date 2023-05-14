@@ -128,7 +128,7 @@ public record InputParameter(@NotNull ParameterType type, @NotNull String self, 
       }
 }
 
-public enum UserInput {List, Install, Repository, Remove, Publish, Exit, Unknown}
+public enum UserInput {List, Install, Repository, Remove, Publish, Exit, Upgrade, Downgrade, Unknown}
 
 public static class InputPattern {
       public UserInput type;

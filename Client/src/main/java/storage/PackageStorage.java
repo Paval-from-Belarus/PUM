@@ -83,6 +83,9 @@ public static class PackageIntegrityException extends Exception {
       public PackageIntegrityException(String msg) {
 	    super(msg);
       }
+      public PackageIntegrityException(Throwable t) {
+	    super(t);
+      }
 }
 
 public static class ConfigurationException extends Exception {
@@ -197,16 +200,30 @@ public @NotNull <T> T initSession(Class<T> classType) throws ConfigurationExcept
       T session = null;
       try {
 	    if (classType.equals(RemovableSession.class)) {
-		  Path removables = Files.createTempFile(Path.of(config.temp), "removables", ".pum");
+		  Path removables = Files.createTempFile(Path.of(config.temp), "remove", ".pum");
 		  var remover = new RemovableSession(this);
-		  remover.setConfig(removables.toFile());
+		  remover.setJournalPath(removables);
 		  session = classType.cast(remover);
 	    }
 	    if (classType.equals(InstallerSession.class)) {
-		  Path tempConfig = Files.createTempFile(Path.of(config.temp), "config", ".pum");
+		  Path tempConfig = Files.createTempFile(Path.of(config.temp), "installation", ".pum");
 		  var installer = new InstallerSession(this);
-		  installer.setConfigFile(tempConfig.toFile());
+		  installer.setJournalPath(tempConfig);
 		  session = classType.cast(installer);
+	    }
+	    if (classType.equals(ModifierSession.class)) {
+		  Path tempJournal = Files.createTempFile(Path.of(config.temp), "modification", ".pum");
+		  Path cacheDir = Path.of(config.temp).resolve("cache");
+		  if (Files.exists(cacheDir) && !Files.isDirectory(cacheDir)) {
+			Files.delete(cacheDir);
+		  }
+		  if (!Files.exists(cacheDir)) {
+			Files.createDirectory(cacheDir);
+		  }
+		  var modifier = new ModifierSession(this);
+		  modifier.setJournalPath(tempJournal);
+		  modifier.setCacheDirectory(cacheDir);
+		  session = classType.cast(modifier);
 	    }
       } catch (Exception e) {
 	    throw new ConfigurationException("Impossible to create session instance");
@@ -250,18 +267,20 @@ public Optional<FullPackageInfoDTO> getFullInfo(String name) {
       var localInfo = getPackageInfo(name);
       return localInfo.flatMap(this::toExternalFormat);
 }
+public Optional<Integer> getPackageId(String name) {
+      return getInstanceInfo(name).map(InstanceInfo::getId);
+}
 public Optional<VersionInfoDTO> getVersionInfo(String name) {
       var dto = getFullInfo(name);
       var instance = getInstanceInfo(name);
       Optional<VersionInfoDTO> version = Optional.empty();
       if (dto.isPresent() && instance.isPresent()) {
-//	    version = Optional.of(new VersionInfoDTO());
-	    version = getVersionInfo(dto.get(), instance.get());
+	    version = Optional.of(getVersionInfo(dto.get(), instance.get()));
       }
       return version;
 }
-private Optional<VersionInfoDTO> getVersionInfo(FullPackageInfoDTO dto, InstanceInfo instance) {
-	return Optional.empty();
+private VersionInfoDTO getVersionInfo(FullPackageInfoDTO dto, InstanceInfo instance) {
+	return new VersionInfoDTO(instance.getId(), dto.version);
 }
 public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
       var info = getPackageInfo(dto.id(), dto.version());
@@ -559,6 +578,7 @@ public static PayloadType convert(@NotNull String type) {
       }
       return result;
 }
+
 
 private Path getCachePath() {
       return Path.of(config.temp).resolve(CACHE_FILE_NAME);

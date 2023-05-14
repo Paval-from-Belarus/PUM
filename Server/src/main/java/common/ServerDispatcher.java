@@ -21,6 +21,7 @@ import java.util.Optional;
 import static common.PackageStorage.*;
 import static transfer.NetworkExchange.*;
 import static transfer.NetworkExchange.PACKAGE_ID_RESPONSE;
+import static transfer.NetworkPacket.toBytes;
 
 
 public class ServerDispatcher implements ServerController {
@@ -80,6 +81,7 @@ private void onPackageId(NetworkExchange exchange) {
       }
 }
 //todo: asymmetric to symmetric handshake
+
 /**
  * There method resolves three kinds of request:<br><ol>
  * <li>PackageId handle and Version label</li>
@@ -148,8 +150,7 @@ private void onVersionInfo(NetworkExchange exchange) {
 		      fullInfo.get().version
 		  );
 		  String response = toJson(versionInfo);
-		  exchange.setResponse(ResponseType.Approve, VERSION_INFO_FORMAT,
-		      response.getBytes(StandardCharsets.US_ASCII));
+		  exchange.setResponse(ResponseType.Approve, VERSION_INFO_FORMAT, toBytes(response));
 	    } else {
 		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
 	    }
@@ -221,10 +222,10 @@ private void onPublishInfo(NetworkExchange exchange) {
 			id = storage.storePackageInfo(authorId.get(), info);
 		  }
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
-		      NetworkPacket.toBytes(id.value()));
+		      toBytes(id.value()));
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		      NetworkPacket.toBytes(e.getMessage()));
+		      toBytes(e.getMessage()));
 	    }
       } else {
 	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
@@ -250,10 +251,10 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 	    try {
 		  var version = storage.storePayload(authorId.get(), dto, payload);
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
-		      NetworkPacket.toBytes(version.value()));
+		      toBytes(version.value()));
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
-		      NetworkPacket.toBytes(e.getMessage()));
+		      toBytes(e.getMessage()));
 	    }
       } else {
 	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
@@ -274,7 +275,7 @@ private void onAuthorizeRequest(NetworkExchange exchange) {
 		  }
 		  if (id.isPresent()) {
 			exchange.setResponse(ResponseType.Approve, code,
-			    NetworkPacket.toBytes(id.get().value()));
+			    toBytes(id.get().value()));
 		  }
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, FORBIDDEN);

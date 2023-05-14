@@ -2,72 +2,75 @@ package storage;
 
 import database.InstanceInfo;
 import packages.FullPackageInfoDTO;
+import storage.JournalTransaction.Type;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static storage.PackageStorage.*;
 
 
-public class RemovableSession implements StorageSession {
-private Path centralPath; //the path of main package
-private boolean isManaged;
+public class RemovableSession extends AbstractSession {
+private Path centralPath = null;
+
 public void removeLocally(FullPackageInfoDTO dto) throws PackageIntegrityException {
       Optional<InstanceInfo> instance = storage.getInstanceInfo(dto.name);
       try {
-            if (instance.isPresent() && storage.getInstanceState(instance.get()).isRemovable()){
-                  storage.unlinkLibraries(instance.get());
-                  appendConfig(instance.get());
-            } else {
-                  throw new PackageIntegrityException("Non-removable package");
-            }
-      } catch (IOException e){
-            //really funny case
-            throw new PackageIntegrityException("Config file is not accessible");
+	    if (instance.isPresent() && storage.getInstanceState(instance.get()).isRemovable()) {
+		  storage.unlinkLibraries(instance.get());
+		  appendJournal(Type.Remove, instance.get());
+		  if (PackageStorage.convert(dto.payloadType) == PayloadType.Application) {
+			assert centralPath == null;//only single application per session
+			centralPath = Path.of(instance.get().getStringPath());
+		  }
+	    } else {
+		  throw new PackageIntegrityException("Non-removable package");
+	    }
+      } catch (IOException e) {
+	    //really funny case
+	    throw new PackageIntegrityException("Config file is not accessible");
       }
 }
 
+/**
+ * The method commit remove actions. By another words, before this moment, no file (packages) were really removed.
+ * But only marked as removable (and unlinkable from PackageStorage)
+ */
 @Override
 public void commit(CommitState state) throws PackageIntegrityException {
+      if (isManaged()) {
+	    return;
+      }
       try {
-            if (state != CommitState.Failed){
-                  String content = Files.readString(configFile.toPath());
-                  List<InstanceInfo> list = InstanceInfo.valueOf(content);
-                  for (var info : list){
-                        Path path = Path.of(info.getStringPath());
-                        removeFiles(path);
-                  }
-                  storage.rebuildConfig(list, RebuildMode.Remove);
-            }
-            if (!isManaged)
-                  clearConfig();
-      } catch(IOException e){
-            throw new PackageIntegrityException("Some packages cannot be removed");
+	    List<InstanceInfo> instances = getTransactions(Type.Remove).stream()
+					       .map(JournalTransaction::getInstance)
+					       .collect(Collectors.toList());
+	    if (state != CommitState.Failed) {
+		  for (var instance : instances) {
+			removeFiles(Path.of(instance.getStringPath()));
+		  }
+		  storage.rebuildConfig(instances, RebuildMode.Remove);
+	    } else {
+		  List<InstanceInfo> dependencies = instances.stream()
+							.filter(info -> !info.getStringPath().equals(centralPath.toString()))
+							.collect(Collectors.toList());
+		  storage.linkLibraries(centralPath, dependencies);
+	    }
+	    eraseJournal();
+	    setManaged(true);
+      } catch (IOException e) {
+	    throw new PackageIntegrityException("Some packages cannot be removed");
       }
 }
-private void clearConfig(){
-      try{
-            isManaged = true;
-            Files.deleteIfExists(configFile.toPath());
-      } catch (IOException ignored){
-      }
-}
-private void appendConfig(InstanceInfo removable) throws IOException {
-      Files.writeString(configFile.toPath(), removable.toString(), StandardOpenOption.APPEND);
-}
-RemovableSession setConfig(File configFile){
-      this.configFile = configFile;
-      return this;
-}
+
 RemovableSession(PackageStorage storage) {
       this.storage = storage;
-      this.isManaged = false;
+      setManaged(false);
 }
+
 private final PackageStorage storage;
-private File configFile;
 }

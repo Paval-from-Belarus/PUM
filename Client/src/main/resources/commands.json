@@ -3,5 +3,7 @@
   {"type":"Install", "aliases": ["install"], "shorts": [], "verbose": ["resolve"]},
   {"type": "Remove", "aliases":  ["remove", "rm"], "shorts": ["f"], "verbose": ["force"]},
   {"type": "Repository", "aliases":  ["repository"], "shorts": [], "verbose": ["add", "list", "remove"]},
-  {"type": "Publish", "aliases": ["publish"], "shorts": [], "verbose": []}
+  {"type": "Publish", "aliases": ["publish"], "shorts": [], "verbose": []},
+  {"type": "Upgrade", "aliases": ["upgrade"], "shorts": [], "verbose": ["release"]},
+  {"type": "Downgrade", "aliases": ["downgrade"], "shorts": ["l"], "verbose": ["level"]}
 ]

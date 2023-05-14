@@ -9,6 +9,8 @@ import packages.*;
 import security.Author;
 import security.Encryptor;
 import storage.*;
+import storage.ModifierSession.Rank;
+import storage.ModifierSession.VersionPredicate;
 import transfer.NetworkPacket;
 import transfer.TransferFormat;
 
@@ -58,9 +60,7 @@ public enum ResolutionMode {
 	    return response;
       }
 }
-private enum UpdateMode {
-      Stable, Upgrade
-}
+
 public final int LATEST_VERSION = 0;
 public final int OLDEST_VERSION = -1;
 Logger logger = LogManager.getLogger(Client.class);
@@ -74,6 +74,7 @@ private InputProcessor input;
 private OutputProcessor output;
 private Encryptor.Encryption encryption = Encryption.Aes;
 private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
+
 public Client(int port, String domain) throws ConfigFormatException {
       this.serverUri = domain;
       this.port = port;
@@ -135,29 +136,171 @@ private void dispatchService(ClientService service) {
 private void dispatchTask(Runnable task) {
       task.run();
 }
+
 private void onUpdateCommand(ParameterMap params) {
       List<InputParameter> raw = params.get(ParameterType.Raw);
-      if (raw.size() < 1){
-	    throw new IllegalStateException("Package name is not specified");
+      List<InputParameter> verbose = params.get(ParameterType.Verbose);
+      Wrapper<UpdateMode> mode = new Wrapper<>(UpdateMode.Version);
+      if (verbose.size() == 1 && verbose.get(0).self().equals("release")) {
+	    mode.set(UpdateMode.Release);
       }
-      raw.forEach(r -> updatePackage(r.self(), UpdateMode.Stable));
-}
-private void updatePackage(String name, UpdateMode mode) {
-      InstallationState state = storage.getPackageState(name);
-      if (state.isRemovable()) { //it can remove then I can and update
-//	    StorageSession session = storage.initSession()
-      }
-}
-private void updateStableVersion(String name) {
-//      ClientService service = defaultService();
-      Optional<VersionInfoDTO> version = storage.getVersionInfo(name);
-
-      if (version.isPresent()) {
-	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
-
-
+      if (raw.size() == 0) {
+	    output.sendMessage("", "Init updating all package");
+	    storage.localPackages().forEach(dto -> updatePackageByMode(dto.name, mode.get()));
       } else {
+	    raw.forEach(r -> updatePackageByMode(r.self(), mode.get()));
+      }
 
+}
+
+private enum UpdateMode {Release, Version}
+
+private void updatePackageByMode(String name, UpdateMode mode) {
+      InstallationState state = storage.getPackageState(name);
+      try (ModifierSession session = storage.initSession(ModifierSession.class)) {
+	    if (state.isRemovable()) { //it can be removed then it can be updated
+		  VersionPredicate predicate = switch (mode) {
+			case Release -> this::changeRelease;
+			case Version -> this::changeVersion;
+		  };
+		  VersionFunction handler = switch (mode) {
+			case Release -> this::getLatestRelease;
+			case Version -> this::getLatestVersion;
+		  };
+		  changeInstalledPackage(session, name, predicate, handler);
+	    }
+      } catch (PackageIntegrityException | ConfigurationException e) { //on close
+	    output.sendError("Configuration error", e.getMessage());
+      }
+}
+
+private boolean changeRelease(VersionInfoDTO old, VersionInfoDTO last) {
+      return ModifierSession.compare(old, last) == Rank.Silent;
+}
+
+private boolean changeVersion(VersionInfoDTO old, VersionInfoDTO last) {
+      return ModifierSession.compare(old, last) == Rank.Jumping;
+}
+
+@FunctionalInterface
+private interface VersionFunction {
+      Optional<VersionInfoDTO> getVersion(Integer id, VersionInfoDTO local);
+}
+
+//the function attempt to check only
+private void changeInstalledPackage(ModifierSession session, String name, VersionPredicate predicate, VersionFunction function) {
+      Optional<Integer> packageId = storage.getPackageId(name);
+      Optional<VersionInfoDTO> local = storage.getVersionInfo(name);
+      Optional<VersionInfoDTO> remote;
+      if (packageId.isPresent() && local.isPresent()) {
+	    remote = function.getVersion(packageId.get(), local.get());
+	    if (remote.isPresent() && predicate.check(local.get(), remote.get())) {
+		  var lastInfo = getFullInfo(packageId.get(), remote.get().label());
+		  var oldInfo = storage.getFullInfo(packageId.get(), local.get().label());
+		  if (lastInfo.isPresent() && oldInfo.isPresent()) {
+			try {
+			      removeRetired(session, packageId.get(), oldInfo.get());
+			      installAdvanced(session, packageId.get(), lastInfo.get());
+			} catch (PackageIntegrityException e) {
+			      output.sendError("Integrity error", e.getMessage());
+			}
+		  } else {
+			if (oldInfo.isEmpty())
+			      output.sendError("Internal error", "The local db corrupted");
+		  }
+	    } else {
+		  if (remote.isPresent()) { //the current level doesn't process network error
+			//it's obligatory for low-level
+			output.sendMessage("", "All is up to date");
+		  }
+	    }
+      } else {
+	    output.sendMessage("Not found", "Package not found");
+      }
+}
+
+private void removeRetired(ModifierSession parent, Integer id, FullPackageInfoDTO dto) throws PackageIntegrityException {
+      try (var session = parent.getRemover()) {
+	    output.sendMessage("", "Attempt to remove old application version");
+	    session.removeLocally(dto);
+	    output.sendMessage("", "Attempt to remove old dependencies");
+	    ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Removable, storage);
+	    Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
+	    if (dependencies.values().size() < dto.dependencies.length)
+		  output.sendMessage("Warning", "There are some global dependencies");
+	    for (var dependency : dependencies.values()) {
+		  session.removeLocally(dependency);
+	    }
+	    output.sendMessage("Completed", "Package was retired");
+	    session.commit(CommitState.Success);
+      }
+}
+
+private void installAdvanced(ModifierSession parent, Integer id, FullPackageInfoDTO dto)
+    throws PackageIntegrityException {
+      try (var session = parent.getInstaller()) {
+	    ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
+	    output.sendMessage("", "Attempt to resolve dependencies");
+	    Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
+	    if (hasUserAgreement(dto, dependencies.values())) {
+		  startInstallation(session, id, dto, dependencies);
+		  parent.commit(CommitState.Success);
+		  output.sendMessage("", "Updating successfully");
+	    } else {
+		  output.sendMessage("", "The installation is aborted by user");
+		  output.sendMessage("", "Attempt to roll back changes");
+		  parent.commit(CommitState.Failed);
+	    }
+      } catch (PackageIntegrityException | ConfigurationException e) {
+	    throw new PackageIntegrityException(e);
+      } catch (PackageAssembly.VerificationException e) {
+	    throw new PackageIntegrityException("The download package is damaged: " + e);
+      }
+}
+
+private Optional<VersionInfoDTO> getVersionByDegree(Integer id, int level, VersionInfoDTO local) {
+      Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
+      try {
+	    ClientService service = defaultService();
+	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.INT_FORMAT);
+	    packet.setPayload(toBytes(id), toBytes(level));
+	    service.setRequest(packet).setResponseHandler((response, socket) -> {
+		  onVersionResponse(wrapper, response);
+	    });
+	    service.run();
+      } catch (ServerAccessException ignored) {
+      }
+      return Optional.ofNullable(wrapper.get());
+}
+
+private Optional<VersionInfoDTO> getFirstVersion(Integer id, VersionInfoDTO local) {
+      return getVersionByDegree(id, OLDEST_VERSION, local);
+}
+
+private Optional<VersionInfoDTO> getLatestVersion(Integer id, VersionInfoDTO local) {
+      return getVersionByDegree(id, LATEST_VERSION, local);
+}
+
+private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO local) {
+      Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
+      try {
+	    ClientService service = defaultService();
+	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
+	    packet.setPayload(toBytes(id), toBytes(local.label()));
+	    service.setRequest(packet).setResponseHandler((response, socket) -> {
+		  onVersionResponse(wrapper, response);
+	    });
+	    service.run();
+      } catch (ServerAccessException ignored) {
+      }
+      return Optional.ofNullable(wrapper.get());
+}
+
+private void onVersionResponse(Wrapper<VersionInfoDTO> wrapper, NetworkPacket response) {
+      VersionInfoDTO dto;
+      if (response.type(ResponseType.class) == ResponseType.Approve) {
+	    dto = fromJson(response.stringData(), VersionInfoDTO.class);
+	    wrapper.set(dto);
       }
 }
 
@@ -369,6 +512,9 @@ private void removePackage(String name) {
 			//the dependency resotion is obligatory only to determine the integrity of package
 			ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Removable, storage);
 			Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(fullInfo.get(), mode);//only existing dependencies
+			if (dependencies.size() < fullInfo.get().dependencies.length) {
+			      output.sendMessage("Warning", "There are some global dependencies");
+			}
 			for (var dto : dependencies.values()) {
 			      session.removeLocally(dto);
 			}
@@ -500,35 +646,27 @@ private void storeDependencies(InstallerSession session, Map<Integer, FullPackag
 //the main thread is for gui
 //the multiple thread for dependencies
 //This method is final in sequence of installation
-private void startInstallation(Integer id, FullPackageInfoDTO info, Map<Integer, FullPackageInfoDTO> dependencies) {
+private void startInstallation(InstallerSession session, Integer id, FullPackageInfoDTO info, Map<Integer, FullPackageInfoDTO> dependencies)
+    throws PackageAssembly.VerificationException, PackageIntegrityException, ConfigurationException {
       output.sendMessage("", "Installation in progress...");
       CommitState commitState = CommitState.Failed;
-      try (var session = storage.initSession(InstallerSession.class)) {
-	    session.setEncryption(encryption);
-	    output.sendMessage("", "Dependency installation...");
-	    storeDependencies(session, dependencies);
-	    var optional = getRawAssembly(id, info.version, session.getEncryption());//latest version
-	    output.sendMessage("", "Verification in progress...");
-	    if (optional.isPresent()) {
-		  output.sendMessage("", "Installation locally...");
-		  session.storeLocally(info, optional.get());
-		  output.sendMessage("", "Local transactions are running...");
-		  commitState = CommitState.Success;
-	    } else {
-		  output.sendMessage("", "Failed to load package");
-		  logger.warn("Package is not installed");
-	    }
-	    session.commit(CommitState.Success);
-	    if (commitState == CommitState.Success)
-		  output.sendMessage("Congratulations!", "Installed successfully!");
-      } catch (PackageAssembly.VerificationException e) {
-	    output.sendMessage("Verification error", e.getMessage());
-      } catch (PackageIntegrityException e) {
-	    logger.warn("Broken dependencies: " + e.getMessage());
-	    output.sendError("Broken dependencies", e.getMessage());
-      } catch (ConfigurationException e) {
-	    output.sendError("common.Configuration error", "Impossible to start installation");
+      session.setEncryption(encryption);
+      output.sendMessage("", "Dependency installation...");
+      storeDependencies(session, dependencies);
+      var optional = getRawAssembly(id, info.version, session.getEncryption());//latest version
+      output.sendMessage("", "Verification in progress...");
+      if (optional.isPresent()) {
+	    output.sendMessage("", "Installation locally...");
+	    session.storeLocally(info, optional.get());
+	    output.sendMessage("", "Local transactions are running...");
+	    commitState = CommitState.Success;
+      } else {
+	    output.sendMessage("", "Failed to load package");
+	    logger.warn("Package is not installed");
       }
+      session.commit(CommitState.Success);
+      if (commitState == CommitState.Success)
+	    output.sendMessage("Congratulations!", "Installed successfully!");
 }
 
 private void installAppPackage(String packageName) {
@@ -540,13 +678,13 @@ private void installAppPackage(String packageName) {
       if (packageId.isEmpty())
 	    packageId = getPackageId(packageName);
       Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
-      try {
+      try (InstallerSession session = storage.initSession(InstallerSession.class)) {
 	    if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
 		  FullPackageInfoDTO dto = fullInfo.get();
 		  ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
 		  if (hasUserAgreement(dto, dependencies.values())) {
-			startInstallation(packageId.get(), dto, dependencies);
+			startInstallation(session, packageId.get(), dto, dependencies);
 		  } else {
 			output.sendMessage("", "Installation is aborted by user");
 		  }
@@ -554,7 +692,12 @@ private void installAppPackage(String packageName) {
 		  output.sendMessage("", "Application is not found");
 	    }
       } catch (PackageIntegrityException e) {
-	    output.sendError("Package integrity Error", e.getMessage());
+	    logger.warn("Broken dependencies: " + e.getMessage());
+	    output.sendError("Broken dependencies", e.getMessage());
+      } catch (ConfigurationException e) {
+	    output.sendError("common.Configuration error", "Impossible to start installation");
+      } catch (PackageAssembly.VerificationException e) {
+	    output.sendMessage("Verification error", e.getMessage());
       }
 }
 
@@ -564,7 +707,7 @@ private boolean isApplication(FullPackageInfoDTO dto) {
 
 /**
  * @param type also holds the public key for encryption
- * */
+ */
 private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption type) {
       Wrapper<byte[]> payload = new Wrapper<>();
       try {
@@ -574,7 +717,7 @@ private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption typ
 	    ClientService service = defaultService();
 	    service.setRequest(request)
 		.setResponseHandler((r, s) -> payload.set(onRawAssemblyResponse(r, s)));
-	    TransferFormat format = new TransferFormat(getArchive(), type);
+	    TransferFormat format = new TransferFormat(this.archive, type);
 	    service.setTailWriter((output) -> output.write(format.toBytes()));
 	    service.run();
       } catch (ServerAccessException e) {
@@ -688,9 +831,6 @@ private Optional<FullPackageInfoDTO> getFullInfo(NetworkPacket request) {
 private void defaultErrorHandler(Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());
-}
-private PackageAssembly.ArchiveType getArchive() {
-      return this.archive;
 }
 
 public static void main(String[] args) {
