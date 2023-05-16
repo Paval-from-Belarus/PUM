@@ -48,7 +48,7 @@ public static List<JournalTransaction> listOf(String lines) {
 private static final Pattern pattern;
 
 static {
-      pattern = Pattern.compile("\\$\\{(.+)}");
+      pattern = Pattern.compile("\\$\\{([^$\n\r]+)}");
 }
 
 public String getStringPath() {

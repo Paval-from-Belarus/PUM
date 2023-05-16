@@ -3,7 +3,7 @@ package storage;
 import database.InstanceInfo;
 import org.jetbrains.annotations.NotNull;
 import packages.FullPackageInfoDTO;
-import packages.PackageAssembly;
+import transfer.PackageAssembly;
 import security.Encryptor;
 
 import java.io.File;
@@ -78,8 +78,8 @@ public void storeLocally(FullPackageInfoDTO dto, byte[] rawAssembly) throws Pack
 
 //Each session should be committed
 public void commit(CommitState state) throws PackageIntegrityException {
-      if (centralPath == null) //remove in prod
-	    throw new PackageIntegrityException("Package without binary payload");
+      if (isManaged())
+	    return;
       if (state == CommitState.Success) {
 	    try {
 		  List<InstanceInfo> dependencies = getTransactions(Type.Install).stream()

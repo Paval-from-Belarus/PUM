@@ -8,12 +8,17 @@ import org.jetbrains.annotations.NotNull;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.DESKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
+import java.security.spec.KeySpec;
+import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 public class Encryptor {
 //todo: if want to use Encryption in multithreading ― replace signle method to two: foreign_key and local_key
 public enum Encryption {
-      None, Rsa, Aes;
+      None, Rsa, Des;
       @Getter
       private String transformation = "";
       @Getter
@@ -21,7 +26,7 @@ public enum Encryption {
 
       static {
 	    Rsa.transformation = "RSA";
-	    Aes.transformation = "AES";
+	    Des.transformation = "DES";
       }
 
       public boolean holdsKey() {
@@ -31,17 +36,17 @@ public enum Encryption {
 	    this.detached = key;
       }
       public boolean isCompatible(Encryption other) {
-	    return other == None;
+	    return other == None || other == this;
       }
       public boolean isSymmetric() {
 	    return switch (this) {
 		  case None, Rsa -> false;
-		  case Aes -> true;
+		  case Des -> true;
 	    };
       }
       public boolean isAsymmetric() {
 	    return switch (this) {
-		  case None, Aes -> false;
+		  case None, Des -> false;
 		  case Rsa -> true;
 	    };
       }
@@ -61,7 +66,7 @@ public Encryptor(Encryption type) {
  */
 public static boolean validate(Encryption type, byte[] payload) {
       return switch (type) {
-	    case None, Aes -> true;
+	    case None, Des -> true;
 	    case Rsa -> payload.length <= 117;
       };
 }
@@ -101,6 +106,23 @@ private void checkEncryptionState(){
       if (type != Encryption.None && !type.holdsKey()) {
 	    throw new IllegalStateException("The specific encryption should holds key");
       }
+}
+public static Key restoreKey(byte[] encoded, Encryption type) {
+      Key result = null;
+      try {
+	    switch (type) {
+		  case Rsa -> {
+			var keySpec = new X509EncodedKeySpec(encoded);
+			KeyFactory factory = KeyFactory.getInstance(type.getTransformation());
+			result = factory.generatePublic(keySpec);
+		  }
+		  case Des -> result = new SecretKeySpec(encoded, 0, encoded.length, type.getTransformation());
+	    }
+      } catch (GeneralSecurityException e) {
+	    e.printStackTrace();
+	    throw new RuntimeException(e);
+      }
+      return result;
 }
 public static SecretKey generateSecret(Encryption type) {
       if (!type.isSymmetric()) {

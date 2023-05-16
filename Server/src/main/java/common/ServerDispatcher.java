@@ -7,12 +7,14 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
-import security.Author;
-import transfer.NetworkExchange;
-import transfer.NetworkExchange.RequestType;
-import transfer.NetworkPacket;
+import requests.InfoRequest;
+import requests.VersionFormat;
 import transfer.TransferFormat;
+import security.Author;
+import transfer.*;
+import transfer.NetworkExchange.RequestType;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -93,6 +95,7 @@ private void onPackageId(NetworkExchange exchange) {
  * (if code is <code>STR_FORMAT</code>) the VersionLabel is assumed
  */
 private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
+      String stringRequest = exchange.request().stringData();
       ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
       Optional<PackageRequest> result = Optional.empty();
       int id = buffer.getInt();
@@ -117,10 +120,40 @@ private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
       return result;
 }
 
+private Optional<PackageRequest> onPackageRequest(Integer value, String label) {
+      var packageId = storage.getPackageId(value);
+      var version = packageId.flatMap(id -> storage.mapVersion(id, label));
+      return version.map(v -> new PackageRequest(packageId.get(), v));
+}
+
+private Optional<PackageRequest> onPackageRequest(Integer value, int offset) {
+      var packageId = storage.getPackageId(value);
+      var version = packageId.flatMap(id -> storage.mapVersion(id, offset));
+      return version.map(v -> new PackageRequest(packageId.get(), v));
+}
+
+private VersionFormat getVersionFormat(NetworkPacket request) {
+      return switch (request.code(PAYLOAD_FORMAT)) {
+	    case INT_FORMAT -> VersionFormat.Int;
+	    case STR_FORMAT -> VersionFormat.String;
+	    default -> VersionFormat.Unknown;
+      };
+}
+
 private void onPackageInfo(NetworkExchange exchange) {
-      var optional = onPackageRequest(exchange);
-      if (optional.isPresent()) {
-	    PackageRequest request = optional.get();
+      String data = exchange.request().stringData();
+      VersionFormat format = getVersionFormat(exchange.request());
+      Optional<InfoRequest> clientRequest = InfoRequest.valueOf(data, format);
+      Optional<PackageRequest> serverRequest = clientRequest.flatMap(request -> {
+	    Optional<PackageRequest> result = Optional.empty();
+	    if (format == VersionFormat.Int)
+		  result = onPackageRequest(request.getId(), request.getOffset());
+	    if (format == VersionFormat.String)
+		  result = onPackageRequest(request.getId(), request.getLabel());
+	    return result;
+      });
+      if (serverRequest.isPresent()) {
+	    PackageRequest request = serverRequest.get();
 	    var info = storage.getFullInfo(request.id(), request.version());
 	    if (info.isPresent()) {
 		  String response = toJson(info.get());
@@ -242,7 +275,7 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
 	    return;
       }
-      PackageInstanceDTO dto = fromJson(request.stringFrom(4), PackageInstanceDTO.class);
+      PublishInstanceDTO dto = fromJson(request.stringFrom(4), PublishInstanceDTO.class);
       byte[] payload = null;
       if (dto != null) {
 	    payload = readBytes(exchange, dto.getPayloadSize());

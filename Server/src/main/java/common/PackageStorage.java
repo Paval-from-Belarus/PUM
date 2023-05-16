@@ -143,7 +143,7 @@ private void checkPermissions(AuthorId author, PublishInfoDTO info) throws Stora
 	    throw new StorageException("Package name is busy");
 }
 
-private void checkInstance(AuthorId author, PackageInstanceDTO dto) throws StorageException {
+private void checkInstance(AuthorId author, PublishInstanceDTO dto) throws StorageException {
       boolean isValidInstance;
       try (Session session = dbFactory.openSession()) {
 	    session.beginTransaction();
@@ -364,7 +364,7 @@ public void updatePackageInfo(AuthorId author, PackageId id, PublishInfoDTO dto)
  * @throws StorageException if packageFamily by PackageId is not exists
  */
 //todo: add release replacement logic
-public VersionId storePayload(@NotNull AuthorId author, @NotNull PackageInstanceDTO dto, @NotNull byte[] payload) throws StorageException {
+public VersionId storePayload(@NotNull AuthorId author, @NotNull PublishInstanceDTO dto, @NotNull byte[] payload) throws StorageException {
       checkInstance(author, dto);
       //replace with simple rules
       return updatePackageInfo(dto, payload);
@@ -400,7 +400,7 @@ private synchronized @NotNull VersionId nextVersionId(PackageId id, String label
       return version;
 }
 
-private @NotNull Path toPayloadPath(PackageHat hat, PackageInstanceDTO dto) throws IOException {
+private @NotNull Path toPayloadPath(PackageHat hat, PublishInstanceDTO dto) throws IOException {
       Path packagesPath = Path.of(config.getPackages()).resolve(hat.getName());
       if (Files.exists(packagesPath) && !Files.isDirectory(packagesPath))
 	    throw new IOException("Invalid File system structure");
@@ -477,7 +477,7 @@ private void removePackageAll(@NotNull Session session, PackageId id) {
  * Set only known info
  */
 @SessionMethod
-private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PackageInstanceDTO dto) throws StorageException {
+private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto) throws StorageException {
       Licence licence = fetchLicense(session, dto.getLicense());
       PackageInfo info = PackageInfo.valueOf(dto.packageId(), version.value());
       info.setPackageId(dto.packageId());
@@ -502,7 +502,7 @@ private PackageInfo constructFrom(@NotNull Session session, VersionId version, @
 /**
  * All checks are passed
  */
-private VersionId updatePackageInfo(@NotNull PackageInstanceDTO dto, byte[] payload) throws StorageException {
+private VersionId updatePackageInfo(@NotNull PublishInstanceDTO dto, byte[] payload) throws StorageException {
       VersionId version;
       try (Session session = dbFactory.openSession()) {
 	    PackageId id = PackageId.valueOf(dto.packageId());
@@ -722,7 +722,7 @@ private void init() {
 
 //@SuppressWarnings("unchecked")
 private void initNameMapper() {
-      nameMapper = new NameMapper();
+       nameMapper = new NameMapper();
       try (Session session = dbFactory.openSession()) {
 	    List<PackageHat> hats = getPackageHatAll(session);
 	    for (PackageHat hat : hats) {

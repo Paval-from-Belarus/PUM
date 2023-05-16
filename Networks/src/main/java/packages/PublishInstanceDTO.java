@@ -1,16 +1,31 @@
 package packages;
 
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+
+import java.util.Optional;
+
 /**
  *This class is used as upper interface for PackageStorage
  *To convert database representation to finite client
  */
-public final class PackageInstanceDTO {
+@Accessors(prefix="")
+public class PublishInstanceDTO extends AbstractDTO{
 public static final String DEFAULT_LICENCE = "GNU";
+@Getter
 private final Integer packageId;
+@Getter
 private final String version;
+@Getter
 private final DependencyInfoDTO[] dependencies;
+@Getter
+@Setter
 private String license;
+@Getter
+@Setter
 private int payloadSize;
 
 /**
@@ -19,7 +34,7 @@ private int payloadSize;
  * @param version      is payload self
  * @param version      is unique String label for package Family
  */
-public PackageInstanceDTO(Integer id, String version, DependencyInfoDTO[] dependencies) {
+public PublishInstanceDTO(Integer id, String version, DependencyInfoDTO[] dependencies) {
       this.packageId = id;
       this.version = version;
       this.dependencies = dependencies;
@@ -37,20 +52,8 @@ public DependencyInfoDTO[] dependencies() {
 public Integer packageId() {
       return packageId;
 }
-
-public String getLicense() {
-      return license;
+public static Optional<PublishInstanceDTO> valueOf(String content) {
+      return valueOf(PublishInstanceDTO.class, content);
 }
 
-public void setLicense(String license) {
-      this.license = license;
-}
-
-public int getPayloadSize() {
-      return payloadSize;
-}
-
-public void setPayloadSize(int payloadSize) {
-      this.payloadSize = payloadSize;
-}
 }

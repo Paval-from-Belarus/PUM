@@ -12,6 +12,7 @@ import storage.*;
 import storage.ModifierSession.Rank;
 import storage.ModifierSession.VersionPredicate;
 import transfer.NetworkPacket;
+import transfer.PackageAssembly;
 import transfer.TransferFormat;
 
 import java.io.*;
@@ -72,7 +73,7 @@ private Configuration config;
 private PackageStorage storage;
 private InputProcessor input;
 private OutputProcessor output;
-private Encryptor.Encryption encryption = Encryption.Aes;
+private Encryptor.Encryption encryption = Encryption.Des;
 private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
 
 public Client(int port, String domain) throws ConfigFormatException {
@@ -114,6 +115,7 @@ private void dispatchInputGroup(@NotNull InputGroup group) {
 		  case Remove -> onRemoveCommand(params);
 		  case Repository -> onRepositoryCommand(params);
 		  case Publish -> onPublishCommand(params);
+		  case Upgrade -> onUpdateCommand(params);
 	    }
       } catch (Exception e) {
 	    defaultErrorHandler(e);
@@ -386,7 +388,7 @@ private void publishPackage(@NotNull String entityPath) {
       }
       if (packageId.isPresent()) { //server save some additional info
 	    try (FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())) {
-		  Optional<PackageInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
+		  Optional<PublishInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
 		  if (dto.isPresent()) {
 			publishPayload(authorId.get(), dto.get(), payloadStream);
 			output.sendMessage("", "Success");
@@ -418,7 +420,7 @@ private Optional<Integer> publishPackageHat(Integer authorId, Publisher entity) 
       return Optional.ofNullable(response.get());
 }
 
-private Optional<Integer> publishPayload(Integer authorId, PackageInstanceDTO dto, FileInputStream fileStream) {
+private Optional<Integer> publishPayload(Integer authorId, PublishInstanceDTO dto, FileInputStream fileStream) {
       Wrapper<Integer> version = new Wrapper<>();
       ClientService service;
       try {
@@ -623,24 +625,27 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
 	    printPackageInfo(dto);
 	    totalSize += dto.payloadSize;
       }
-      output.sendMessage("The total size", String.format("%d", totalSize));
+      output.sendMessage("The total space required: ", String.format("%d", totalSize));
       QuestionResponse userResponse = output.sendQuestion("Is it ok?", QuestionType.YesNo);
       return (Boolean) userResponse.value();
 }
 
 //this method install dependencies according the common conventional rules
-private void storeDependencies(InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
+private long storeDependencies(InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
       //todo: rewrite onto parallel stream or dispatchTask methods
+      long downloadSize = 0;
       try {
 	    for (var entry : dependencies.entrySet()) {
 		  var rawAssembly = getRawAssembly(entry.getKey(), entry.getValue().version, session.getEncryption());
 		  if (rawAssembly.isPresent()) {
+			downloadSize += rawAssembly.get().length;
 			session.storeLocally(entry.getValue(), rawAssembly.get());
 		  }
 	    }
       } catch (PackageIntegrityException | PackageAssembly.VerificationException e) {
 	    throw new PackageIntegrityException("Cannot install package: " + e.getMessage());
       }
+      return downloadSize;
 }
 
 //the main thread is for gui
@@ -652,14 +657,16 @@ private void startInstallation(InstallerSession session, Integer id, FullPackage
       CommitState commitState = CommitState.Failed;
       session.setEncryption(encryption);
       output.sendMessage("", "Dependency installation...");
-      storeDependencies(session, dependencies);
+      long downloadSize = storeDependencies(session, dependencies);
       var optional = getRawAssembly(id, info.version, session.getEncryption());//latest version
       output.sendMessage("", "Verification in progress...");
       if (optional.isPresent()) {
 	    output.sendMessage("", "Installation locally...");
+	    downloadSize += optional.get().length;
 	    session.storeLocally(info, optional.get());
 	    output.sendMessage("", "Local transactions are running...");
 	    commitState = CommitState.Success;
+	    output.sendMessage("The total download size", "" + downloadSize);
       } else {
 	    output.sendMessage("", "Failed to load package");
 	    logger.warn("Package is not installed");

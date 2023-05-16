@@ -9,7 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import packages.*;
+import requests.PublishInfoRequest;
 import security.Author;
+import transfer.PackageAssembly;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -233,9 +235,9 @@ public @NotNull <T> T initSession(Class<T> classType) throws ConfigurationExcept
       return session;
 }
 
-public Optional<PackageInstanceDTO> collectPublishInstance(Integer id, Publisher entity) {
+public Optional<PublishInstanceDTO> collectPublishInstance(Integer id, Publisher entity) {
       DependencyInfoDTO[] dependencies = new DependencyInfoDTO[entity.dependencies.length];
-      PackageInstanceDTO dto = null;
+      PublishInstanceDTO dto = null;
       int index = 0;
       for (PublisherDependency info : entity.dependencies) {
 	    Optional<Integer> depId = mapPackage(info.name());
@@ -247,7 +249,7 @@ public Optional<PackageInstanceDTO> collectPublishInstance(Integer id, Publisher
       }
       File payload = Path.of(entity.exePath).toFile();
       if (index == dependencies.length && payload.exists()) {
-	    dto = new PackageInstanceDTO(id, entity.version, dependencies);
+	    dto = new PublishInstanceDTO(id, entity.version, dependencies);
 	    dto.setLicense(entity.licence.toString());
 	    dto.setPayloadSize((int) payload.length()); //the current limitation is payload size
       }

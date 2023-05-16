@@ -1,4 +1,4 @@
-package packages;
+package transfer;
 
 import com.aayushatharva.brotli4j.Brotli4jLoader;
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
@@ -58,7 +58,7 @@ public PackageAssembly setArchive(ArchiveType type) {
 /**
  * This method attemp to change the old encryption to new
  * If chosen encryption is not available, the last is present
- * */
+ */
 public PackageAssembly setEncryption(@NotNull Encryptor.Encryption type) {
       if (Encryptor.validate(type, payload)) {
 	    encryptor.setType(type);
@@ -100,6 +100,8 @@ private void compress() {
 		  case LZ77 -> lz77Compression(byteOutput);
 	    };
 	    output.write(payload);
+	    output.flush();
+	    output.close();
 	    payload = byteOutput.toByteArray();
       } catch (IOException e) {
 	    throw new IllegalStateException("The compression failed");
@@ -132,17 +134,17 @@ public static @NotNull byte[] decrypt(byte[] payload, Encryptor.Encryption type)
 }
 
 private static @Nullable Encryptor.Encryption getCompatible(@NotNull PackageHeader header, Encryptor.Encryption type) {
- boolean isCompatible = header.getEncryption() < Encryptor.Encryption.values().length;
-Encryptor.Encryption packageEncryption = null;
- Encryptor.Encryption result = null;
- if (isCompatible) {
-       packageEncryption = Encryptor.Encryption.values()[header.getEncryption()];
-       isCompatible = type.isCompatible(packageEncryption);
- }
- if (isCompatible) {
-       result = packageEncryption;
- }
- return result;
+      boolean isCompatible = header.getEncryption() < Encryptor.Encryption.values().length;
+      Encryptor.Encryption packageEncryption = null;
+      Encryptor.Encryption result = null;
+      if (isCompatible) {
+	    packageEncryption = Encryptor.Encryption.values()[header.getEncryption()];
+	    isCompatible = type.isCompatible(packageEncryption);
+      }
+      if (isCompatible) {
+	    result = packageEncryption;
+      }
+      return result;
 }
 
 public static @NotNull PackageAssembly deserialize(byte[] rawData, @NotNull Encryptor.Encryption type) throws VerificationException {

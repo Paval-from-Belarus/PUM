@@ -2,7 +2,7 @@ package storage;
 
 import database.InstanceInfo;
 import packages.FullPackageInfoDTO;
-import packages.PackageAssembly;
+import transfer.PackageAssembly;
 import packages.VersionInfoDTO;
 
 import java.io.IOException;
