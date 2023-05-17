@@ -7,14 +7,12 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
-import requests.InfoRequest;
-import requests.VersionFormat;
+import requests.*;
 import transfer.TransferFormat;
 import security.Author;
 import transfer.*;
 import transfer.NetworkExchange.RequestType;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -62,6 +60,9 @@ public void error(NetworkExchange exchange) {
       ServerController.super.error(exchange);
 }
 
+/**
+ * No request is specified on this method type
+ */
 private void onAllPackages(NetworkExchange exchange) throws IOException {
       var packages = storage.shortInfoList()
 			 .toArray(ShortPackageInfoDTO[]::new);
@@ -94,10 +95,10 @@ private void onPackageId(NetworkExchange exchange) {
  * If <code>request.code()</code> equals <code>INT_FORMAT</code>, that is VersionOffset. Otherwise,
  * (if code is <code>STR_FORMAT</code>) the VersionLabel is assumed
  */
-private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
+private Optional<PackageHandle> toPackageHandle(NetworkExchange exchange) {
       String stringRequest = exchange.request().stringData();
       ByteBuffer buffer = ByteBuffer.wrap(exchange.request().data());
-      Optional<PackageRequest> result = Optional.empty();
+      Optional<PackageHandle> result = Optional.empty();
       int id = buffer.getInt();
       var optional = storage.getPackageId(id);
       if (optional.isPresent()) {
@@ -115,21 +116,21 @@ private Optional<PackageRequest> onPackageRequest(NetworkExchange exchange) {
 		  default -> versionId = Optional.empty();
 	    }
 	    //if version id is correct, return not empty optional
-	    result = versionId.map(v -> new PackageRequest(packageId, v));
+	    result = versionId.map(v -> new PackageHandle(packageId, v));
       }
       return result;
 }
 
-private Optional<PackageRequest> onPackageRequest(Integer value, String label) {
+private Optional<PackageHandle> toPackageHandle(Integer value, String label) {
       var packageId = storage.getPackageId(value);
       var version = packageId.flatMap(id -> storage.mapVersion(id, label));
-      return version.map(v -> new PackageRequest(packageId.get(), v));
+      return version.map(v -> new PackageHandle(packageId.get(), v));
 }
 
-private Optional<PackageRequest> onPackageRequest(Integer value, int offset) {
+private Optional<PackageHandle> toPackageHandle(Integer value, int offset) {
       var packageId = storage.getPackageId(value);
       var version = packageId.flatMap(id -> storage.mapVersion(id, offset));
-      return version.map(v -> new PackageRequest(packageId.get(), v));
+      return version.map(v -> new PackageHandle(packageId.get(), v));
 }
 
 private VersionFormat getVersionFormat(NetworkPacket request) {
@@ -144,16 +145,13 @@ private void onPackageInfo(NetworkExchange exchange) {
       String data = exchange.request().stringData();
       VersionFormat format = getVersionFormat(exchange.request());
       Optional<InfoRequest> clientRequest = InfoRequest.valueOf(data, format);
-      Optional<PackageRequest> serverRequest = clientRequest.flatMap(request -> {
-	    Optional<PackageRequest> result = Optional.empty();
-	    if (format == VersionFormat.Int)
-		  result = onPackageRequest(request.getId(), request.getOffset());
-	    if (format == VersionFormat.String)
-		  result = onPackageRequest(request.getId(), request.getLabel());
-	    return result;
+      Optional<PackageHandle> serverRequest = clientRequest.flatMap(request -> switch (format) {
+	    case String -> toPackageHandle(request.getId(), request.getLabel());
+	    case Int -> toPackageHandle(request.getId(), request.getOffset());
+	    case Unknown -> Optional.empty();
       });
       if (serverRequest.isPresent()) {
-	    PackageRequest request = serverRequest.get();
+	    PackageHandle request = serverRequest.get();
 	    var info = storage.getFullInfo(request.id(), request.version());
 	    if (info.isPresent()) {
 		  String response = toJson(info.get());
@@ -173,9 +171,13 @@ private void onPackageInfo(NetworkExchange exchange) {
  * The versionInfo can be replaced by GetInfo. But it's supposed to be more suitable and fast
  */
 private void onVersionInfo(NetworkExchange exchange) {
-      var optional = onPackageRequest(exchange);
-      if (optional.isPresent()) {
-	    var request = optional.get();
+      String data = exchange.request().stringData();
+      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data);
+      Optional<PackageHandle> serverRequest = userRequest.flatMap(
+	  request -> toPackageHandle(request.packageId(), request.label())
+      );
+      if (serverRequest.isPresent()) {
+	    var request = serverRequest.get();
 	    var fullInfo = storage.getFullInfo(request.id(), request.version());
 	    if (fullInfo.isPresent()) {
 		  VersionInfoDTO versionInfo = new VersionInfoDTO(
@@ -202,57 +204,50 @@ private byte[] readBytes(NetworkExchange exchange, Integer cbRead) throws IOExce
       return input.readNBytes(cbRead);
 }
 
-private Optional<TransferFormat> getTransferFormat(NetworkExchange exchange) throws UnsupportedRequestException {
-      NetworkPacket packet = exchange.request();
-      Optional<TransferFormat> format = Optional.empty();
-      if (packet.containsCode(RequestCode.TRANSFER_FORMAT)) {
-	    try {
-		  byte[] bytesFormat = readBytes(exchange, TransferFormat.TRANSFER_BYTES_CNT);
-		  format = Optional.of(TransferFormat.construct(bytesFormat));
-	    } catch (IOException | IllegalStateException e) {
-		  logger.warn("Attempt to pass illegal transfer format");
-	    }
-      }
-      return format;
-}
-
 private void onPayload(NetworkExchange exchange) throws IOException {
-      var optional = onPackageRequest(exchange);
-      if (optional.isPresent()) {
-	    try {
-		  var format = getTransferFormat(exchange);
-		  var request = optional.get();
-		  Optional<byte[]> payload = storage.getPayload(request.id(), request.version());
-		  PackageHeader header = new PackageHeader(request.id().value(), request.version().value());
-		  if (payload.isPresent()) {
-			var assembly = PackageAssembly.valueOf(header, payload.get());
-			format.ifPresent(f -> f.apply(assembly));
-			writeBytes(exchange, assembly.serialize());
-			exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
-		  } else {
-			exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
-		  }
-	    } catch (UnsupportedRequestException e) {
-		  exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+      String data = exchange.request().stringData();
+      VersionFormat format = getVersionFormat(exchange.request());
+      Optional<PayloadRequest> clientRequest = PayloadRequest.valueOf(data, format);
+      Optional<PackageHandle> serverRequest = clientRequest.flatMap(request -> switch (format) {
+	    case String -> toPackageHandle(request.getPackageId(), request.getLabel());
+	    case Int -> toPackageHandle(request.getPackageId(), request.getOffset());
+	    case Unknown -> Optional.empty();
+      });
+      if (serverRequest.isPresent()) {
+	    PackageHandle handle = serverRequest.get();
+	    Optional<byte[]> payload = storage.getPayload(handle.id(), handle.version()); //todo: add archive as parameter
+	    PackageAssembly assembly;
+	    TransferFormat transfer;
+	    if (payload.isPresent()) {
+		  PackageHeader header = new PackageHeader(handle.id().value(), handle.version().value());
+		  transfer = clientRequest.get().getTransfer();
+		  assembly = PackageAssembly.valueOf(header, payload.get());
+		  transfer.apply(assembly);
+		  writeBytes(exchange, assembly.serialize());
+		  exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
+	    } else {
+		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
       }
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      NetworkPacket request = exchange.request();
-      var authorId = storage.getAuthorId(request.intFrom(0));
-      PublishInfoDTO info = fromJson(request.stringFrom(4), PublishInfoDTO.class);
-      if (authorId.isPresent() && info != null) {
-	    Optional<PackageId> packageId = storage.toPackageId(info.name());
+      String data = exchange.request().stringData();
+      Optional<PublishInfoRequest> userRequest = PublishInfoRequest.valueOf(data);
+      Optional<AuthorId> author = userRequest.flatMap(request -> storage.getAuthorId(request.getAuthorId()));
+      if (author.isPresent()) {
+	    AuthorId authorId = author.get();
+	    PublishInfoDTO dto = userRequest.get().getDto();
+	    Optional<PackageId> packageId = storage.toPackageId(dto.name());
+	    PackageId id;
 	    try {
-		  PackageId id;
 		  if (packageId.isPresent()) {
-			storage.updatePackageInfo(authorId.get(), packageId.get(), info);
+			storage.updatePackageInfo(authorId, packageId.get(), dto);
 			id = packageId.get();
 		  } else {
-			id = storage.storePackageInfo(authorId.get(), info);
+			id = storage.storePackageInfo(authorId, dto);
 		  }
 		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
 		      toBytes(id.value()));
@@ -265,32 +260,28 @@ private void onPublishInfo(NetworkExchange exchange) {
       }
 }
 
-/**
- *
- */
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      NetworkPacket request = exchange.request();
-      var authorId = storage.getAuthorId(request.intFrom(0));
-      if (authorId.isEmpty()) {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
-	    return;
-      }
-      PublishInstanceDTO dto = fromJson(request.stringFrom(4), PublishInstanceDTO.class);
-      byte[] payload = null;
-      if (dto != null) {
-	    payload = readBytes(exchange, dto.getPayloadSize());
-      }
-      if (dto != null && payload != null) {
+      String data = exchange.request().stringData();
+      Optional<PublishInstanceRequest> userRequest = PublishInstanceRequest.valueOf(data);
+      Optional<AuthorId> author = userRequest.flatMap(request -> storage.getAuthorId(request.getAuthorId()));
+      if (author.isPresent()) {
+	    AuthorId authorId = author.get();
+	    PublishInstanceDTO dto = userRequest.get().getDto();
+	    byte[] payload = readBytes(exchange, dto.getPayloadSize());
 	    try {
-		  var version = storage.storePayload(authorId.get(), dto, payload);
-		  exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
-		      toBytes(version.value()));
+		  if (payload != null) {
+			VersionId version = storage.storePayload(authorId, dto, payload);
+			exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
+			    toBytes(version.value()));
+		  } else {
+			exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+		  }
 	    } catch (StorageException e) {
 		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
 		      toBytes(e.getMessage()));
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
       }
 }
 

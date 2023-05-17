@@ -1,8 +1,12 @@
 import database.InstanceInfo;
 import org.junit.jupiter.api.Test;
 
-class InstanceInfoTest {
+import java.lang.reflect.GenericArrayType;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
 
+class InstanceInfoTest {
 @Test
 void testToString() {
       InstanceInfo info = new InstanceInfo(1, new String[]{"kernel", "cd-rom", "driver"}, "/home");

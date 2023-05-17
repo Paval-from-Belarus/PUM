@@ -4,15 +4,14 @@ package security;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.ByteBuffer;
 import java.security.*;
-import java.security.spec.KeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 public class Encryptor {
@@ -33,7 +32,12 @@ public enum Encryption {
 	    return detached != null;
       }
       public void detachKey(@NotNull Key key) {
-	    this.detached = key;
+	    if (this != None) {
+		  this.detached = key;
+	    }
+	    else {
+		  throw new IllegalArgumentException("Key is not available for None");
+	    }
       }
       public boolean isCompatible(Encryption other) {
 	    return other == None || other == this;
@@ -49,6 +53,35 @@ public enum Encryption {
 		  case None, Des -> false;
 		  case Rsa -> true;
 	    };
+      }
+      public byte[] getEncoded() {
+	    byte[] key = new byte[0];
+	    if (this.detached != null) {
+		  key = detached.getEncoded();
+	    }
+	    ByteBuffer buffer = ByteBuffer.allocate(4 + key.length);
+	    buffer.putInt(this.ordinal()).put(key);
+	    return buffer.array();
+      }
+      public static @Nullable Encryption restore(byte[] encoded) {
+	    Encryption result = null;
+	    if (encoded.length >= 4) {
+		  ByteBuffer buffer = ByteBuffer.wrap(encoded);
+		  int ordinal = buffer.getInt();
+		  int length = encoded.length - 4;
+		  byte[] bytes = new byte[length];
+		  if (bytes.length > 0 && ordinal < Encryption.values().length) {
+			Encryption self = Encryption.values()[ordinal];
+			Key key = Encryptor.restoreKey(bytes, self);
+			if (key != null && self != None) {
+			      self.detachKey(key);
+			}
+			if (self == None || self.holdsKey()) {
+			      result = self;
+			}
+		  }
+	    }
+	    return result;
       }
 }
 
@@ -107,7 +140,7 @@ private void checkEncryptionState(){
 	    throw new IllegalStateException("The specific encryption should holds key");
       }
 }
-public static Key restoreKey(byte[] encoded, Encryption type) {
+public static @Nullable Key restoreKey(byte[] encoded, Encryption type) {
       Key result = null;
       try {
 	    switch (type) {

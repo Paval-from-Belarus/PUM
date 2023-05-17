@@ -25,7 +25,7 @@ public String stringify() {
 
 public static Optional<PublishInstanceRequest> valueOf(String content) {
       Optional<PublishInstanceRequest> optional = Optional.empty();
-      List<byte[]> bytes = split(content);
+      List<byte[]> bytes = split(content, 2);
       if (bytes.size() == 2) {
 	    Integer author = toInteger(bytes.get(0));
 	    var dto = PublishInstanceDTO.valueOf(content);

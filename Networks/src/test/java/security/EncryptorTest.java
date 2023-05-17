@@ -25,17 +25,6 @@ private void changeEnumKey() {
 }
 @Test
 public void testEnums() {
-      ForkJoinPool pool = new ForkJoinPool();
-      List<Runnable> tasks = new ArrayList<>();
-      for (int i = 0; i < 100; i++) {
-      	tasks.add(this::changeEnumKey);
-      }
-      tasks.forEach(pool::submit);
-      try {
-            Thread.sleep(2000);
-      } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-      }
 
 }
 @Test

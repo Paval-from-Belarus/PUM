@@ -41,9 +41,10 @@ public String stringify() {
 }
 
 public static Optional<InfoRequest> valueOf(String content, VersionFormat format) {
+      final int fieldCnt = 2;
       InfoRequest request = null;
-      List<byte[]> bytes = split(content);
-      if (bytes.size() == 2) { //if something go wrong, the size is reduced
+      List<byte[]> bytes = split(content, fieldCnt);
+      if (bytes.size() == fieldCnt) { //if something go wrong, the size is reduced
 	    int id = toInteger(bytes.get(0));
 	    request = switch (format) {
 		  case String -> new InfoRequest(id, toString(bytes.get(1)));

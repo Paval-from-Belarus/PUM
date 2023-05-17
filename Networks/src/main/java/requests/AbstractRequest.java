@@ -29,9 +29,12 @@ protected static String join(String base64, Integer value) {
       buffer.putInt(value).position(0);
       return join(base64, Base64.getEncoder().encodeToString(buffer.array()));
 }
-protected static List<byte[]> split(String content) { //return the array of byte[] as result
+protected static String join(String base64, byte[] bytes) {
+      return base64 + "#" + Base64.getEncoder().encodeToString(bytes);
+}
+protected static List<byte[]> split(String content, int limit) { //return the array of byte[] as result
       Base64.Decoder decoder = Base64.getDecoder();
-      String[] parts = content.split("#");
+      String[] parts = content.split("#", limit);
       List<byte[]> bytes = new ArrayList<>();
       boolean areValid = checkParts(parts);
       if (areValid) {
