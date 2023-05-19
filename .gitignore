@@ -38,8 +38,10 @@ build/
 ### Mac OS ###
 .DS_Store
 ### Project FS
-Client/local/*
-Server/packages/*
+Client/local
+Server/packages
+*.log
+*.lck
 **/*.exe
 **/*.zip
-**/*.pum
+*.pum
