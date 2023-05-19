@@ -34,6 +34,7 @@
 		<mapping class="database.PackageInfo" />
 		<mapping class="database.Payload" />
 		<mapping class="database.AuthorInfo"/>
+		<mapping class="database.Archive"/>
 	</session-factory>
 </hibernate-configuration>
 

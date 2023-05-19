@@ -78,6 +78,7 @@ public static class StorageException extends Exception {
       }
 }
 
+private static String DEFAULT_ARCHIVE = "None";
 private static Logger logger = LogManager.getLogger(PackageStorage.class);
 //not will be replaced by database
 //this exactly convert
@@ -301,6 +302,7 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 	    var optionalInfo = getInstanceInfo(session, id, version);
 	    var optionalHat = getValidPackageHat(session, id);
 	    if (optionalHat.isPresent() && optionalInfo.isPresent()) {
+
 		  PackageHat hat = optionalHat.get();
 		  PackageInfo info = optionalInfo.get();
 		  dto = new FullPackageInfoDTO();
@@ -309,8 +311,13 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 		  dto.name = hat.getName();
 		  dto.licenseType = info.getLicence().getName();
 		  dto.payloadType = hat.getPayload().getName();
-		  dto.payloadSize = (int) Files.size(Path.of(info.getPayloadPath()));
-		  dto.dependencies = collectDependencies(info).toArray(new DependencyInfoDTO[0]);
+		  var payload = info.getPayloads().stream().findAny(); //replace
+		  if (payload.isPresent()) {
+			dto.payloadSize = (int) Files.size(Path.of(payload.get().getPath()));
+			dto.dependencies = collectDependencies(info).toArray(new DependencyInfoDTO[0]);
+		  } else {
+			dto = null;
+		  }
 		  //todo: exhause max file size to Long
 
 	    }
@@ -327,15 +334,19 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
  * Should be replaced by OutputStream
  */
 public Optional<byte[]> getPayload(PackageId id, VersionId version) {
+      final String archiveType = "None"; //hardly
       byte[] bytes = null;
       try (Session session = dbFactory.openSession()) {
 	    var optional = getInstanceInfo(session, id, version);
 	    if (optional.isPresent()) {
 		  var info = optional.get();
-		  File payload = new File(info.getPayloadPath());
+		  Optional<Path> payloadPath = info.getPayloads().stream()
+						   .findAny()
+						   .map(payload -> Path.of(payload.getPath()))
+						   .filter(path -> Files.exists(path) && Files.isReadable(path));
 		  try {
-			if (payload.exists() && payload.canRead()) {
-			      bytes = Files.readAllBytes(payload.toPath());
+			if (payloadPath.isPresent()) {
+			      bytes = Files.readAllBytes(payloadPath.get());
 			}
 		  } catch (IOException e) {
 			logger.error("Impossible to read package payload: " + e.getMessage());
@@ -427,10 +438,7 @@ private void removeOldestVersion(PackageId id) {
       session.getTransaction().commit();
       if (!infoList.isEmpty()) {
 	    var info = infoList.get(0);
-	    new Thread(() -> {
-		  File file = new File(info.getPayloadPath());
-		  deletePayload(file);
-	    }).start();
+	    //todo: remove payload
       } else {
 	    logger.warn("No PackageInfo to remove");
       }
@@ -458,8 +466,7 @@ private void removeVersion(PackageId id, VersionId version) {
       session.remove(info);
       session.getTransaction().commit();
       new Thread(() -> {
-	    File file = new File(info.getPayloadPath());
-	    deletePayload(file);
+	    //todo: remove payload
       }).start();
 }
 
@@ -477,12 +484,14 @@ private void removePackageAll(@NotNull Session session, PackageId id) {
  * Set only known info
  */
 @SessionMethod
-private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto) throws StorageException {
+private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto,  @NotNull String path) throws StorageException {
       Licence licence = fetchLicense(session, dto.getLicense());
+      Archive archive = fetchArchive(session, DEFAULT_ARCHIVE);
       PackageInfo info = PackageInfo.valueOf(dto.packageId(), version.value());
       info.setPackageId(dto.packageId());
       info.setVersionLabel(dto.version());
       info.setLicence(licence);
+      info.setPayloadPath(archive, path);
       Set<DependencyId> dependencies = new HashSet<>();
       for (DependencyInfoDTO libDTO : dto.dependencies()) {
 	    Optional<PackageId> libId = getPackageId(libDTO.packageId());
@@ -509,12 +518,12 @@ private VersionId updatePackageInfo(@NotNull PublishInstanceDTO dto, byte[] payl
 	    Optional<PackageHat> hat = getAnyPackageHat(session, id);
 	    if (hat.isPresent()) {
 		  version = nextVersionId(id, dto.version());//each time unique)
-		  PackageInfo info = constructFrom(session, version, dto);
+		  PackageInfo info;
 		  try {
 			Path path = toPayloadPath(hat.get(), dto);
 			Files.deleteIfExists(path);
 			Files.write(path, payload);
-			info.setPayloadPath(path.toString());
+			info = constructFrom(session, version, dto, path.toString());
 		  } catch (IOException e) {
 			throw new StorageException("Error during file saving");
 		  }
@@ -608,7 +617,18 @@ private @NotNull Licence fetchLicense(@NotNull Session session, String type) thr
 	    throw new StorageException("Invalid license type");
       return licence;
 }
-
+@SessionMethod
+private @NotNull Archive fetchArchive(@NotNull Session session, String type) throws StorageException {
+      session.beginTransaction();
+      Query query = session.createQuery("from Archive where type = :type");
+      query.setParameter("type", type);
+      Archive archive = (Archive) query.getSingleResult();
+      session.getTransaction().commit();
+      if (archive == null) {
+	    throw new StorageException("Invalid archive type");
+      }
+      return archive;
+}
 //todo: if PackageHat is downgraded to invalid, it means Package is deprecated and should be removed in future
 @SessionMethod
 private void validatePackageHat(@NotNull Session session, PackageId id, boolean isValid) {
@@ -650,7 +670,6 @@ private @NotNull List<PackageHat> getPackageHatAll(@NotNull Session session) {
       session.getTransaction().commit();
       return hats;
 }
-
 @SessionMethod
 private Optional<PackageInfo> getInstanceInfo(@NotNull Session session, PackageId id, VersionId version) {
       Optional<PackageInfo> info;
@@ -722,7 +741,7 @@ private void init() {
 
 //@SuppressWarnings("unchecked")
 private void initNameMapper() {
-       nameMapper = new NameMapper();
+      nameMapper = new NameMapper();
       try (Session session = dbFactory.openSession()) {
 	    List<PackageHat> hats = getPackageHatAll(session);
 	    for (PackageHat hat : hats) {

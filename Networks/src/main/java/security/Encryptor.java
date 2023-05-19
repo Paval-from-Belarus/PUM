@@ -70,6 +70,7 @@ public enum Encryption {
 		  int ordinal = buffer.getInt();
 		  int length = encoded.length - 4;
 		  byte[] bytes = new byte[length];
+		  System.arraycopy(encoded, 4, bytes, 0, bytes.length);
 		  if (bytes.length > 0 && ordinal < Encryption.values().length) {
 			Encryption self = Encryption.values()[ordinal];
 			Key key = Encryptor.restoreKey(bytes, self);

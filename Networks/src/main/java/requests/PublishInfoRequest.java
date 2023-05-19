@@ -3,11 +3,13 @@ package requests;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import packages.PublishInfoDTO;
+import transfer.MethodRequest;
 
 import java.util.List;
 import java.util.Optional;
 
 @AllArgsConstructor
+@MethodRequest(name="PublishInfo")
 public class PublishInfoRequest extends AbstractRequest {
 @Getter
 private Integer authorId;
@@ -21,9 +23,10 @@ public String stringify() {
 }
 
 public static Optional<PublishInfoRequest> valueOf(String content) {
+      final int fieldCnt = 2;
       PublishInfoRequest request = null;
-      List<byte[]> bytes = split(content);
-      if (bytes.size() == 2) {
+      List<byte[]> bytes = split(content, fieldCnt);
+      if (bytes.size() == fieldCnt) {
 	    int id = toInteger(bytes.get(0));
 	    String stringDto = toString(bytes.get(1));
 	    var dto = PublishInfoDTO.valueOf(stringDto);

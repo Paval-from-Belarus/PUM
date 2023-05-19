@@ -2,7 +2,9 @@ package requests;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+import transfer.MethodRequest;
 import transfer.TransferFormat;
 
 import java.util.List;
@@ -10,7 +12,7 @@ import java.util.Optional;
 
 import static security.Encryptor.*;
 import static transfer.PackageAssembly.ArchiveType;
-
+@MethodRequest(name="GetPayload")
 public class PayloadRequest extends AbstractRequest {
 
 private PayloadRequest(Integer packageId, ArchiveType archive) {
@@ -36,8 +38,10 @@ public PayloadRequest(Integer packageId, Integer offset, ArchiveType archive) {
 private final Integer packageId;
 private final ArchiveType archive;
 @Getter
+@Accessors(fluent = true)
 private String label;
 @Getter
+@Accessors(fluent = true)
 private Integer offset;
 @NotNull
 @Setter

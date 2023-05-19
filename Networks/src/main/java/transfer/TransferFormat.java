@@ -14,7 +14,7 @@ public static final int TRANSFER_BYTES_CNT = 4 * 3 + 170;
 public void apply(PackageAssembly assembly) {
       assembly.setEncryption(encryption);
       assembly.setArchive(archive);
-}
+ }
 
 public byte[] toBytes() {
       ByteBuffer buffer = ByteBuffer.allocate(TRANSFER_BYTES_CNT);

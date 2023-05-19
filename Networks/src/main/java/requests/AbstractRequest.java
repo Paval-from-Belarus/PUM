@@ -27,7 +27,7 @@ protected static String join(String base64, String line) {
 protected static String join(String base64, Integer value) {
       ByteBuffer buffer = ByteBuffer.allocate(4);
       buffer.putInt(value).position(0);
-      return join(base64, Base64.getEncoder().encodeToString(buffer.array()));
+      return base64 + "#" + Base64.getEncoder().encodeToString(buffer.array());
 }
 protected static String join(String base64, byte[] bytes) {
       return base64 + "#" + Base64.getEncoder().encodeToString(bytes);

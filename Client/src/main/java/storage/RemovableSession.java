@@ -6,7 +6,6 @@ import storage.JournalTransaction.Type;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -60,7 +59,7 @@ public void commit(CommitState state) throws PackageIntegrityException {
 							.collect(Collectors.toList());
 		  storage.linkLibraries(centralPath, dependencies);
 	    }
-	    eraseJournal();
+	    deleteJournal();
 	    setManaged(true);
       } catch (IOException e) {
 	    throw new PackageIntegrityException("Some packages cannot be removed");

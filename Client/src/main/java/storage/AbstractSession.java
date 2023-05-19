@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 abstract class AbstractSession implements StorageSession {
 @Override
@@ -23,8 +22,11 @@ void appendJournal(JournalTransaction.Type type, InstanceInfo info) throws IOExc
       JournalTransaction transaction = new JournalTransaction(type, info);
       Files.writeString(journalPath, transaction.stringify(), StandardOpenOption.APPEND);
 }
-void eraseJournal() throws IOException {
+void deleteJournal() throws IOException {
       Files.deleteIfExists(journalPath);
+}
+void eraseJournal() throws IOException {
+      Files.writeString(journalPath, "");
 }
 List<JournalTransaction> getTransactions() throws IOException {
       if (transactions != null)

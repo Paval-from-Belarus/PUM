@@ -4,8 +4,8 @@
   "name": "PetOS Music",
   "type": "Application",
   "aliases": ["music"],
-  "version": "0.0.1",
+  "version": "0.0.2",
   "exePath": "/home/Paval/Music.exe",
-  "license": "MIT",
+  "license": "GNU",
   "dependencies": []
 }

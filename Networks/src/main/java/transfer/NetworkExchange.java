@@ -54,26 +54,28 @@ public static final int STR_FORMAT = 2;
 public static final int TAIL_FORMAT = 4; //after common message (in NetworkPackage) also binary data is available
 public static final int TRANSFER_FORMAT = 8;
 }
+public static class ResponseCode {
+      public static final int NO_PAYLOAD = 1;
+      public static final int FORBIDDEN = 2;
+      public static final int STR_FORMAT = 4;
+      public static final int SHORT_INFO = 8;
+      public static final int INT_FORMAT = 16;
+      public static final int VERBOSE_FORMAT = 32; //append strictly after NP command message ended by /n/r/n/r
+      public static final int BIN_FORMAT = 64;
+      public static final int ALL_PACKAGES_RESPONSE = STR_FORMAT | SHORT_INFO;
+      public static final int PACKAGE_ID_RESPONSE = INT_FORMAT;
+      public static final int PACKAGE_INFO_FORMAT = STR_FORMAT;
+      public static final int PAYLOAD_FORMAT = STR_FORMAT | BIN_FORMAT;
+      public static final int VERSION_INFO_FORMAT = STR_FORMAT;
+      public static final int PUBLISH_INFO_RESPONSE = INT_FORMAT;
+      public static final int PUBLISH_PAYLOAD_RESPONSE = INT_FORMAT;
+      //Success codes
+      public static final int CREATED = 512;
+      //Errors codes
+      public static final int INTERNAL_ERROR = 128;
+      public static final int ILLEGAL_REQUEST = 256;
+}
 //Common codes
-public static final int NO_PAYLOAD = 1;
-public static final int FORBIDDEN = 2;
-public static final int STR_FORMAT = 4;
-public static final int SHORT_INFO = 8;
-public static final int INT_FORMAT = 16;
-public static final int VERBOSE_FORMAT = 32; //append strictly after NP command message ended by /n/r/n/r
-public static final int BIN_FORMAT = 64;
-public static final int ALL_PACKAGES_RESPONSE = STR_FORMAT | SHORT_INFO;
-public static final int PACKAGE_ID_RESPONSE = INT_FORMAT;
-public static final int PACKAGE_INFO_FORMAT = STR_FORMAT;
-public static final int PAYLOAD_FORMAT = STR_FORMAT | BIN_FORMAT;
-public static final int VERSION_INFO_FORMAT = STR_FORMAT;
-public static final int PUBLISH_INFO_RESPONSE = INT_FORMAT;
-public static final int PUBLISH_PAYLOAD_RESPONSE = INT_FORMAT;
-//Success codes
-public static final int CREATED = 512;
-//Errors codes
-public static final int INTERNAL_ERROR = 128;
-public static final int ILLEGAL_REQUEST = 256;
 
 public NetworkExchange(NetworkPacket request, NetworkConnection connection) {
       this.request = request;

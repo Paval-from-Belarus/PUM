@@ -37,7 +37,7 @@ public Server setController(ServerController handle) {
 }
 
 private void defaultController(NetworkExchange message) {
-      message.setResponse(ResponseType.Approve, NO_PAYLOAD);
+      message.setResponse(ResponseType.Approve, ResponseCode.NO_PAYLOAD);
 }
 
 public void start() {
@@ -103,7 +103,7 @@ static class ClientService implements Runnable {
 			      ServerController.defaultResponse(message);
 		  } catch (Exception e) {
 			handler.error(message);//it's obligatory for Controller to process error
-			logger.warn("Error in common.Server Controller: " + e.getMessage());
+   			logger.warn("Error in common.Server Controller: " + e.getMessage());
 		  } finally {
 			if (message.response().isPresent())
 			      sendResponse(message.response().get(), connection, output);

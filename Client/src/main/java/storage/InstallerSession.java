@@ -92,7 +92,7 @@ public void commit(CommitState state) throws PackageIntegrityException {
 		  storage.linkLibraries(centralPath, dependencies);
 		  //storage relink storage
 		  //it's known info that some packages are already installed
-		  eraseJournal();
+		  deleteJournal();
 	    } catch (IOException e) {
 		  eraseSession();
 		  throw new PackageIntegrityException("Package linking error" + e.getMessage());
@@ -143,7 +143,7 @@ private void eraseSession() {
 	    for (var op : transactions) {
 		  removeFiles(Path.of(op.getStringPath()));
 	    }
-	    eraseJournal();
+	    deleteJournal();
       } catch (IOException ignored) {
       }
 }

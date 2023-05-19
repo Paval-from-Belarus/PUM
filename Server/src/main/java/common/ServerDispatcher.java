@@ -20,7 +20,7 @@ import java.util.Optional;
 
 import static common.PackageStorage.*;
 import static transfer.NetworkExchange.*;
-import static transfer.NetworkExchange.PACKAGE_ID_RESPONSE;
+
 import static transfer.NetworkPacket.toBytes;
 
 
@@ -67,9 +67,9 @@ private void onAllPackages(NetworkExchange exchange) throws IOException {
       var packages = storage.shortInfoList()
 			 .toArray(ShortPackageInfoDTO[]::new);
       OutputStream output = exchange.getOutputStream();
-      String payload = toJson(packages);
+      String payload = toJson(packages); //replace with concatenation of string)
       output.write(payload.getBytes(StandardCharsets.US_ASCII));
-      exchange.setResponse(ResponseType.Approve, ALL_PACKAGES_RESPONSE);
+      exchange.setResponse(ResponseType.Approve, ResponseCode.ALL_PACKAGES_RESPONSE);
 }
 
 private void onPackageId(NetworkExchange exchange) {
@@ -78,9 +78,9 @@ private void onPackageId(NetworkExchange exchange) {
       if (optional.isPresent()) {
 	    ByteBuffer buffer = ByteBuffer.allocate(4);
 	    buffer.putInt(optional.get().value());
-	    exchange.setResponse(ResponseType.Approve, PACKAGE_ID_RESPONSE, buffer.array());
+	    exchange.setResponse(ResponseType.Approve, ResponseCode.PACKAGE_ID_RESPONSE, buffer.array());
       } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.FORBIDDEN);
       }
 }
 //todo: asymmetric to symmetric handshake
@@ -134,9 +134,9 @@ private Optional<PackageHandle> toPackageHandle(Integer value, int offset) {
 }
 
 private VersionFormat getVersionFormat(NetworkPacket request) {
-      return switch (request.code(PAYLOAD_FORMAT)) {
-	    case INT_FORMAT -> VersionFormat.Int;
-	    case STR_FORMAT -> VersionFormat.String;
+      return switch (request.code(RequestCode.PAYLOAD_FORMAT_MASK)) {
+	    case RequestCode.INT_FORMAT -> VersionFormat.Int;
+	    case RequestCode.STR_FORMAT -> VersionFormat.String;
 	    default -> VersionFormat.Unknown;
       };
 }
@@ -146,23 +146,21 @@ private void onPackageInfo(NetworkExchange exchange) {
       VersionFormat format = getVersionFormat(exchange.request());
       Optional<InfoRequest> clientRequest = InfoRequest.valueOf(data, format);
       Optional<PackageHandle> serverRequest = clientRequest.flatMap(request -> switch (format) {
-	    case String -> toPackageHandle(request.getId(), request.getLabel());
-	    case Int -> toPackageHandle(request.getId(), request.getOffset());
+	    case String -> toPackageHandle(request.getPackageId(), request.label());
+	    case Int -> toPackageHandle(request.getPackageId(), request.offset());
 	    case Unknown -> Optional.empty();
       });
       if (serverRequest.isPresent()) {
 	    PackageHandle request = serverRequest.get();
 	    var info = storage.getFullInfo(request.id(), request.version());
 	    if (info.isPresent()) {
-		  String response = toJson(info.get());
 		  exchange.setResponse(
-		      ResponseType.Approve, PACKAGE_INFO_FORMAT,
-		      response.getBytes(StandardCharsets.US_ASCII));
+		      ResponseType.Approve, ResponseCode.PACKAGE_INFO_FORMAT, toBytes(info.get().stringify()));
 	    } else {
-		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.FORBIDDEN);
       }
 }
 
@@ -172,9 +170,13 @@ private void onPackageInfo(NetworkExchange exchange) {
  */
 private void onVersionInfo(NetworkExchange exchange) {
       String data = exchange.request().stringData();
-      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data);
-      Optional<PackageHandle> serverRequest = userRequest.flatMap(
-	  request -> toPackageHandle(request.packageId(), request.label())
+      VersionFormat format = getVersionFormat(exchange.request());
+      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data,format);
+      Optional<PackageHandle> serverRequest = userRequest.flatMap(request -> switch(format) {
+		case String -> toPackageHandle(request.getPackageId(), request.label());
+		case Int -> toPackageHandle(request.getPackageId(), request.offset());
+		case Unknown -> Optional.empty();
+	  }
       );
       if (serverRequest.isPresent()) {
 	    var request = serverRequest.get();
@@ -184,13 +186,12 @@ private void onVersionInfo(NetworkExchange exchange) {
 		      request.version().value(),
 		      fullInfo.get().version
 		  );
-		  String response = toJson(versionInfo);
-		  exchange.setResponse(ResponseType.Approve, VERSION_INFO_FORMAT, toBytes(response));
+		  exchange.setResponse(ResponseType.Approve, ResponseCode.VERSION_INFO_FORMAT, toBytes(versionInfo.stringify()));
 	    } else {
-		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.FORBIDDEN);
       }
 }
 
@@ -208,13 +209,13 @@ private void onPayload(NetworkExchange exchange) throws IOException {
       String data = exchange.request().stringData();
       VersionFormat format = getVersionFormat(exchange.request());
       Optional<PayloadRequest> clientRequest = PayloadRequest.valueOf(data, format);
-      Optional<PackageHandle> serverRequest = clientRequest.flatMap(request -> switch (format) {
-	    case String -> toPackageHandle(request.getPackageId(), request.getLabel());
-	    case Int -> toPackageHandle(request.getPackageId(), request.getOffset());
+      Optional<PackageHandle> packageHandle = clientRequest.flatMap(request -> switch (format) {
+	    case String -> toPackageHandle(request.getPackageId(), request.label());
+	    case Int -> toPackageHandle(request.getPackageId(), request.offset());
 	    case Unknown -> Optional.empty();
       });
-      if (serverRequest.isPresent()) {
-	    PackageHandle handle = serverRequest.get();
+      if (packageHandle.isPresent()) {
+	    PackageHandle handle = packageHandle.get();
 	    Optional<byte[]> payload = storage.getPayload(handle.id(), handle.version()); //todo: add archive as parameter
 	    PackageAssembly assembly;
 	    TransferFormat transfer;
@@ -224,12 +225,12 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 		  assembly = PackageAssembly.valueOf(header, payload.get());
 		  transfer.apply(assembly);
 		  writeBytes(exchange, assembly.serialize());
-		  exchange.setResponse(ResponseType.Approve, PAYLOAD_FORMAT);
+		  exchange.setResponse(ResponseType.Approve, ResponseCode.PAYLOAD_FORMAT);
 	    } else {
-		  exchange.setResponse(ResponseType.Decline, NO_PAYLOAD);
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.ILLEGAL_REQUEST);
       }
 }
 
@@ -249,14 +250,14 @@ private void onPublishInfo(NetworkExchange exchange) {
 		  } else {
 			id = storage.storePackageInfo(authorId, dto);
 		  }
-		  exchange.setResponse(ResponseType.Approve, PUBLISH_INFO_RESPONSE,
+		  exchange.setResponse(ResponseType.Approve, ResponseCode.PUBLISH_INFO_RESPONSE,
 		      toBytes(id.value()));
 	    } catch (StorageException e) {
-		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.VERBOSE_FORMAT,
 		      toBytes(e.getMessage()));
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.ILLEGAL_REQUEST);
       }
 }
 
@@ -271,17 +272,17 @@ private void onPublishPayload(NetworkExchange exchange) throws IOException {
 	    try {
 		  if (payload != null) {
 			VersionId version = storage.storePayload(authorId, dto, payload);
-			exchange.setResponse(ResponseType.Approve, PUBLISH_PAYLOAD_RESPONSE,
+			exchange.setResponse(ResponseType.Approve, ResponseCode.PUBLISH_PAYLOAD_RESPONSE,
 			    toBytes(version.value()));
 		  } else {
-			exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+			exchange.setResponse(ResponseType.Decline, ResponseCode.ILLEGAL_REQUEST);
 		  }
 	    } catch (StorageException e) {
-		  exchange.setResponse(ResponseType.Decline, VERBOSE_FORMAT,
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.VERBOSE_FORMAT,
 		      toBytes(e.getMessage()));
 	    }
       } else {
-	    exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.FORBIDDEN);
       }
 }
 
@@ -291,22 +292,22 @@ private void onAuthorizeRequest(NetworkExchange exchange) {
       if (author.isPresent()) {
 	    Optional<AuthorId> id = storage.getAuthorId(author.get());
 	    try {
-		  int code = INT_FORMAT;
+		  int code = ResponseCode.INT_FORMAT;
 		  if (id.isEmpty()) { //attempt to register Author
 			storage.authorize(author.get());
 			id = storage.getAuthorId(author.get());
-			code |= CREATED;
+			code |= ResponseCode.CREATED;
 		  }
 		  if (id.isPresent()) {
 			exchange.setResponse(ResponseType.Approve, code,
 			    toBytes(id.get().value()));
 		  }
 	    } catch (StorageException e) {
-		  exchange.setResponse(ResponseType.Decline, FORBIDDEN);
+		  exchange.setResponse(ResponseType.Decline, ResponseCode.FORBIDDEN);
 	    }
 
       } else {
-	    exchange.setResponse(ResponseType.Decline, ILLEGAL_REQUEST);
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.ILLEGAL_REQUEST);
       }
 }
 

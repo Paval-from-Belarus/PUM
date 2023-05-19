@@ -57,7 +57,6 @@ public RemovableSession getRemover() {
 ModifierSession(PackageStorage storage) {
       this.storage = storage;
 }
-
 @Override
 public void commit(CommitState state) throws PackageIntegrityException {
       if (isManaged())
@@ -72,15 +71,19 @@ public void commit(CommitState state) throws PackageIntegrityException {
 			PackageStorage.removeFiles(Path.of(atom.getStringPath()));
 		  }
 		  storage.rebuildConfig(removables, RebuildMode.Remove);
-		  eraseJournal();//what are you doing???
+		  eraseJournal();
 		  for (var atom : installed) {
 			proxyInstaller.replace(Path.of(atom.getStringPath()));
 		  }
 		  proxyInstaller.forceCommit();
 	    } else {
-		  proxyInstaller.commit(CommitState.Failed);
-		  proxyRemover.commit(CommitState.Failed);
-		  eraseJournal();
+		  if (proxyInstaller != null) {
+			proxyInstaller.commit(CommitState.Failed);
+		  }
+		  if (proxyRemover != null) {
+			proxyRemover.commit(CommitState.Failed);
+		  }
+		  deleteJournal(); //removeFil
 	    }
 	    setManaged(true);
       } catch (PackageAssembly.VerificationException e) {
@@ -126,8 +129,12 @@ private static class ProxyInstaller extends InstallerSession {
 	    try {
 		  stringInfo = Files.readString(resolveInfo(packageDir));
 		  byte[] assembly = Files.readAllBytes(resolveAssembly(packageDir));
-		  FullPackageInfoDTO dto = fromJson(stringInfo, FullPackageInfoDTO.class);
-		  super.storeLocally(dto, assembly);
+		  var dto = FullPackageInfoDTO.valueOf(stringInfo);
+		  if (dto.isPresent()) {
+			super.storeLocally(dto.get(), assembly);
+		  } else {
+			throw new PackageIntegrityException("The temp package info is damaged");
+		  }
 	    } catch (IOException e) {
 		  //something go wrong
 		  throw new RuntimeException(e);
@@ -145,7 +152,7 @@ private static class ProxyInstaller extends InstallerSession {
 			removeFiles(cacheDir);
 		  Files.createDirectory(cacheDir);
 		  Files.write(resolveAssembly(cacheDir), assembly);
-		  Files.writeString(resolveInfo(cacheDir), PackageStorage.toJson(dto));
+		  Files.writeString(resolveInfo(cacheDir), dto.stringify());
 		  appendJournal(DUMMY_PACKAGE_ID, cacheDir, dto);
 	    } catch (IOException e) {
 		  throw new RuntimeException(e);
@@ -165,7 +172,7 @@ private static class ProxyRemover extends RemovableSession {
       }
 
       @Override
-      void eraseJournal() {
+      void deleteJournal() {
       }
 
       @Override

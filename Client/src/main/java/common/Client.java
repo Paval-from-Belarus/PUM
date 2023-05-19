@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import packages.*;
+import requests.*;
 import security.Author;
 import security.Encryptor;
 import storage.*;
@@ -13,12 +14,10 @@ import storage.ModifierSession.Rank;
 import storage.ModifierSession.VersionPredicate;
 import transfer.NetworkPacket;
 import transfer.PackageAssembly;
-import transfer.TransferFormat;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -30,7 +29,6 @@ import static security.Encryptor.*;
 import static storage.PackageStorage.*;
 import static storage.StorageSession.*;
 import static transfer.NetworkExchange.*;
-import static transfer.NetworkPacket.toBytes;
 
 
 public class Client {
@@ -116,6 +114,7 @@ private void dispatchInputGroup(@NotNull InputGroup group) {
 		  case Repository -> onRepositoryCommand(params);
 		  case Publish -> onPublishCommand(params);
 		  case Upgrade -> onUpdateCommand(params);
+		  case Downgrade -> onDowngradeCommand(params);
 	    }
       } catch (Exception e) {
 	    defaultErrorHandler(e);
@@ -138,7 +137,31 @@ private void dispatchService(ClientService service) {
 private void dispatchTask(Runnable task) {
       task.run();
 }
+private enum UpdateMode {Release, Version;
+	public static int LATEST = 0;
+}
 
+private enum DowngradeMode {
+      Highest, Lowest, Level;
+      private int level;
+
+      static {
+	    Highest.level = 1; //not the zero
+	    Lowest.level = -1;
+	    Level.level = 1;
+      }
+
+      public void setLevel(int level) {
+	    if (this == Level) {
+		  level = Math.max(-1, level);
+		  this.level = Math.min(level, 10);
+	    }
+      }
+
+      public int level() {
+	    return level;
+      }
+}
 private void onUpdateCommand(ParameterMap params) {
       List<InputParameter> raw = params.get(ParameterType.Raw);
       List<InputParameter> verbose = params.get(ParameterType.Verbose);
@@ -152,24 +175,69 @@ private void onUpdateCommand(ParameterMap params) {
       } else {
 	    raw.forEach(r -> updatePackageByMode(r.self(), mode.get()));
       }
-
 }
 
-private enum UpdateMode {Release, Version}
+private void onDowngradeCommand(ParameterMap params) {
+      List<InputParameter> raw = params.get(ParameterType.Raw);
+      List<InputParameter> verbose = params.get(ParameterType.Verbose);
+      List<InputParameter> shorts = params.get(ParameterType.Shorts);
+      InputParameter level = null;
+      Wrapper<DowngradeMode> wrapper = new Wrapper<>(DowngradeMode.Highest);
+      if (verbose.size() == 1 && verbose.get(0).self().equals("level")) {
+	    level = verbose.get(0);
+      }
+      if (level == null && shorts.size() == 1 && shorts.get(0).self().equals("l")) {
+	    level = shorts.get(0);
+      }
+      if (level != null) {
+	    try {
+		  int value = Integer.parseInt(level.value());
+		  DowngradeMode mode = value < 0 ? DowngradeMode.Lowest : DowngradeMode.Level;
+		  mode.setLevel(value); //setValue method is safe
+		  wrapper.set(mode);
+	    } catch (NumberFormatException e) {
+		  throw new IllegalStateException("Illegal parameter value");
+	    }
+      }
+      if (raw.size() != 0) {
+	    raw.forEach(r -> downgradePackageByMode(r.self(), wrapper.get()));
+      } else {
+	    throw new IllegalStateException("The package is not specified");
+      }
+}
+private void downgradePackageByMode(String name, @NotNull DowngradeMode mode) {
+      InstallationState state = storage.getPackageState(name);
+      try (ModifierSession session = storage.initSession(ModifierSession.class)) {
+	    if (state.isRemovable()) {
+		  final VersionPredicate predicate = this::changeVersion; //impossible to restore old release -> UB
+		  final VersionFunction function = (id, dto) -> getVersionByLevel(id, mode.level(), dto);
+		  changeInstalledPackage(session, name, predicate, function);
+	    } else {
+		  output.sendError("", "The package cannot be changed");
+	    }
+      } catch (PackageIntegrityException | ConfigurationException e) {
+      	output.sendError("Configuration error", e.getMessage());
+      }
+}
 
-private void updatePackageByMode(String name, UpdateMode mode) {
+
+private void updatePackageByMode(String name, @NotNull UpdateMode mode) {
       InstallationState state = storage.getPackageState(name);
       try (ModifierSession session = storage.initSession(ModifierSession.class)) {
 	    if (state.isRemovable()) { //it can be removed then it can be updated
-		  VersionPredicate predicate = switch (mode) {
+		  final VersionPredicate predicate;
+		  final VersionFunction function;
+		  predicate = switch (mode) {
 			case Release -> this::changeRelease;
 			case Version -> this::changeVersion;
 		  };
-		  VersionFunction handler = switch (mode) {
+		  function = switch (mode) {
 			case Release -> this::getLatestRelease;
-			case Version -> this::getLatestVersion;
+			case Version -> (id, dto) -> getVersionByLevel(id, UpdateMode.LATEST, dto);
 		  };
-		  changeInstalledPackage(session, name, predicate, handler);
+		  changeInstalledPackage(session, name, predicate, function);
+	    } else {
+		  output.sendError("", "Package is not found or is not deletable");
 	    }
       } catch (PackageIntegrityException | ConfigurationException e) { //on close
 	    output.sendError("Configuration error", e.getMessage());
@@ -222,36 +290,38 @@ private void changeInstalledPackage(ModifierSession session, String name, Versio
 }
 
 private void removeRetired(ModifierSession parent, Integer id, FullPackageInfoDTO dto) throws PackageIntegrityException {
-      try (var session = parent.getRemover()) {
-	    output.sendMessage("", "Attempt to remove old application version");
-	    session.removeLocally(dto);
-	    output.sendMessage("", "Attempt to remove old dependencies");
-	    ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Removable, storage);
-	    Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
-	    if (dependencies.values().size() < dto.dependencies.length)
-		  output.sendMessage("Warning", "There are some global dependencies");
-	    for (var dependency : dependencies.values()) {
-		  session.removeLocally(dependency);
-	    }
-	    output.sendMessage("Completed", "Package was retired");
-	    session.commit(CommitState.Success);
+      var session = parent.getRemover();//don't close
+      output.sendMessage("", "Attempt to remove old application version");
+      session.removeLocally(dto);
+      output.sendMessage("", "Attempt to remove old dependencies");
+      ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Removable, storage);
+      Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
+      if (dependencies.values().size() < dto.dependencies.length)
+	    output.sendMessage("Warning", "There are some global dependencies");
+      for (var dependency : dependencies.values()) {
+	    session.removeLocally(dependency);
       }
+      output.sendMessage("Completed", "Package was retired");
+      session.commit(CommitState.Success);
+
 }
 
 private void installAdvanced(ModifierSession parent, Integer id, FullPackageInfoDTO dto)
     throws PackageIntegrityException {
-      try (var session = parent.getInstaller()) {
+      try {
+	    var session = parent.getInstaller();
 	    ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 	    output.sendMessage("", "Attempt to resolve dependencies");
 	    Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
 	    if (hasUserAgreement(dto, dependencies.values())) {
 		  startInstallation(session, id, dto, dependencies);
 		  parent.commit(CommitState.Success);
-		  output.sendMessage("", "Updating successfully");
+		  output.sendMessage("", "Updating successfully!");
 	    } else {
 		  output.sendMessage("", "The installation is aborted by user");
 		  output.sendMessage("", "Attempt to roll back changes");
 		  parent.commit(CommitState.Failed);
+		  output.sendMessage("Completed", "Package was restored");
 	    }
       } catch (PackageIntegrityException | ConfigurationException e) {
 	    throw new PackageIntegrityException(e);
@@ -260,12 +330,13 @@ private void installAdvanced(ModifierSession parent, Integer id, FullPackageInfo
       }
 }
 
-private Optional<VersionInfoDTO> getVersionByDegree(Integer id, int level, VersionInfoDTO local) {
+private Optional<VersionInfoDTO>  getVersionByLevel(Integer id, int level, VersionInfoDTO local) {
       Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
       try {
 	    ClientService service = defaultService();
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.INT_FORMAT);
-	    packet.setPayload(toBytes(id), toBytes(level));
+	    VersionRequest request = new VersionRequest(id, level);
+	    packet.setPayload(request.stringify());
 	    service.setRequest(packet).setResponseHandler((response, socket) -> {
 		  onVersionResponse(wrapper, response);
 	    });
@@ -275,12 +346,12 @@ private Optional<VersionInfoDTO> getVersionByDegree(Integer id, int level, Versi
       return Optional.ofNullable(wrapper.get());
 }
 
-private Optional<VersionInfoDTO> getFirstVersion(Integer id, VersionInfoDTO local) {
-      return getVersionByDegree(id, OLDEST_VERSION, local);
+private Optional<VersionInfoDTO> getOldestVersion(Integer id, VersionInfoDTO local) {
+      return getVersionByLevel(id, OLDEST_VERSION, local);
 }
 
 private Optional<VersionInfoDTO> getLatestVersion(Integer id, VersionInfoDTO local) {
-      return getVersionByDegree(id, LATEST_VERSION, local);
+      return getVersionByLevel(id, UpdateMode.LATEST, local);
 }
 
 private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO local) {
@@ -288,7 +359,8 @@ private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO loc
       try {
 	    ClientService service = defaultService();
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
-	    packet.setPayload(toBytes(id), toBytes(local.label()));
+	    VersionRequest request = new VersionRequest(id, local.label());
+	    packet.setPayload(request.stringify());
 	    service.setRequest(packet).setResponseHandler((response, socket) -> {
 		  onVersionResponse(wrapper, response);
 	    });
@@ -323,7 +395,7 @@ private Optional<Integer> getAuthorId(Author author) {
       Wrapper<Integer> id = new Wrapper<>();
       try {
 	    ClientService service = defaultService();
-	    NetworkPacket packet = new NetworkPacket(RequestType.Authorize, STR_FORMAT);
+	    NetworkPacket packet = new NetworkPacket(RequestType.Authorize, RequestCode.STR_FORMAT);
 	    packet.setPayload(author.stringify());
 	    service.setRequest(packet).setExceptionHandler(this::handleAuthException)
 		.setResponseHandler((p, s) -> id.set(onAuthorizeResponse(p, s)));
@@ -349,7 +421,7 @@ private @NotNull Integer onAuthorizeResponse(NetworkPacket response, Socket sock
       if (response.type(ResponseType.class) == ResponseType.Approve && response.payloadSize() == 4) {
 	    result = ByteBuffer.wrap(response.data()).getInt();
       } else {
-	    if (response.containsCode(FORBIDDEN)) {
+	    if (response.containsCode(ResponseCode.FORBIDDEN)) {
 		  throw new ServerAccessException("Invalid credentials");
 	    }
 	    throw new IllegalStateException("Server declines");
@@ -407,10 +479,11 @@ private Optional<Integer> publishPackageHat(Integer authorId, Publisher entity) 
       Wrapper<Integer> response = new Wrapper<>();//the default value is null
       try {
 	    ClientService service = defaultService();
-	    NetworkPacket request = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
+	    var packet = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
 	    PublishInfoDTO dto = extractPublishHat(entity);
-	    request.setPayload(toBytes(authorId), toBytes(toJson(dto)));
-	    service.setRequest(request)
+	    var request = new PublishInfoRequest(authorId, dto);
+	    packet.setPayload(request.stringify());
+	    service.setRequest(packet)
 		.setResponseHandler((r, s) -> response.set(onPublishResponse(r, s)))
 		.setExceptionHandler(this::onPublishException);
 	    service.run();
@@ -429,9 +502,10 @@ private Optional<Integer> publishPayload(Integer authorId, PublishInstanceDTO dt
 	    output.sendError("Network error", e.getMessage());
 	    return Optional.empty();
       }
-      NetworkPacket request = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
-      request.setPayload(toBytes(authorId), toBytes(toJson(dto)));
-      service.setRequest(request)
+      var packet = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
+      var request = new PublishInstanceRequest(authorId, dto);
+      packet.setPayload(request.stringify());
+      service.setRequest(packet)
 	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
 	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
 	  .setExceptionHandler(this::onPublishException);
@@ -455,7 +529,7 @@ private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response, Soc
       if (approved) {
 	    result = ByteBuffer.wrap(response.data()).getInt();
       }
-      if (!approved && response.containsCode(VERBOSE_FORMAT))
+      if (!approved && response.containsCode(ResponseCode.VERBOSE_FORMAT))
 	    output.sendError("Publish error", NetworkPacket.toString(response.data()));
       return result;
 }
@@ -671,7 +745,7 @@ private void startInstallation(InstallerSession session, Integer id, FullPackage
 	    output.sendMessage("", "Failed to load package");
 	    logger.warn("Package is not installed");
       }
-      session.commit(CommitState.Success);
+      session.commit(commitState);
       if (commitState == CommitState.Success)
 	    output.sendMessage("Congratulations!", "Installed successfully!");
 }
@@ -684,7 +758,7 @@ private void installAppPackage(String packageName) {
       }
       if (packageId.isEmpty())
 	    packageId = getPackageId(packageName);
-      Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, LATEST_VERSION));
+      Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, UpdateMode.LATEST));
       try (InstallerSession session = storage.initSession(InstallerSession.class)) {
 	    if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
 		  FullPackageInfoDTO dto = fullInfo.get();
@@ -713,19 +787,19 @@ private boolean isApplication(FullPackageInfoDTO dto) {
 }
 
 /**
- * @param type also holds the public key for encryption
+ * @param encryption also holds the public key for encryption
  */
-private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption type) {
+private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption encryption) {
       Wrapper<byte[]> payload = new Wrapper<>();
       try {
-	    var request = new NetworkPacket(RequestType.GetPayload,
+	    var packet = new NetworkPacket(RequestType.GetPayload,
 		RequestCode.STR_FORMAT | RequestCode.TRANSFER_FORMAT);
-	    request.setPayload(toBytes(id), toBytes(label));
+	    var request = new PayloadRequest(id, label, archive);
+	    request.setEncryption(encryption);
+	    packet.setPayload(request.stringify());
 	    ClientService service = defaultService();
-	    service.setRequest(request)
+	    service.setRequest(packet)
 		.setResponseHandler((r, s) -> payload.set(onRawAssemblyResponse(r, s)));
-	    TransferFormat format = new TransferFormat(this.archive, type);
-	    service.setTailWriter((output) -> output.write(format.toBytes()));
 	    service.run();
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
@@ -773,10 +847,11 @@ private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO 
 private Optional<Integer> getPackageId(String packageName) {
       Wrapper<Integer> id = new Wrapper<>();
       try {
-	    var request = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
-	    request.setPayload(packageName.getBytes(StandardCharsets.US_ASCII));
+	    var packet = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
+	    var request = new IdRequest(packageName);
+	    packet.setPayload(request.stringify());
 	    ClientService service = defaultService();
-	    service.setRequest(request)
+	    service.setRequest(packet)
 		.setResponseHandler((p, s) -> id.set(onPackageIdResponse(p, s)));
 	    service.run();
       } catch (ServerAccessException e) {
@@ -798,15 +873,17 @@ private int onPackageIdResponse(NetworkPacket response, Socket socket) {
 }
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, String label) {
-      var request = new NetworkPacket(RequestType.GetInfo, RequestCode.STR_FORMAT);
-      request.setPayload(toBytes(id), toBytes(label));
-      return getFullInfo(request);
+      var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.STR_FORMAT);
+      var request = new InfoRequest(id, label);
+      packet.setPayload(request.stringify());
+      return getFullInfo(packet);
 }
 
-private Optional<FullPackageInfoDTO> getFullInfo(Integer id, Integer version) {
-      var request = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
-      request.setPayload(toBytes(id, version)); //second param is version offset
-      return getFullInfo(request);
+private Optional<FullPackageInfoDTO> getFullInfo(Integer id, Integer offset) {
+      var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
+      var request = new InfoRequest(id, offset);
+      packet.setPayload(request.stringify());
+      return getFullInfo(packet);
 }
 
 private String onPackageInfoResponse(NetworkPacket response, Socket socket) {

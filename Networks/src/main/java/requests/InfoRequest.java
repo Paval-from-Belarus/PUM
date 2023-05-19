@@ -1,40 +1,44 @@
 package requests;
 
 import lombok.Getter;
+import lombok.experimental.Accessors;
+import transfer.MethodRequest;
 
 import java.util.List;
 import java.util.Optional;
 
-
+@MethodRequest(name="GetInfo")
+@Accessors(fluent = true)
 public class InfoRequest extends AbstractRequest {
 @Getter
-private final Integer id;
+@Accessors(fluent = false)
+private final Integer packageId;
 @Getter
 private Integer offset;
 @Getter
 private String label;
 
-public InfoRequest(Integer id) {
-      this.id = id;
+public InfoRequest(Integer packageId) {
+      this.packageId = packageId;
       this.label = "";
 }
 
-public InfoRequest(Integer id, Integer offset) {
-      this(id);
+public InfoRequest(Integer packageId, Integer offset) {
+      this(packageId);
       this.offset = offset;
 }
 
-public InfoRequest(Integer id, String label) {
-      this(id);
+public InfoRequest(Integer packageId, String label) {
+      this(packageId);
       this.label = label;
 }
 
 public String stringify() {
       String result;
       if (label.isEmpty()) {
-	    result = stringify(id, offset);
+	    result = stringify(packageId, offset);
       } else {
-	    result = stringify(id);
+	    result = stringify(packageId);
 	    result = join(result, label);
       }
       return result;

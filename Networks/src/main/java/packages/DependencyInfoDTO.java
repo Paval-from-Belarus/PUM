@@ -1,14 +1,13 @@
 package packages;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
+import lombok.*;
 import lombok.experimental.Accessors;
 
 import java.util.Optional;
 
 @Accessors(prefix = "", makeFinal = true, fluent = true)
 @AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 public class DependencyInfoDTO extends AbstractDTO {
 @Getter
 private Integer packageId;

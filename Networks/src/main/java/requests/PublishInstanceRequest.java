@@ -4,11 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import packages.PublishInstanceDTO;
+import transfer.MethodRequest;
 
 import java.util.List;
 import java.util.Optional;
 
 @AllArgsConstructor
+@MethodRequest(name="PublishPayload")
 public class PublishInstanceRequest extends AbstractRequest {
 @Getter
 @NotNull
@@ -28,7 +30,7 @@ public static Optional<PublishInstanceRequest> valueOf(String content) {
       List<byte[]> bytes = split(content, 2);
       if (bytes.size() == 2) {
 	    Integer author = toInteger(bytes.get(0));
-	    var dto = PublishInstanceDTO.valueOf(content);
+	    var dto = PublishInstanceDTO.valueOf(toString(bytes.get(1)));
 	    optional = dto.map(info -> new PublishInstanceRequest(author, info));
       }
       return optional;
