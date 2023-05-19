@@ -1,4 +1,0 @@
-[
-  {"type": "ListAll", "pattern": "list", "hasParams": "false"},
-  {"type": "Install", "pattern": "install (.+)", "hasParams": "true"}
-]

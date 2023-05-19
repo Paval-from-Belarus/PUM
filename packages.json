@@ -1,5 +1,0 @@
-[
-  {"name":"PetOS Kernel","aliases":["kernel" ],"version": "0.0.2", "payloadType": "Binary", "licenseType": "MIT", "dependencies": [""]},
-  {"name": "PetOS Edit", "aliases":["edit"],"version": "0.0.3", "payloadType": "Binary", "licenseType": "MIT", "dependencies": [""]},
-  {"name": "CDROM Driver", "aliases":["cd-driver"],"version": "0.0.1", "payloadType": "Binary", "licenseType": "MIT", "dependencies": [""]}
-]

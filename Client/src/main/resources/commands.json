@@ -1,0 +1,9 @@
+[
+  {"type":"List", "aliases": ["list"], "shorts": ["v"], "verbose": ["installed", "verbose"]},
+  {"type":"Install", "aliases": ["install"], "shorts": [], "verbose": ["resolve"]},
+  {"type": "Remove", "aliases":  ["remove", "rm"], "shorts": ["f"], "verbose": ["force"]},
+  {"type": "Repository", "aliases":  ["repository"], "shorts": [], "verbose": ["add", "list", "remove"]},
+  {"type": "Publish", "aliases": ["publish"], "shorts": [], "verbose": []},
+  {"type": "Upgrade", "aliases": ["upgrade", "update"], "shorts": [], "verbose": ["release"]},
+  {"type": "Downgrade", "aliases": ["downgrade"], "shorts": ["l"], "verbose": ["level"]}
+]

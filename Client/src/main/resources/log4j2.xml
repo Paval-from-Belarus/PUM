@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<common.Configuration name="Configurations" status="INFO" monitorInterval="5">
+    <Properties>
+        <Property name="log-path">logs</Property>
+        <Property name="archive">${log-path}/archive</Property>
+    </Properties>
+    <Appenders>
+        <Console name="ErrorOut" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d %-5p [%t]: %m%n"/>
+        </Console>
+        <Console name="Default" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d %-5p%n"/>
+        </Console>
+        <File name="CommonLogs" fileName="${log-path}/client.log">
+            <PatternLayout pattern="%d{hh:mms yyyy:mm:ss} %-5p [%t] %m%n"/>
+        </File>
+    </Appenders>
+    <Loggers>
+        <Logger name="common.PackageStorage" level="warn" additivity="false">
+            <AppenderRef ref="CommonLogs"/>
+        </Logger>
+        <Logger name="common.Client" level="error" additivity="true">
+            <AppenderRef ref="ErrorOut"/>
+        </Logger>
+        <Root level="error">
+            <AppenderRef ref="Default"/>
+        </Root>
+    </Loggers>
+</common.Configuration>
