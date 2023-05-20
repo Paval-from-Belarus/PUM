@@ -3,11 +3,11 @@ module org.petos.packagemanager.Networks {
       requires static lombok;
       requires com.aayushatharva.brotli4j;
       requires com.google.gson;
-      opens packages;
+      opens dto;
       opens transfer;
       opens requests;
       exports transfer;
-      exports packages;
+      exports dto;
       exports security;
       exports requests;
 }

@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
-import transfer.MethodRequest;
 import transfer.TransferFormat;
 
 import java.util.List;

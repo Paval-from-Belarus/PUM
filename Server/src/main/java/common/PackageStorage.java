@@ -7,7 +7,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
-import packages.*;
+import dto.*;
 import security.Author;
 
 import javax.persistence.Query;

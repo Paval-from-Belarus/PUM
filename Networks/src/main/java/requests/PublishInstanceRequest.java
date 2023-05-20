@@ -3,8 +3,7 @@ package requests;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
-import packages.PublishInstanceDTO;
-import transfer.MethodRequest;
+import dto.PublishInstanceDTO;
 
 import java.util.List;
 import java.util.Optional;

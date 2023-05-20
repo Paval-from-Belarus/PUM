@@ -21,6 +21,7 @@ public String temp;
 public String packagesInfo;
 public String infoPath;
 public String publishers;
+public String repositories;
 
 public void init() {
       var list = List.of(programs, libraries, temp, packagesInfo, publishers);
@@ -33,11 +34,15 @@ public void init() {
 	    }
 	    Path infoPath = Path.of(packagesInfo, PACKAGES_INFO_FILE);
 	    Path publisherPath = Path.of(publishers).resolve(PUBLISHER_CONFIG);
+	    Path repoPath = Path.of(repositories);
 	    if (!Files.exists(infoPath)) {
 		  Files.createFile(infoPath);
 	    }
 	    if (!Files.exists(publisherPath)) {
 		  Files.createFile(publisherPath);
+	    }
+	    if (!Files.exists(repoPath)) {
+		  Files.createFile(repoPath);
 	    }
 	    this.publishers = publisherPath.toAbsolutePath().toString();
 	    this.infoPath = infoPath.toAbsolutePath().toString();
@@ -45,7 +50,6 @@ public void init() {
 	    throw new RuntimeException(e);
       }
 }
-
 //todo :implements to any config files (such as InstanceInfo, Publisher)
 public static Map<String, String[]> mapOf(@NotNull String content) {
       if (content.length() <= 2)

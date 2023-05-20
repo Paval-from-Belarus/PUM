@@ -11,6 +11,7 @@ public class Publisher {
 public String author;
 public String email;
 public String name;
+public String origin;
 public PayloadType type;
 public String[] aliases;
 public String version;

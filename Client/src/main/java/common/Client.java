@@ -1,28 +1,29 @@
 package common;
 
 import com.google.gson.Gson;
+import database.CachedInfo;
+import database.RepositoryInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import packages.*;
+import dto.*;
 import requests.*;
 import security.Author;
 import security.Encryptor;
 import storage.*;
 import storage.ModifierSession.Rank;
 import storage.ModifierSession.VersionPredicate;
-import transfer.NetworkPacket;
-import transfer.PackageAssembly;
+import transfer.*;
 
 import java.io.*;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static common.ClientService.*;
+import static transfer.SimplexService.*;
 import static common.InputProcessor.*;
 import static common.OutputProcessor.*;
 import static security.Encryptor.*;
@@ -33,7 +34,6 @@ import static transfer.NetworkExchange.*;
 
 public class Client {
 /**
- * <code>Selective</code> mode is used to install package (select dependencies that are not installed)<br>
  * <code>Local</code> mode is used to collect all available local dependencies<br>
  * <code>Complete</code> mode is used to complete all dependencies whereas installed or not
  */
@@ -60,10 +60,34 @@ public enum ResolutionMode {
       }
 }
 
-public final int LATEST_VERSION = 0;
-public final int OLDEST_VERSION = -1;
+private enum UpdateMode {
+      Release, Version;
+      public static final int LATEST = 0;
+}
+
+private enum DowngradeMode {
+      Highest, Lowest, Level;
+      private int level;
+
+      static {
+	    Highest.level = 1; //not the zero
+	    Lowest.level = -1;
+	    Level.level = 1;
+      }
+
+      public void setLevel(int level) {
+	    if (this == Level) {
+		  level = Math.max(-1, level);
+		  this.level = Math.min(level, 10);
+	    }
+      }
+
+      public int level() {
+	    return level;
+      }
+}
+
 Logger logger = LogManager.getLogger(Client.class);
-private final String serverUri;
 private final int port;
 private Thread listenThread;
 private Thread userThread;
@@ -74,8 +98,7 @@ private OutputProcessor output;
 private Encryptor.Encryption encryption = Encryption.Des;
 private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
 
-public Client(int port, String domain) throws ConfigFormatException {
-      this.serverUri = domain;
+public Client(int port) throws ConfigFormatException {
       this.port = port;
       input = new InputProcessor();
       output = new OutputProcessor();
@@ -121,15 +144,43 @@ private void dispatchInputGroup(@NotNull InputGroup group) {
       }
 }
 
-private ClientService defaultService() throws ServerAccessException {
-      ClientService service = new ClientService(serverUri, port);
+private UrlInfo toUrlInfo(RepositoryInfo info) {
+      UrlInfo[] mirrors = new UrlInfo[0];
+      if (info.getMirrors() != null) {
+	    String[] urls = info.getMirrors();
+	    mirrors = Arrays.stream(urls).map(url -> UrlInfo.valueOf(url, port)).toArray(UrlInfo[]::new);
+      }
+      return new UrlInfo(info.getBaseUrl(), port, mirrors);
+}
+
+private MultiplexService repositoryService() throws ServerAccessException {
+      List<RepositoryInfo> list = storage.getRepositoryAll();
+      List<UrlInfo> urls = list.stream().map(this::toUrlInfo).collect(Collectors.toList());
+      MultiplexService service = new MultiplexService(urls);
       service.setExceptionHandler(this::defaultErrorHandler);
       return service;
 }
 
+private SimplexService packageService(Integer packageId) throws ServerAccessException {
+      Optional<RepositoryInfo> info = storage.getRepository(packageId);
+      SimplexService service;
+      if (info.isPresent()) {
+	    service = new SimplexService(toUrlInfo(info.get()));
+	    service.setExceptionHandler(this::defaultErrorHandler);
+      } else {
+	    throw new ServerAccessException("The package id is doesn't match to any local repositories");
+      }
+      return service;
+}
+
+private SimplexService urlService(String repoUrl) throws ServerAccessException {
+      SimplexService service = new SimplexService(UrlInfo.valueOf(repoUrl, port));
+      service.setExceptionHandler(this::defaultErrorHandler);
+      return service;
+}
 
 //Multithreading intrinsic)
-private void dispatchService(ClientService service) {
+private void dispatchService(SimplexService service) {
       service.run();
 }
 
@@ -137,31 +188,7 @@ private void dispatchService(ClientService service) {
 private void dispatchTask(Runnable task) {
       task.run();
 }
-private enum UpdateMode {Release, Version;
-	public static int LATEST = 0;
-}
 
-private enum DowngradeMode {
-      Highest, Lowest, Level;
-      private int level;
-
-      static {
-	    Highest.level = 1; //not the zero
-	    Lowest.level = -1;
-	    Level.level = 1;
-      }
-
-      public void setLevel(int level) {
-	    if (this == Level) {
-		  level = Math.max(-1, level);
-		  this.level = Math.min(level, 10);
-	    }
-      }
-
-      public int level() {
-	    return level;
-      }
-}
 private void onUpdateCommand(ParameterMap params) {
       List<InputParameter> raw = params.get(ParameterType.Raw);
       List<InputParameter> verbose = params.get(ParameterType.Verbose);
@@ -205,18 +232,19 @@ private void onDowngradeCommand(ParameterMap params) {
 	    throw new IllegalStateException("The package is not specified");
       }
 }
+
 private void downgradePackageByMode(String name, @NotNull DowngradeMode mode) {
       InstallationState state = storage.getPackageState(name);
       try (ModifierSession session = storage.initSession(ModifierSession.class)) {
 	    if (state.isRemovable()) {
 		  final VersionPredicate predicate = this::changeVersion; //impossible to restore old release -> UB
-		  final VersionFunction function = (id, dto) -> getVersionByLevel(id, mode.level(), dto);
+		  final VersionFunction function = (id, dto) -> getVersionByLevel(id, mode.level());
 		  changeInstalledPackage(session, name, predicate, function);
 	    } else {
 		  output.sendError("", "The package cannot be changed");
 	    }
       } catch (PackageIntegrityException | ConfigurationException e) {
-      	output.sendError("Configuration error", e.getMessage());
+	    output.sendError("Configuration error", e.getMessage());
       }
 }
 
@@ -225,6 +253,7 @@ private void updatePackageByMode(String name, @NotNull UpdateMode mode) {
       InstallationState state = storage.getPackageState(name);
       try (ModifierSession session = storage.initSession(ModifierSession.class)) {
 	    if (state.isRemovable()) { //it can be removed then it can be updated
+
 		  final VersionPredicate predicate;
 		  final VersionFunction function;
 		  predicate = switch (mode) {
@@ -233,7 +262,7 @@ private void updatePackageByMode(String name, @NotNull UpdateMode mode) {
 		  };
 		  function = switch (mode) {
 			case Release -> this::getLatestRelease;
-			case Version -> (id, dto) -> getVersionByLevel(id, UpdateMode.LATEST, dto);
+			case Version -> (id, dto) -> getVersionByLevel(id, UpdateMode.LATEST);
 		  };
 		  changeInstalledPackage(session, name, predicate, function);
 	    } else {
@@ -330,42 +359,28 @@ private void installAdvanced(ModifierSession parent, Integer id, FullPackageInfo
       }
 }
 
-private Optional<VersionInfoDTO>  getVersionByLevel(Integer id, int level, VersionInfoDTO local) {
+private Optional<VersionInfoDTO> getVersionByLevel(Integer packageId, int level) {
       Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
-      try {
-	    ClientService service = defaultService();
+      try (NetworkService service = packageService(packageId)) {
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.INT_FORMAT);
-	    VersionRequest request = new VersionRequest(id, level);
+	    VersionRequest request = new VersionRequest(packageId, level);
 	    packet.setPayload(request.stringify());
-	    service.setRequest(packet).setResponseHandler((response, socket) -> {
-		  onVersionResponse(wrapper, response);
-	    });
+	    service.setRequest(packet).setResponseHandler((NetworkPacket response) -> onVersionResponse(wrapper, response));
 	    service.run();
-      } catch (ServerAccessException ignored) {
+      } catch (Exception ignored) {
       }
       return Optional.ofNullable(wrapper.get());
 }
 
-private Optional<VersionInfoDTO> getOldestVersion(Integer id, VersionInfoDTO local) {
-      return getVersionByLevel(id, OLDEST_VERSION, local);
-}
-
-private Optional<VersionInfoDTO> getLatestVersion(Integer id, VersionInfoDTO local) {
-      return getVersionByLevel(id, UpdateMode.LATEST, local);
-}
-
 private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO local) {
       Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
-      try {
-	    ClientService service = defaultService();
+      try (NetworkService service = packageService(id)) {
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
 	    VersionRequest request = new VersionRequest(id, local.label());
 	    packet.setPayload(request.stringify());
-	    service.setRequest(packet).setResponseHandler((response, socket) -> {
-		  onVersionResponse(wrapper, response);
-	    });
+	    service.setRequest(packet).setResponseHandler((NetworkPacket response) -> onVersionResponse(wrapper, response));
 	    service.run();
-      } catch (ServerAccessException ignored) {
+      } catch (Exception ignored) {
       }
       return Optional.ofNullable(wrapper.get());
 }
@@ -387,21 +402,20 @@ private void onPublishCommand(ParameterMap params) {
 
 }
 
-private Optional<Integer> getAuthorId(Author author) {
+private Optional<Integer> getAuthorId(Publisher publisher, Author author) {
       if (author.token().length() < Author.PREF_TOKEN_LENGTH) {
 	    output.sendError("Authentication error", "The token is too small");
       }
-//      Author author = new Author(publisher.author, publisher.email, token);
       Wrapper<Integer> id = new Wrapper<>();
-      try {
-	    ClientService service = defaultService();
+      try (NetworkService service = urlService(publisher.origin)) { //todo: add mirror checking
 	    NetworkPacket packet = new NetworkPacket(RequestType.Authorize, RequestCode.STR_FORMAT);
 	    packet.setPayload(author.stringify());
-	    service.setRequest(packet).setExceptionHandler(this::handleAuthException)
-		.setResponseHandler((p, s) -> id.set(onAuthorizeResponse(p, s)));
+	    service.setRequest(packet).setExceptionHandler(this::handleAuthException);
+	    service.setResponseHandler((NetworkPacket p) -> id.set(onAuthorizeResponse(p)));
 	    service.run();
-      } catch (IOException e) {
+      } catch (ServerAccessException e) {
 	    output.sendError("Network error", "Server doesn't response");
+      } catch (Exception ignored) {
       }
       return Optional.ofNullable(id.get());
 }
@@ -416,7 +430,7 @@ private void handleAuthException(Exception e) {
       }
 }
 
-private @NotNull Integer onAuthorizeResponse(NetworkPacket response, Socket socket) throws ServerAccessException {
+private @NotNull Integer onAuthorizeResponse(NetworkPacket response) throws ServerAccessException {
       int result;
       if (response.type(ResponseType.class) == ResponseType.Approve && response.payloadSize() == 4) {
 	    result = ByteBuffer.wrap(response.data()).getInt();
@@ -440,7 +454,7 @@ private void publishPackage(@NotNull String entityPath) {
       } else {
 	    author = storage.getSavedAuthor(publisher.author).get();
       }
-      Optional<Integer> authorId = getAuthorId(author);
+      Optional<Integer> authorId = getAuthorId(publisher, author); //authorId is temporary value
       if (authorId.isPresent() && storage.getSavedAuthor(author.name()).isEmpty()) {
 	    var response = output.sendQuestion("Remember publisher?", QuestionType.YesNo);
 	    if (response.value(Boolean.class)) {
@@ -453,7 +467,7 @@ private void publishPackage(@NotNull String entityPath) {
       if (authorId.isEmpty()) {
 	    return; // the last method cannot be failed
       }
-      Optional<Integer> packageId = getPackageId(publisher.name);
+      Optional<Integer> packageId = getPackageIdByUrl(publisher.name, publisher.origin);
       if (packageId.isEmpty()) {
 	    output.sendMessage("", "Attempt to publish common package info");
 	    packageId = authorId.flatMap(id -> publishPackageHat(id, publisher));
@@ -462,7 +476,7 @@ private void publishPackage(@NotNull String entityPath) {
 	    try (FileInputStream payloadStream = new FileInputStream(Path.of(publisher.exePath).toFile())) {
 		  Optional<PublishInstanceDTO> dto = storage.collectPublishInstance(packageId.get(), publisher);
 		  if (dto.isPresent()) {
-			publishPayload(authorId.get(), dto.get(), payloadStream);
+			publishPayload(publisher.origin, authorId.get(), dto.get(), payloadStream);
 			output.sendMessage("", "Success");
 		  } else {
 			output.sendError("Broken dependencies", "PUM cannot resolve mentioned dependencies");
@@ -477,39 +491,35 @@ private void publishPackage(@NotNull String entityPath) {
 
 private Optional<Integer> publishPackageHat(Integer authorId, Publisher entity) {
       Wrapper<Integer> response = new Wrapper<>();//the default value is null
-      try {
-	    ClientService service = defaultService();
-	    var packet = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
+      try (NetworkService service = urlService(entity.origin)) {
 	    PublishInfoDTO dto = extractPublishHat(entity);
+	    var packet = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
 	    var request = new PublishInfoRequest(authorId, dto);
 	    packet.setPayload(request.stringify());
 	    service.setRequest(packet)
-		.setResponseHandler((r, s) -> response.set(onPublishResponse(r, s)))
+		.setResponseHandler((NetworkPacket p) -> response.set(onPublishResponse(p)))
 		.setExceptionHandler(this::onPublishException);
 	    service.run();
-      } catch (ServerAccessException e) {
+      } catch (Exception e) {
 	    output.sendError("Network error", e.getMessage());
       }
       return Optional.ofNullable(response.get());
 }
 
-private Optional<Integer> publishPayload(Integer authorId, PublishInstanceDTO dto, FileInputStream fileStream) {
+private Optional<Integer> publishPayload(String repoUrl, Integer authorId, PublishInstanceDTO dto, FileInputStream fileStream) {
       Wrapper<Integer> version = new Wrapper<>();
-      ClientService service;
-      try {
-	    service = defaultService();
-      } catch (ServerAccessException e) {
+      try (NetworkService service = urlService(repoUrl)) {
+	    var packet = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
+	    var request = new PublishInstanceRequest(authorId, dto);
+	    packet.setPayload(request.stringify());
+	    service.setRequest(packet)
+		.setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
+		.setResponseHandler((NetworkPacket p) -> version.set(onPublishResponse(p)))
+		.setExceptionHandler(this::onPublishException);
+	    service.run();
+      } catch (Exception e) {
 	    output.sendError("Network error", e.getMessage());
-	    return Optional.empty();
       }
-      var packet = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
-      var request = new PublishInstanceRequest(authorId, dto);
-      packet.setPayload(request.stringify());
-      service.setRequest(packet)
-	  .setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
-	  .setResponseHandler((r, s) -> version.set(onPublishResponse(r, s)))
-	  .setExceptionHandler(this::onPublishException);
-      service.run();
       return Optional.ofNullable(version.get());
 }
 
@@ -523,7 +533,7 @@ private void writePayload(FileInputStream payloadStream, OutputStream socketStre
 
 //each time on publish request server return Integer value
 //PackageId or VersionId
-private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response, Socket socket) {
+private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response) {
       Integer result = null;
       boolean approved = (response.type(ResponseType.class).equals(ResponseType.Approve));
       if (approved) {
@@ -626,14 +636,12 @@ private void onListCommand(ParameterMap params) throws IOException {
 }
 
 private void showPackagesAll() {
-      try {
-	    ClientService service = defaultService();
+      try (NetworkService service = repositoryService()) {
 	    var request = new NetworkPacket(RequestType.GetAll, RequestCode.NO_CODE);
-	    service.setRequest(request)
-		.setResponseHandler(this::onListAllResponse);
+	    service.setRequest(request).setResponseHandler(this::onListAllResponse);
 	    service.run();
-      } catch (ServerAccessException e) {
-	    output.sendError("Network error", "Server is busy");
+      } catch (Exception e) {
+	    output.sendError("Network error", e.getMessage());
       }
 }
 
@@ -653,11 +661,11 @@ private void showPackagesLocally(boolean isVerbose) {
       }
 }
 
-private void onListAllResponse(NetworkPacket response, Socket socket) throws IOException {
+private void onListAllResponse(NetworkPacket response) throws IOException {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No payload to print");
       String jsonInfo = response.stringData();
-      ShortPackageInfoDTO[] packages = new Gson().fromJson(jsonInfo, ShortPackageInfoDTO[].class);
+      ShortPackageInfoDTO[] packages = fromJson(jsonInfo, ShortPackageInfoDTO[].class);
       System.out.format("Available packages:\n");
       for (ShortPackageInfoDTO info : packages) {
 	    printShortInfo(info);
@@ -754,13 +762,13 @@ private void installAppPackage(String packageName) {
       Optional<Integer> packageId = Optional.empty();
       if (storage.getPackageState(packageName) == InstallationState.Cached) {
 	    packageId = storage.getCachedInfo(packageName)
-			    .map(ShortPackageInfoDTO::id);
+			    .map(CachedInfo::id);
       }
       if (packageId.isEmpty())
-	    packageId = getPackageId(packageName);
+	    packageId = getPackageIdByDefault(packageName);
       Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, UpdateMode.LATEST));
-      try (InstallerSession session = storage.initSession(InstallerSession.class)) {
-	    if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
+      if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
+	    try (InstallerSession session = storage.initSession(InstallerSession.class)) {
 		  FullPackageInfoDTO dto = fullInfo.get();
 		  ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
@@ -769,16 +777,16 @@ private void installAppPackage(String packageName) {
 		  } else {
 			output.sendMessage("", "Installation is aborted by user");
 		  }
-	    } else {
-		  output.sendMessage("", "Application is not found");
+	    } catch (PackageIntegrityException e) {
+		  logger.warn("Broken dependencies: " + e.getMessage());
+		  output.sendError("Broken dependencies", e.getMessage());
+	    } catch (ConfigurationException e) {
+		  output.sendError("common.Configuration error", "Impossible to start installation");
+	    } catch (PackageAssembly.VerificationException e) {
+		  output.sendMessage("Verification error", e.getMessage());
 	    }
-      } catch (PackageIntegrityException e) {
-	    logger.warn("Broken dependencies: " + e.getMessage());
-	    output.sendError("Broken dependencies", e.getMessage());
-      } catch (ConfigurationException e) {
-	    output.sendError("common.Configuration error", "Impossible to start installation");
-      } catch (PackageAssembly.VerificationException e) {
-	    output.sendMessage("Verification error", e.getMessage());
+      } else {
+	    output.sendMessage("", "Application is not found");
       }
 }
 
@@ -791,23 +799,21 @@ private boolean isApplication(FullPackageInfoDTO dto) {
  */
 private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption encryption) {
       Wrapper<byte[]> payload = new Wrapper<>();
-      try {
+      try (NetworkService service = packageService(id)) {
 	    var packet = new NetworkPacket(RequestType.GetPayload,
 		RequestCode.STR_FORMAT | RequestCode.TRANSFER_FORMAT);
 	    var request = new PayloadRequest(id, label, archive);
 	    request.setEncryption(encryption);
 	    packet.setPayload(request.stringify());
-	    ClientService service = defaultService();
-	    service.setRequest(packet)
-		.setResponseHandler((r, s) -> payload.set(onRawAssemblyResponse(r, s)));
+	    service.setRequest(packet).setResponseHandler((NetworkPacket p) -> payload.set(onRawAssemblyResponse(p)));
 	    service.run();
-      } catch (ServerAccessException e) {
-	    output.sendError("", e.getMessage());
+      } catch (Exception e) {
+	    output.sendError("Network packet", e.getMessage());
       }
       return Optional.ofNullable(payload.get());
 }
 
-private byte[] onRawAssemblyResponse(NetworkPacket response, Socket socket) {
+private byte[] onRawAssemblyResponse(NetworkPacket response) {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No valid package exists");
       return response.data();
@@ -844,31 +850,66 @@ private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO 
       return dependencyMap;
 }
 
-private Optional<Integer> getPackageId(String packageName) {
-      Wrapper<Integer> id = new Wrapper<>();
-      try {
-	    var packet = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
-	    var request = new IdRequest(packageName);
-	    packet.setPayload(request.stringify());
-	    ClientService service = defaultService();
-	    service.setRequest(packet)
-		.setResponseHandler((p, s) -> id.set(onPackageIdResponse(p, s)));
-	    service.run();
-      } catch (ServerAccessException e) {
-	    output.sendError("", e.getMessage());
+private Optional<Integer> getPackageIdByUrl(String packageName, String url) {
+      Optional<Integer> packageId = Optional.empty();
+      try (NetworkService service = urlService(url)) {
+	    packageId = getPackageId(service, packageName);
+	    packageId.ifPresent(id -> storage.updateCache(id, packageName));
+//	    service.close(); to prevent exception if getPackageId is didn't close
+      } catch (Exception ignored) {
       }
+      return packageId;
+}
+
+/**
+ * This function is a bit tricky. It uses <code.>storage</code.>instance to save request result
+ * */
+private Optional<Integer> getPackageIdByDefault(String packageName) {
+      Optional<Integer> packageId = Optional.empty();
+      try (MultiplexService service = repositoryService()) {
+	    packageId = getPackageId(service, packageName);
+//	    service.close(); to prevent exception if getPackageId is didn't close
+	    Optional<UrlInfo> lastInfo = service.lastInfo();
+	    packageId.ifPresent(id -> {
+		  storage.updateCache(id, packageName);
+		  lastInfo.ifPresent(urlInfo -> storage.setRepoMapping(id, urlInfo.url()));
+	    });
+      } catch (Exception ignored) {
+      }
+      return packageId;
+}
+
+private Optional<Integer> getPackageId(NetworkService service, String packageName) {
+      Wrapper<Integer> id = new Wrapper<>();
+      var packet = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
+      var request = new IdRequest(packageName);
+      packet.setPayload(request.stringify());
+      service.setRequest(packet)
+	  .setResponseHandler((NetworkPacket p) -> {
+		id.set(onPackageIdResponse(p));
+		if (!id.isEmpty()) {
+		      try {
+			    service.close(); //attempt to close service as redundant functionality
+			    		     //because each repository should support global name uniqueness
+		      } catch (Exception e) {
+			    id.set(null);
+			    logger.warn(e.getMessage());
+		      }
+		}
+	  }).run();
       return Optional.ofNullable(id.get());
 }
 
-private int onPackageIdResponse(NetworkPacket response, Socket socket) {
+private @Nullable Integer onPackageIdResponse(NetworkPacket response) {
       Integer result = null;
       if (response.type() == ResponseType.Approve) {
 	    ByteBuffer buffer = ByteBuffer.wrap(response.data());
-	    if (buffer.capacity() == 4)
+	    if (buffer.capacity() == 4) {
 		  result = buffer.getInt();
+	    } else {
+		  throw new IllegalStateException("The server send illegal response");
+	    }
       }
-      if (result == null)
-	    throw new IllegalArgumentException("Server declines");
       return result;
 }
 
@@ -876,38 +917,38 @@ private Optional<FullPackageInfoDTO> getFullInfo(Integer id, String label) {
       var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.STR_FORMAT);
       var request = new InfoRequest(id, label);
       packet.setPayload(request.stringify());
-      return getFullInfo(packet);
+      return getFullInfo(id, packet);
 }
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, Integer offset) {
       var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
       var request = new InfoRequest(id, offset);
       packet.setPayload(request.stringify());
-      return getFullInfo(packet);
+      return getFullInfo(id, packet);
 }
 
-private String onPackageInfoResponse(NetworkPacket response, Socket socket) {
+private String onPackageInfoResponse(NetworkPacket response) {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No valid package info");
       return response.stringData();
 }
 
-private Optional<FullPackageInfoDTO> getFullInfo(NetworkPacket request) {
+private Optional<FullPackageInfoDTO> getFullInfo(Integer id, NetworkPacket request) {
       FullPackageInfoDTO dto = null;
-      try {
-	    ClientService service = defaultService();
+      try (NetworkService service = packageService(id)) { //single thread ?
 	    Wrapper<String> info = new Wrapper<>();
-	    service.setRequest(request)
-		.setResponseHandler((r, s) -> info.set(onPackageInfoResponse(r, s)));
+	    service.setRequest(request).setResponseHandler((NetworkPacket p) -> info.set(onPackageInfoResponse(p)));
 	    service.run();
 	    var stringInfo = Optional.ofNullable(info.get());
 	    if (stringInfo.isPresent()) {
-		  dto = new Gson().fromJson(stringInfo.get(), FullPackageInfoDTO.class);
+		  dto = PackageStorage.fromJson(stringInfo.get(), FullPackageInfoDTO.class);
 	    }
 	    if (dto != null && dto.aliases == null)
 		  dto.aliases = new String[0];
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
+      } catch (Exception e) {
+	    output.sendError("Unknown error", e.getMessage());
       }
       return Optional.ofNullable(dto);
 }
@@ -919,7 +960,7 @@ private void defaultErrorHandler(Exception e) {
 
 public static void main(String[] args) {
       try {
-	    Client client = new Client(3344, "self.ip");
+	    Client client = new Client(3344);
 	    client.start();
       } catch (ConfigFormatException e) {
 	    System.out.println("Some files are not valid or absent. Impossible to start client"); //probably replace exception with recreation of program

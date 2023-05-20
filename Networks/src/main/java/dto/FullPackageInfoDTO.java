@@ -1,4 +1,4 @@
-package packages;
+package dto;
 
 import java.util.Optional;
 

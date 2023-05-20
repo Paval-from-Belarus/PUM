@@ -53,6 +53,7 @@ public static final int INT_FORMAT = 1;
 public static final int STR_FORMAT = 2;
 public static final int TAIL_FORMAT = 4; //after common message (in NetworkPackage) also binary data is available
 public static final int TRANSFER_FORMAT = 8;
+public static final int ENCRYPTED_PAYLOAD = 16; //notify that data in packet is encrypted
 }
 public static class ResponseCode {
       public static final int NO_PAYLOAD = 1;

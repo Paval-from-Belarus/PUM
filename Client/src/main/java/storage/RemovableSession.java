@@ -1,7 +1,7 @@
 package storage;
 
 import database.InstanceInfo;
-import packages.FullPackageInfoDTO;
+import dto.FullPackageInfoDTO;
 import storage.JournalTransaction.Type;
 
 import java.io.IOException;

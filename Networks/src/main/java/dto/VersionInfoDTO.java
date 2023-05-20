@@ -1,4 +1,4 @@
-package packages;
+package dto;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -11,17 +11,15 @@ import java.util.Optional;
 
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
-@Accessors(prefix = "", makeFinal = true, fluent = true)
-public class PublishInfoDTO extends AbstractDTO{
+@Accessors(prefix="", makeFinal = true, fluent = true)
+public class VersionInfoDTO extends AbstractDTO{
 @NotNull
 @Getter
-private String name;
+private Integer versionId;
 @NotNull
 @Getter
-private String[] aliases;
-@Getter
-private String payloadType;
-public static Optional<PublishInfoDTO> valueOf(String content) {
-      return valueOf(PublishInfoDTO.class, content);
+private String label;
+public static Optional<VersionInfoDTO> valueOf(String content) {
+      return valueOf(VersionInfoDTO.class, content);
 }
 }

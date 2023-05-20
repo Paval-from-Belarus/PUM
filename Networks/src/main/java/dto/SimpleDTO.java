@@ -1,6 +1,4 @@
-package packages;
-
-import com.google.gson.Gson;
+package dto;
 
 public interface SimpleDTO{
       String stringify();

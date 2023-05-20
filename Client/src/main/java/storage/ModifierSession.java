@@ -1,9 +1,9 @@
 package storage;
 
 import database.InstanceInfo;
-import packages.FullPackageInfoDTO;
+import dto.FullPackageInfoDTO;
 import transfer.PackageAssembly;
-import packages.VersionInfoDTO;
+import dto.VersionInfoDTO;
 
 import java.io.IOException;
 import java.nio.file.Files;

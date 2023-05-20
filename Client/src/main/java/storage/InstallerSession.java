@@ -2,7 +2,7 @@ package storage;
 
 import database.InstanceInfo;
 import org.jetbrains.annotations.NotNull;
-import packages.FullPackageInfoDTO;
+import dto.FullPackageInfoDTO;
 import transfer.PackageAssembly;
 import security.Encryptor;
 

@@ -1,60 +1,79 @@
-package common;
+package transfer;
 
-import transfer.NetworkPacket;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 import static transfer.NetworkPacket.BytesPerCommand;
 
 
-public class ClientService implements Runnable {
-
-public static class ServerAccessException extends IOException {
-      public ServerAccessException(String msg) {
-	    super(msg);
-      }
-}
-
-private static final int DEFAULT_SERVER_TIMEOUT = 1000_000;
+public class SimplexService implements NetworkService {
 private final Socket socket;
+private final UrlInfo url;
 private NetworkPacket request;
 private Consumer<Exception> errorHandler = (e) -> {
 };
-private ResponseHandler responseHandler = (n, s) -> {
+private ResponseHandler responseHandler = (p) -> {
 };
 private TailWriter tailWriter = (s) -> {
 };
+private static @NotNull Socket getFirstSocket(UrlInfo info) throws IOException {
+      List<UrlInfo> urls = new ArrayList<>(info.mirrors().length + 1);
+      urls.add(info);
+      Socket socket = null;
+      urls.addAll(Arrays.asList(info.mirrors()));
+      for (var url : urls) {
+	    try {
+		  socket = new Socket(url.url(), url.port());
+	    } catch (ConnectException ignored) {
 
-ClientService(String uri, int port) throws ServerAccessException {
-      try {
-	    socket = new Socket(uri, port);
-	    socket.setSoTimeout(DEFAULT_SERVER_TIMEOUT);
-      } catch (UnknownHostException e) {
-	    throw new ServerAccessException("Server is too busy");
-      } catch (IOException e) {
-	    throw new ServerAccessException("Unknown system error");
+	    }
       }
+      if (socket == null)
+	    throw new ConnectException("Server doesn't response");
+      return socket;
+
 }
-public ClientService setTailWriter(TailWriter tailWriter) {
+public SimplexService(UrlInfo info) throws ServerAccessException {
+      Socket socket;
+      try {
+	    socket = getFirstSocket(info);
+	    socket.setSoTimeout(DEFAULT_SERVER_TIMEOUT);
+      } catch (IOException e) {
+	    throw new ServerAccessException(e);
+      }
+      this.socket = socket;
+      this.url = info;
+}
+public UrlInfo getUrlInfo(){
+      return url;
+}
+public SimplexService setTailWriter(TailWriter tailWriter) {
       this.tailWriter = tailWriter;
       return this;
 }
-public ClientService setExceptionHandler(Consumer<Exception> handler) {
+public SimplexService setExceptionHandler(Consumer<Exception> handler) {
       this.errorHandler = handler;
       return this;
 }
 
-public ClientService setRequest(NetworkPacket packet) {
+public SimplexService setRequest(NetworkPacket packet) {
       assert packet.direction() == NetworkPacket.PacketDirection.Request;
       this.request = packet;
       return this;
 }
 
-public ClientService setResponseHandler(ResponseHandler handler) {
+public SimplexService setResponseHandler(ResponseHandler handler) {
       responseHandler = handler;
       return this;
 }
@@ -84,9 +103,13 @@ public void run() {
 	    do {
 		  packet = getResponse(input);
 	    } while (packet.isEmpty());
-	    responseHandler.accept(packet.get(), socket);
+	    responseHandler.accept(packet.get());
       } catch (Exception e) {
 	    errorHandler.accept(e);
       }
+}
+@Override
+public void close() throws Exception {
+	socket.close();
 }
 }

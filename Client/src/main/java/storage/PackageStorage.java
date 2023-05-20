@@ -3,13 +3,14 @@ package storage;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import common.Configuration;
+import database.CachedInfo;
 import database.InstanceInfo;
 import database.PackageInfo;
+import database.RepositoryInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import packages.*;
-import requests.PublishInfoRequest;
+import dto.*;
 import security.Author;
 import transfer.PackageAssembly;
 
@@ -85,6 +86,7 @@ public static class PackageIntegrityException extends Exception {
       public PackageIntegrityException(String msg) {
 	    super(msg);
       }
+
       public PackageIntegrityException(Throwable t) {
 	    super(t);
       }
@@ -104,9 +106,21 @@ public PackageStorage(Configuration config) throws IOException {
       installed =
 	  InstanceInfo.valueOf(content).parallelStream()
 	      .collect(Collectors.toMap(InstanceInfo::getId, info -> info));
+      cachedRepositories = new HashMap<>();
+      initRepositories();
       initPublishers();
 
 }
+
+private void initRepositories() throws IOException {
+      String content = Files.readString(Path.of(config.repositories));
+      RepositoryInfo[] repositories = fromJson(content, RepositoryInfo[].class);
+      if (repositories == null)
+	    repositories = new RepositoryInfo[0];
+      this.repositories = new ArrayList<>();
+      this.repositories.addAll(Arrays.asList(repositories));
+}
+
 private void initPublishers() throws IOException {
       localPublishers = new HashMap<>();
       String content = Files.readString(Path.of(config.publishers));
@@ -117,12 +131,12 @@ private void initPublishers() throws IOException {
       }
       if (publishers.length != localPublishers.size()) {
 	    StringBuilder strText = new StringBuilder();
-	     localPublishers.values().forEach(author -> strText.append(author.stringify()));
-	     Files.writeString(Path.of(config.publishers), strText.toString());
+	    localPublishers.values().forEach(author -> strText.append(author.stringify()));
+	    Files.writeString(Path.of(config.publishers), strText.toString());
       }
 }
 
-private List<ShortPackageInfoDTO> cachedInfo;
+private List<CachedInfo> cachedInfo;
 private List<InstanceInfo> brokenPackages; //the list of packages that cannot be resolved
 private OperationStatus lastStatus;
 
@@ -135,22 +149,62 @@ public Optional<Integer> mapPackage(String name) {
       return instance.map(InstanceInfo::getId);
 }
 
-public void replaceCacheInfo(ShortPackageInfoDTO[] shortInfo) throws ConfigurationException {
-      if (cachedInfo != null) {
-	    cachedInfo.clear();
-      } else {
-	    cachedInfo = new ArrayList<>();
+/**
+ * @param id ― local Package name
+ */
+public Optional<RepositoryInfo> getRepository(Integer id) {
+      assert repositories != null && cachedRepositories != null;
+      Optional<RepositoryInfo> repoInfo = Optional.ofNullable(cachedRepositories.get(id));
+      if (repoInfo.isEmpty()) {
+	    Optional<String> repoUrl = getPackageInfo(id).map(p -> p.repoUrl);
+	    if (repoUrl.isPresent()) {
+		  String url = repoUrl.get();
+		  repoInfo = repositories.stream()
+				 .filter(info -> info.getBaseUrl().equalsIgnoreCase(url))
+				 .findAny();
+	    }
+	    repoInfo.ifPresent(repositoryInfo -> cachedRepositories.put(id, repositoryInfo));
       }
-      cachedInfo.addAll(Arrays.asList(shortInfo));
-      final Path cachePath = getCachePath();
-      String content = toJson(cachedInfo.toArray(ShortPackageInfoDTO[]::new));
-      try {
-	    Files.writeString(cachePath, content);
-      } catch (IOException e) {
-	    throw new ConfigurationException("Invalid cache replacing");
-      }
+      return repoInfo;
 }
 
+Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id) {
+      return installed.values().stream()
+		 .filter(info -> info.getId().equals(id))
+		 .findAny();
+}
+
+Optional<PackageInfo> getPackageInfo(Integer id) {
+      var instance = getInstanceInfo(id);
+      return instance.flatMap(this::getPackageInfo);
+}
+
+public List<RepositoryInfo> getRepositoryAll() {
+      return repositories;
+}
+public void setRepoMapping(Integer packageId, String repoUrl) {
+      assert repositories != null && cachedRepositories != null;
+      Optional<RepositoryInfo> repoInfo = repositories.stream().filter(repo -> {
+	    boolean result =  repo.getName().equals(repoUrl);
+	    if (!result && repo.getMirrors() != null) {
+		  result = Arrays.asList(repo.getMirrors()).contains(repoUrl);
+	    }
+	    return result;
+      }).findAny();
+      repoInfo.ifPresent(repo -> cachedRepositories.put(packageId, repo));
+}
+public void updateCache(Integer id, String name, String... aliases) {
+      if (cachedInfo == null) {
+	    cachedInfo = new ArrayList<>();
+      }
+      CachedInfo cached = new CachedInfo(id, name, aliases);
+      int index = cachedInfo.indexOf(cached);
+      if (index != -1) {
+	    cachedInfo.set(index, cached);
+      } else {
+	    cachedInfo.add(cached);
+      }
+}
 public void clearCache() throws ConfigurationException {
       if (cachedInfo != null)
 	    cachedInfo.clear();
@@ -191,7 +245,7 @@ public InstallationState getPackageState(@NotNull Integer id, @NotNull String ve
 		  state = getInstanceState(instance.get());
 	    }
       } else {
-	    var cached = getCachedInfo(id, version);
+	    var cached = getCachedInfo(id);
 	    if (cached.isPresent())
 		  state = InstallationState.Cached;
       }
@@ -269,9 +323,11 @@ public Optional<FullPackageInfoDTO> getFullInfo(String name) {
       var localInfo = getPackageInfo(name);
       return localInfo.flatMap(this::toExternalFormat);
 }
+
 public Optional<Integer> getPackageId(String name) {
       return getInstanceInfo(name).map(InstanceInfo::getId);
 }
+
 public Optional<VersionInfoDTO> getVersionInfo(String name) {
       var dto = getFullInfo(name);
       var instance = getInstanceInfo(name);
@@ -281,9 +337,11 @@ public Optional<VersionInfoDTO> getVersionInfo(String name) {
       }
       return version;
 }
+
 private VersionInfoDTO getVersionInfo(FullPackageInfoDTO dto, InstanceInfo instance) {
-	return new VersionInfoDTO(instance.getId(), dto.version);
+      return new VersionInfoDTO(instance.getId(), dto.version);
 }
+
 public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
       var info = getPackageInfo(dto.id(), dto.version());
       return info.flatMap(this::toExternalFormat);
@@ -382,20 +440,23 @@ void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOE
 	    throw new PackageIntegrityException("Package is already removed");
       }
 }
+
 public Optional<Author> getSavedAuthor(String authorName) {
       return Optional.ofNullable(localPublishers.get(authorName));
 }
+
 public void remember(Author author) throws IOException {
-        if (!localPublishers.containsKey(author.name())) {
-	      File publishers = Path.of(config.publishers).toFile();
-	      if (!publishers.exists()) {
-		    Files.createFile(publishers.toPath());
-	      }
-	      Files.writeString(publishers.toPath(), author.stringify() + "\n", StandardOpenOption.APPEND);
-	      localPublishers.put(author.name(), author);
-	}
+      if (!localPublishers.containsKey(author.name())) {
+	    File publishers = Path.of(config.publishers).toFile();
+	    if (!publishers.exists()) {
+		  Files.createFile(publishers.toPath());
+	    }
+	    Files.writeString(publishers.toPath(), author.stringify() + "\n", StandardOpenOption.APPEND);
+	    localPublishers.put(author.name(), author);
+      }
 
 }
+
 //each packages also holds info about self in package directory as conf.pum
 //At this moment, in central path stores configaration file
 //The configuration file has <code>Local format</code>
@@ -459,16 +520,16 @@ public @NotNull List<FullPackageInfoDTO> localPackages() {
       return list;
 }
 
-private @NotNull List<ShortPackageInfoDTO> getCachedList() {
+private @NotNull List<CachedInfo> getCachedList() {
       final Path cachePath = getCachePath();
-      List<ShortPackageInfoDTO> cachedInfo;
+      List<CachedInfo> cachedInfo;
       if (this.cachedInfo != null) {
 	    cachedInfo = this.cachedInfo;//already was invoked to memory)
       } else {
 	    cachedInfo = new ArrayList<>();
 	    try {
 		  String content = Files.readString(cachePath);
-		  ShortPackageInfoDTO[] items = fromJson(content, ShortPackageInfoDTO[].class);
+		  CachedInfo[] items = fromJson(content, CachedInfo[].class);
 		  cachedInfo.addAll(Arrays.asList(items));
 		  this.cachedInfo = cachedInfo;
 	    } catch (IOException | JsonSyntaxException ignored) {
@@ -477,19 +538,20 @@ private @NotNull List<ShortPackageInfoDTO> getCachedList() {
       return cachedInfo;
 }
 
-public Optional<ShortPackageInfoDTO> getCachedInfo(@NotNull String name) {
+public Optional<CachedInfo> getCachedInfo(@NotNull String name) {
       var list = getCachedList();
       return list.stream()
-		 .filter(dto -> dto.similar(name))
+		 .filter(info -> info.similar(name))
 		 .findAny();
 }
 
-public Optional<ShortPackageInfoDTO> getCachedInfo(@NotNull Integer id, @NotNull String version) {
+public Optional<CachedInfo> getCachedInfo(@NotNull Integer id) {
       var list = getCachedList();
       return list.stream()
-		 .filter(dto -> dto.id().equals(id) && dto.version().equals(version))
+		 .filter(info -> info.id().equals(id))
 		 .findAny();
 }
+
 
 Optional<PackageInfo> getPackageInfo(@NotNull String name) {
       Optional<InstanceInfo> instance = getInstanceInfo(name);
@@ -589,6 +651,8 @@ private Path getCachePath() {
 private static Configuration config;
 private Map<String, Author> localPublishers;
 private Map<Integer, InstanceInfo> installed;
+private Map<Integer, RepositoryInfo> cachedRepositories;
+private List<RepositoryInfo> repositories;
 private static final Gson gson = new Gson();
 private final String CACHE_FILE_NAME = "pum.cache";
 }

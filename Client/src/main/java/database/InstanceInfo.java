@@ -12,7 +12,7 @@ public enum LinkState {Add, Remove}
 private final static int MIN_LETTERS_PER_INSTANCE = 19;
 private final Integer packageId;
 private final String[] aliases; //the first
-private final String path; //where the
+private final String path; //where the full info is stored
 private int linksCnt;//by default no
 public InstanceInfo(Integer id, String[] aliases, String path) {
       this.packageId = id;

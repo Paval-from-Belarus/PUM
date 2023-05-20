@@ -2,8 +2,7 @@ package requests;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import packages.PublishInfoDTO;
-import transfer.MethodRequest;
+import dto.PublishInfoDTO;
 
 import java.util.List;
 import java.util.Optional;

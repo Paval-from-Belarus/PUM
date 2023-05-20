@@ -1,4 +1,4 @@
-package common;
+package transfer;
 
 
 import transfer.NetworkPacket;
@@ -8,5 +8,5 @@ import java.net.Socket;
 
 @FunctionalInterface
 public interface ResponseHandler {
-	void accept(NetworkPacket response, Socket socket) throws IOException;
+	void accept(NetworkPacket response) throws IOException;
 }

@@ -1,9 +1,7 @@
 package requests;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import transfer.MethodRequest;
 
 import java.util.List;
 import java.util.Optional;

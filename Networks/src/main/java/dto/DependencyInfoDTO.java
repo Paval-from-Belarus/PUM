@@ -1,4 +1,4 @@
-package packages;
+package dto;
 
 import lombok.*;
 import lombok.experimental.Accessors;
