@@ -1,5 +1,7 @@
 package database;
 
+import lombok.AccessLevel;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ private final static int MIN_LETTERS_PER_INSTANCE = 19;
 private final Integer packageId;
 private final String[] aliases; //the first
 private final String path; //where the full info is stored
+@Setter(AccessLevel.PRIVATE)
 private int linksCnt;//by default no
 public InstanceInfo(Integer id, String[] aliases, String path) {
       this.packageId = id;
@@ -89,7 +92,9 @@ public static List<InstanceInfo> valueOf(@NotNull String source) {
 			String[] path = collectParams(parts[2] + "]");
 			String[] links = collectParams(parts[3] + "]");
 			if (links.length == 1 && path.length == 1 && id.length == 1 && aliases.length != 0) {
-			      list.add(new InstanceInfo(Integer.parseInt(id[0]), aliases, path[0]));
+			      var instance = new InstanceInfo(Integer.parseInt(id[0]), aliases, path[0]);
+			      instance.setLinksCnt(Integer.parseInt(links[0]));
+			      list.add(instance);
 			}
 
 		  }

@@ -33,7 +33,7 @@ public enum ResponseType {Approve, Decline}
  * the server response has two values: versionID (handle) and versionLabel (String). By this way, is possible to upgrade each package
  * Convert
  */
-public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, getOptions, Unknown,
+public enum RequestType {GetAll, GetId, GetInfo, GetPayload, GetVersion, GetRepo, Unknown,
       /**
        * Upgrade the network protocol to use symmetric encryption
        * */
@@ -75,6 +75,7 @@ public static class ResponseCode {
       //Errors codes
       public static final int INTERNAL_ERROR = 128;
       public static final int ILLEGAL_REQUEST = 256;
+      public static final int TRY_AGAIN = 512;
 }
 //Common codes
 

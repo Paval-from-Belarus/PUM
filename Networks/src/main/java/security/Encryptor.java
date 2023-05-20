@@ -39,6 +39,9 @@ public enum Encryption {
 		  throw new IllegalArgumentException("Key is not available for None");
 	    }
       }
+      public void releaseKey() {
+	    this.detached = null;
+      }
       public boolean isCompatible(Encryption other) {
 	    return other == None || other == this;
       }

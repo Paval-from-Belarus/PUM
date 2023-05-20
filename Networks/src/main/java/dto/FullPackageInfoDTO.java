@@ -1,5 +1,7 @@
 package dto;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Optional;
 
 //generally, package info is supposed to transfer through network

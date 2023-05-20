@@ -18,9 +18,12 @@ import transfer.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.channels.AcceptPendingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static transfer.SimplexService.*;
@@ -621,7 +624,79 @@ private void removePackage(String name) {
 }
 
 private void onRepositoryCommand(ParameterMap params) {
+      List<RepositoryInfo> repositories = storage.getRepositoryAll();
+      boolean isVerboseMode = params.hasParameter(ParameterType.Verbose, "verbose") ||
+				  params.hasParameter(ParameterType.Shorts, "v");
+      boolean wasChosen = false;
+      if (params.hasParameter(ParameterType.Verbose, "list")) {
+	    wasChosen = true;
+	    printRepository(isVerboseMode);
+      }
+      if (!wasChosen) {
+	    Optional<InputParameter> parameter = params.get(ParameterType.Verbose).stream()
+						     .filter(p -> p.self().equals("add") && !p.value().isEmpty())
+						     .findFirst();
+	    parameter.ifPresent(p -> addRepository(p.value()));
 
+      }
+
+}
+
+private void addRepository(String url) {
+      output.sendMessage("", "Try to add a new repository");
+      Optional<RepoInfoDTO> dto = getRepoInfo(url);
+      if (dto.isPresent()) {
+	    try {
+		  storage.updateRepository(url, dto.get());
+	    } catch (IOException e) {
+		  output.sendError("Local error", "Impossible to save repository");
+	    }
+	    output.sendMessage("Success", "The repo was locally added");
+      } else {
+	    output.sendError("", "Impossible to add the repository by " + url);
+      }
+}
+
+private Optional<RepoInfoDTO> getRepoInfo(String url) {
+      Wrapper<RepoInfoDTO> wrapper = new Wrapper<>();
+      try (NetworkService service = urlService(url)) {
+	    NetworkPacket request = new NetworkPacket(RequestType.GetRepo, RequestCode.NO_CODE);
+	    AtomicBoolean shouldRerun = new AtomicBoolean(false);
+	    service.setRequest(request).setResponseHandler((NetworkPacket p) -> {
+		  if (p.type(ResponseType.class) == ResponseType.Approve) {
+			RepoInfoDTO.valueOf(p.stringData()).ifPresent(wrapper::set);
+		  } else {
+			if (p.containsCode(ResponseCode.TRY_AGAIN)) {
+			      shouldRerun.set(true);
+			}
+		  }
+	    });
+	    service.run();
+	    while (wrapper.isEmpty() && shouldRerun.get()) {
+		  System.out.print(".");
+		  service.run();
+	    }
+	    if (wrapper.isEmpty() && !shouldRerun.get()) {
+		  output.sendError("Server says", "Forbidden");
+	    }
+      } catch (ServerAccessException e) {
+	    output.sendError("Network error", e.getMessage());
+      } catch (Exception e) {
+	    logger.error("GetRepoInfo error: " + e.getMessage());
+      }
+      return Optional.ofNullable(wrapper.get());
+}
+
+private void printRepository(boolean isVerbose) {
+      List<RepositoryInfo> repositories = storage.getRepositoryAll();
+      if (!repositories.isEmpty()) {
+	    if (isVerbose)
+		  repositories.forEach(this::printRepository);
+	    else
+		  repositories.forEach(this::printRepositoryHat);
+      } else {
+	    output.sendMessage("", "No repository is available");
+      }
 }
 
 private void onListCommand(ParameterMap params) throws IOException {
@@ -699,6 +774,18 @@ private void printPackageInfo(@NotNull FullPackageInfoDTO dto) {
 
 }
 
+private void printRepository(RepositoryInfo repoInfo) {
+      String output = String.format("name: %s\nbase-url: %s\nmirrors: %s\nstatus: %s\nlast update: %s\ntimeout: %s\n",
+	  repoInfo.getName(), repoInfo.getBaseUrl(), Arrays.toString(repoInfo.getMirrors()),
+	  repoInfo.getStatus(), repoInfo.getLastUpdate(), repoInfo.getTimeout());
+      System.out.println(output);
+}
+
+private void printRepositoryHat(RepositoryInfo repoInfo) {
+      System.out.printf("%-30s %-40s\n", repoInfo.getName(), repoInfo.getBaseUrl());
+
+}
+
 private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Collection<FullPackageInfoDTO> dependencies) {
       printPackageInfo(info);
       output.sendMessage("The additional dependencies", "");
@@ -714,7 +801,6 @@ private boolean hasUserAgreement(@NotNull FullPackageInfoDTO info, @NotNull Coll
 
 //this method install dependencies according the common conventional rules
 private long storeDependencies(InstallerSession session, Map<Integer, FullPackageInfoDTO> dependencies) throws PackageIntegrityException {
-      //todo: rewrite onto parallel stream or dispatchTask methods
       long downloadSize = 0;
       try {
 	    for (var entry : dependencies.entrySet()) {
@@ -758,6 +844,16 @@ private void startInstallation(InstallerSession session, Integer id, FullPackage
 	    output.sendMessage("Congratulations!", "Installed successfully!");
 }
 
+private void assignDependencies(Integer packageId, FullPackageInfoDTO dto) {
+      Optional<RepositoryInfo> repoInfo = storage.getRepository(packageId);
+      if (repoInfo.isPresent() && dto.dependencies != null) {
+	    String baseUrl = repoInfo.get().getBaseUrl();
+	    for (var dependency : dto.dependencies) {
+		  storage.setRepoMapping(dependency.packageId(), baseUrl);
+	    }
+      }
+}
+
 private void installAppPackage(String packageName) {
       Optional<Integer> packageId = Optional.empty();
       if (storage.getPackageState(packageName) == InstallationState.Cached) {
@@ -770,6 +866,7 @@ private void installAppPackage(String packageName) {
       if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
 	    try (InstallerSession session = storage.initSession(InstallerSession.class)) {
 		  FullPackageInfoDTO dto = fullInfo.get();
+		  assignDependencies(packageId.get(), dto); //add to local storage mapping remote id to database
 		  ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
 		  if (hasUserAgreement(dto, dependencies.values())) {
@@ -854,7 +951,7 @@ private Optional<Integer> getPackageIdByUrl(String packageName, String url) {
       Optional<Integer> packageId = Optional.empty();
       try (NetworkService service = urlService(url)) {
 	    packageId = getPackageId(service, packageName);
-	    packageId.ifPresent(id -> storage.updateCache(id, packageName));
+	    packageId.ifPresent(id -> storage.updateCache(id, packageName, url));
 //	    service.close(); to prevent exception if getPackageId is didn't close
       } catch (Exception ignored) {
       }
@@ -863,7 +960,7 @@ private Optional<Integer> getPackageIdByUrl(String packageName, String url) {
 
 /**
  * This function is a bit tricky. It uses <code.>storage</code.>instance to save request result
- * */
+ */
 private Optional<Integer> getPackageIdByDefault(String packageName) {
       Optional<Integer> packageId = Optional.empty();
       try (MultiplexService service = repositoryService()) {
@@ -875,24 +972,29 @@ private Optional<Integer> getPackageIdByDefault(String packageName) {
 		  lastInfo.ifPresent(urlInfo -> storage.setRepoMapping(id, urlInfo.url()));
 	    });
       } catch (Exception ignored) {
+	    output.sendError("", ignored.getMessage());
       }
       return packageId;
 }
 
 private Optional<Integer> getPackageId(NetworkService service, String packageName) {
-      Wrapper<Integer> id = new Wrapper<>();
+      AtomicReference<Integer> id = new AtomicReference<>(null);
       var packet = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
       var request = new IdRequest(packageName);
       packet.setPayload(request.stringify());
       service.setRequest(packet)
 	  .setResponseHandler((NetworkPacket p) -> {
-		id.set(onPackageIdResponse(p));
-		if (!id.isEmpty()) {
+		Integer responseId = onPackageIdResponse(p);
+		Integer oldValue = null;
+		if (responseId != null) {
+		      oldValue = id.compareAndExchange(null, responseId);
+		}
+		if (responseId != null && oldValue == null) { //the first attempt to change
 		      try {
-			    service.close(); //attempt to close service as redundant functionality
-			    		     //because each repository should support global name uniqueness
+			    service.close();
 		      } catch (Exception e) {
-			    id.set(null);
+			    id.set(null); //attempt to close service as redundant functionality
+			    //because each repository should support global name uniqueness
 			    logger.warn(e.getMessage());
 		      }
 		}
@@ -943,8 +1045,6 @@ private Optional<FullPackageInfoDTO> getFullInfo(Integer id, NetworkPacket reque
 	    if (stringInfo.isPresent()) {
 		  dto = PackageStorage.fromJson(stringInfo.get(), FullPackageInfoDTO.class);
 	    }
-	    if (dto != null && dto.aliases == null)
-		  dto.aliases = new String[0];
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
       } catch (Exception e) {

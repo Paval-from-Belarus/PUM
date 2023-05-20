@@ -48,7 +48,7 @@ public SimplexService(UrlInfo info) throws ServerAccessException {
       Socket socket;
       try {
 	    socket = getFirstSocket(info);
-	    socket.setSoTimeout(DEFAULT_SERVER_TIMEOUT);
+	    socket.setSoTimeout(REQUEST_TIMEOUT);
       } catch (IOException e) {
 	    throw new ServerAccessException(e);
       }

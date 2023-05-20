@@ -47,6 +47,6 @@ List<JournalTransaction> getTransactions(JournalTransaction.Type type) throws IO
 private List<JournalTransaction> transactions = null;
 @Setter(AccessLevel.MODULE) @Getter(AccessLevel.PROTECTED)
 private Path journalPath;
-@Setter @Getter
+@Setter(AccessLevel.PACKAGE) @Getter(AccessLevel.PACKAGE)
 private boolean isManaged;
 }

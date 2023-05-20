@@ -1,17 +1,15 @@
 package transfer;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Vector;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public class MultiplexService implements NetworkService {
-
 public MultiplexService(List<UrlInfo> list) throws ServerAccessException {
       if (list.size() == 0) {
 	    throw new ServerAccessException("Servers are not specified");
@@ -59,14 +57,13 @@ public NetworkService setResponseHandler(ResponseHandler handler) {
 		  handler.accept(p);
 	    });
       }
-      services.forEach(service -> service.setResponseHandler(
-	  handler));
       return this;
 }
+
 /**
  * Last info that caused closing of the service. It's impossible to get the last info in case of closing
  * the <code>MutliplexService</code> not in the ResponseHandler
- * */
+ */
 public Optional<UrlInfo> lastInfo() {
       if (lastThread == null)
 	    throw new IllegalStateException("The service was not closed");
@@ -77,30 +74,39 @@ public Optional<UrlInfo> lastInfo() {
 @Override
 public void run() {
       services.forEach(scheduler::execute);
-      while (scheduler.getTaskCount() != 0) {
-	    Thread.yield();
+      scheduler.shutdown();
+      try {
+	    boolean isTerminated = false;
+	    //the possible cause in case of buggy SimplexService is
+	    while (!isTerminated) { //do while client is working
+		  isTerminated = scheduler.awaitTermination(RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
+	    }
+      } catch (InterruptedException ignored) {
+	    //simply, awaiting is finished
       }
 }
 
 /**
  * The only single thread can close the service. To get the last uri was used to get info, ResponseHandler
  * should close the service.
- * */
+ */
 @Override
 public synchronized void close() throws Exception {
       if (lastThread != null) {
 	    return;
       }
-      scheduler.shutdown();//force close all threads
+      scheduler.shutdownNow(); //force close all threads
       for (var service : services) {
 	    service.close();
       }
       lastThread = Thread.currentThread().getId(); //in single thread
 }
+
 private final List<SimplexService> services;
 private final ThreadPoolExecutor scheduler;
 private final Vector<TaskFootprint> tasks;
 private Long lastThread;
+
 private record TaskFootprint(long threadId, UrlInfo url) {
       @Override
       public boolean equals(Object object) {

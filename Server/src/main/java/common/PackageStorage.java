@@ -9,15 +9,15 @@ import org.hibernate.cfg.Configuration;
 import org.jetbrains.annotations.NotNull;
 import dto.*;
 import security.Author;
+import security.Encryptor;
 
 import javax.persistence.Query;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.security.*;
+import java.time.Clock;
 import java.util.*;
 
 public class PackageStorage {
@@ -88,6 +88,7 @@ private static Logger logger = LogManager.getLogger(PackageStorage.class);
 private NameMapper nameMapper; //upper functionality
 
 public PackageStorage() {
+      signTimer = new Timer(true);
       init();
       initNameMapper();
 }
@@ -100,13 +101,14 @@ public void close() {
 
 public List<ShortPackageInfoDTO> shortInfoList() {
       List<ShortPackageInfoDTO> list = new ArrayList<>();
+      List<PackageHat> hats;
       try (Session session = dbFactory.openSession()) {
-	    List<PackageHat> hats = getPackageHatAll(session);
-	    for (PackageHat hat : hats) {
-		  PackageId id = PackageId.valueOf(hat.getId());
-		  Optional<ShortPackageInfoDTO> info = getShortInfo(id);
-		  info.ifPresent(list::add);
-	    }
+	    hats = getPackageHatAll(session);
+      }
+      for (PackageHat hat : hats) {
+	    PackageId id = PackageId.valueOf(hat.getId());
+	    Optional<ShortPackageInfoDTO> info = getShortInfo(id);
+	    info.ifPresent(list::add);
       }
       return list;
 }
@@ -295,7 +297,24 @@ public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
       }
       return dto;
 }
-
+public RepoInfoDTO getRepoInfo() {
+      RepoInfoDTO dto = new RepoInfoDTO();
+      dto.setName(config.getRepoName());
+      dto.setMirrors(config.getMirrors());
+      completeRepoInfo(dto);
+      return dto;
+}
+private void completeRepoInfo(@NotNull RepoInfoDTO dto) {
+      Long currTime = Clock.systemUTC().millis();
+      Long lastUpdate = getLastTimerUpdate();
+      long diff = currTime - lastUpdate;
+      if (!DEFAULT_ENCRYPTION.holdsKey()) {
+	    PublicKey key = getPublicSign();
+	    DEFAULT_ENCRYPTION.detachKey(key);
+      }
+      dto.setPublicKey(DEFAULT_ENCRYPTION.getEncoded());
+      dto.setTimeout(diff);
+}
 public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
       FullPackageInfoDTO dto = null;
       try (Session session = dbFactory.openSession()) {
@@ -322,9 +341,10 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 
 	    }
       } catch (StorageException | IOException e) {
+	    dto = null;
 	    logger.error("Broken dependency" +
-			     "Id= " + id +
-			     "Version=" + version);
+			     "Id= " + id.value() +
+			     "Version=" + version.value());
       }
       return Optional.ofNullable(dto);
 }
@@ -484,7 +504,7 @@ private void removePackageAll(@NotNull Session session, PackageId id) {
  * Set only known info
  */
 @SessionMethod
-private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto,  @NotNull String path) throws StorageException {
+private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto, @NotNull String path) throws StorageException {
       Licence licence = fetchLicense(session, dto.getLicense());
       Archive archive = fetchArchive(session, DEFAULT_ARCHIVE);
       PackageInfo info = PackageInfo.valueOf(dto.packageId(), version.value());
@@ -617,6 +637,7 @@ private @NotNull Licence fetchLicense(@NotNull Session session, String type) thr
 	    throw new StorageException("Invalid license type");
       return licence;
 }
+
 @SessionMethod
 private @NotNull Archive fetchArchive(@NotNull Session session, String type) throws StorageException {
       session.beginTransaction();
@@ -629,6 +650,7 @@ private @NotNull Archive fetchArchive(@NotNull Session session, String type) thr
       }
       return archive;
 }
+
 //todo: if PackageHat is downgraded to invalid, it means Package is deprecated and should be removed in future
 @SessionMethod
 private void validatePackageHat(@NotNull Session session, PackageId id, boolean isValid) {
@@ -670,6 +692,7 @@ private @NotNull List<PackageHat> getPackageHatAll(@NotNull Session session) {
       session.getTransaction().commit();
       return hats;
 }
+
 @SessionMethod
 private Optional<PackageInfo> getInstanceInfo(@NotNull Session session, PackageId id, VersionId version) {
       Optional<PackageInfo> info;
@@ -732,11 +755,35 @@ private static @NotNull byte[] getSalt() {
 
 private static final String DEFAULT_LICENSE = "GNU";
 private static final String DEFAULT_CONFIG_PATH = "server.conf";
+private static final Encryptor.Encryption DEFAULT_ENCRYPTION = Encryptor.Encryption.Rsa;
 private LocalConfig config;
-
+private KeyPair signPair;
+private Long lastTimerUpdate;
+private final Timer signTimer;
 private void init() {
       dbFactory = new Configuration().configure().buildSessionFactory();
       config = LocalConfig.load(DEFAULT_CONFIG_PATH);
+      signTimer.schedule(new KeyGenTimerTask(), 0L, config.getTimeout());
+}
+private PublicKey getPublicSign() {
+      synchronized (signTimer) {
+	    return signPair.getPublic();
+      }
+}
+private Long getLastTimerUpdate() {
+      synchronized (signTimer) {
+	    return lastTimerUpdate;
+      }
+}
+private class KeyGenTimerTask extends TimerTask {
+      @Override
+      public void run() {
+	    synchronized (signTimer) {
+		  signPair = Encryptor.generatePair(DEFAULT_ENCRYPTION);
+		  lastTimerUpdate = Clock.systemUTC().millis();
+		  DEFAULT_ENCRYPTION.releaseKey();
+	    }
+      }
 }
 
 //@SuppressWarnings("unchecked")

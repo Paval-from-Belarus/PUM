@@ -20,6 +20,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Clock;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -182,10 +183,36 @@ Optional<PackageInfo> getPackageInfo(Integer id) {
 public List<RepositoryInfo> getRepositoryAll() {
       return repositories;
 }
+
+public void updateRepository(String baseUrl, RepoInfoDTO dto) throws IOException {
+      RepositoryInfo young = toLocalFormat(baseUrl, dto);
+      boolean wasFound = false;
+      int index;
+      for (index = 0; !wasFound && index < repositories.size(); index++) {
+	    var any = repositories.get(index);
+	    wasFound = any.getName().equals(dto.getName()) &&
+			   (any.getBaseUrl().equals(baseUrl) || Arrays.asList(any.getMirrors()).contains(baseUrl));
+      }
+      if (wasFound) {
+	    repositories.set(index - 1, young);
+      } else {
+	    repositories.add(young);
+      }
+      Files.writeString(Path.of(config.repositories), toJson(repositories));
+}
+
+private RepositoryInfo toLocalFormat(String baseUrl, RepoInfoDTO dto) {
+      RepositoryInfo local = new RepositoryInfo();
+      local.setName(dto.getName()).setBaseUrl(baseUrl).setLastUpdate(Clock.systemUTC().millis());
+      local.setMirrors(dto.getMirrors()).setPublicKey(dto.getPublicKey()).setTimeout(dto.getTimeout());
+      local.setStatus(RepositoryInfo.Status.Enabled);
+      return local;
+}
+
 public void setRepoMapping(Integer packageId, String repoUrl) {
       assert repositories != null && cachedRepositories != null;
       Optional<RepositoryInfo> repoInfo = repositories.stream().filter(repo -> {
-	    boolean result =  repo.getName().equals(repoUrl);
+	    boolean result = repo.getBaseUrl().equals(repoUrl);
 	    if (!result && repo.getMirrors() != null) {
 		  result = Arrays.asList(repo.getMirrors()).contains(repoUrl);
 	    }
@@ -193,6 +220,7 @@ public void setRepoMapping(Integer packageId, String repoUrl) {
       }).findAny();
       repoInfo.ifPresent(repo -> cachedRepositories.put(packageId, repo));
 }
+
 public void updateCache(Integer id, String name, String... aliases) {
       if (cachedInfo == null) {
 	    cachedInfo = new ArrayList<>();
@@ -205,6 +233,7 @@ public void updateCache(Integer id, String name, String... aliases) {
 	    cachedInfo.add(cached);
       }
 }
+
 public void clearCache() throws ConfigurationException {
       if (cachedInfo != null)
 	    cachedInfo.clear();

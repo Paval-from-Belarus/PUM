@@ -29,7 +29,7 @@ SET FILES NIO TRUE
 SET FILES NIO SIZE 256
 SET FILES LOG TRUE
 SET FILES LOG SIZE 50
-SET FILES CHECK 5610
+SET FILES CHECK 5722
 SET DATABASE COLLATION "SQL_TEXT" PAD SPACE
 CREATE USER "server" PASSWORD DIGEST 'e1163db6e2caeb94ea4385bcf15d1cee'
 ALTER USER "server" SET LOCAL TRUE
@@ -102,5 +102,5 @@ INSERT INTO PACKAGES_PAYLOADS VALUES(0,1,0,'/home/Paval/Development/Programs/PUM
 INSERT INTO PACKAGES_PAYLOADS VALUES(1,0,0,'/home/Paval/Development/Programs/PUM/payloads/bootloader/extMBR.bin')
 INSERT INTO PACKAGES_PAYLOADS VALUES(2,0,0,'/home/Paval/Development/Programs/PUM/payloads/bootloader/extMBR.bin')
 INSERT INTO PACKAGES_PAYLOADS VALUES(3,0,0,'/home/Paval/Development/Programs/PUM/payloads/bootloader/extMBR.bin')
-INSERT INTO PACKAGES_PAYLOADS VALUES(16,0,0,'/home/Paval/Triggers/Java/PackageManager/PackageManager/Server/dto/PetOS Music/Application0.0.1')
-INSERT INTO PACKAGES_PAYLOADS VALUES(16,1,0,'/home/Paval/Triggers/Java/PackageManager/PackageManager/Server/dto/PetOS Music/Application0.0.2')
+INSERT INTO PACKAGES_PAYLOADS VALUES(16,1,0,'/home/Paval/Triggers/Java/PackageManager/PackageManager/Server/packages/PetOS Music/Application0.0.2')
+INSERT INTO PACKAGES_PAYLOADS VALUES(16,0,0,'/home/Paval/Triggers/Java/PackageManager/PackageManager/Server/packages/PetOS Music/Application0.0.1')

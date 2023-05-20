@@ -50,6 +50,7 @@ public void accept(NetworkExchange exchange) throws Exception {
 	    case PublishInfo -> onPublishInfo(exchange);
 	    case PublishPayload -> onPublishPayload(exchange);
 	    case Authorize -> onAuthorizeRequest(exchange);
+	    case GetRepo -> onRepoInfo(exchange);
 	    case DeprecateVersion -> onDeprecateVersion(exchange);
 	    default -> throw new IllegalStateException("Illegal command");
       }
@@ -58,6 +59,15 @@ public void accept(NetworkExchange exchange) throws Exception {
 @Override
 public void error(NetworkExchange exchange) {
       ServerController.super.error(exchange);
+}
+
+private void onRepoInfo(NetworkExchange exchange) {
+      RepoInfoDTO dto = storage.getRepoInfo();
+      if (dto.getTimeout() > 10) {
+	    exchange.setResponse(ResponseType.Approve, ResponseCode.BIN_FORMAT, toBytes(dto.stringify()));
+      } else {
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.TRY_AGAIN | ResponseCode.BIN_FORMAT, toBytes(dto.stringify()));
+      }
 }
 
 /**
@@ -171,8 +181,8 @@ private void onPackageInfo(NetworkExchange exchange) {
 private void onVersionInfo(NetworkExchange exchange) {
       String data = exchange.request().stringData();
       VersionFormat format = getVersionFormat(exchange.request());
-      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data,format);
-      Optional<PackageHandle> serverRequest = userRequest.flatMap(request -> switch(format) {
+      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data, format);
+      Optional<PackageHandle> serverRequest = userRequest.flatMap(request -> switch (format) {
 		case String -> toPackageHandle(request.getPackageId(), request.label());
 		case Int -> toPackageHandle(request.getPackageId(), request.offset());
 		case Unknown -> Optional.empty();
