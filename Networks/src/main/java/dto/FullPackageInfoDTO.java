@@ -1,5 +1,6 @@
 package dto;
 
+import lombok.EqualsAndHashCode;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -8,6 +9,7 @@ import java.util.Optional;
 //this class hasn't any real representation in database
 //Client should only accept this entity
 //This info soo verbose
+@EqualsAndHashCode
 public class FullPackageInfoDTO extends AbstractDTO {
 public  String name;
 public String[] aliases;

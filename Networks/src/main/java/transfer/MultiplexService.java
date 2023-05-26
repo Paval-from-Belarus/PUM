@@ -16,7 +16,17 @@ public MultiplexService(List<UrlInfo> list) throws ServerAccessException {
       }
       services = new ArrayList<>(list.size());
       for (var info : list) {
-	    services.add(new SimplexService(info));
+	    SimplexService service = null;
+	    try {
+		service = new SimplexService(info);
+	    } catch (ServerAccessException ignored) {
+	    }
+	    if (service != null) {
+		  services.add(service);
+	    }
+      }
+      if (services.size() == 0) {
+	    throw new ServerAccessException("The no server responses");
       }
       scheduler = (ThreadPoolExecutor) Executors.newFixedThreadPool(services.size());
       tasks = new Vector<>();

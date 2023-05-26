@@ -53,7 +53,7 @@ public void start() {
 }
 
 static class ClientService implements Runnable {
-      private final int DEFAULT_TIMEOUT = 5000_000;
+      private final int DEFAULT_TIMEOUT = 2500;
       private final Socket socket;
       private final ServerController handler;
 

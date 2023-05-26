@@ -1,4 +1,1 @@
 id=[16]aliases=[PetOS Music,music]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/PetOS Music]links=[0]
-id=[0]aliases=[PetOS Kernel,kernel]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/PetOS Kernel]links=[0]
-id=[2]aliases=[CDROM Driver,cdrom-driver]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/libraries/CDROM Driver]links=[1]
-id=[3]aliases=[Network Driver,network-driver]path=[/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/libraries/Network Driver]links=[1]

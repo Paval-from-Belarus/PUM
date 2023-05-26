@@ -21,7 +21,7 @@ private String name;
 @Getter @Setter
 private Long timeout; //in milliseconds
 @Getter @Setter
-public Long lastUpdate;
+private Long lastUpdate;
 @Getter @Setter
 private String baseUrl;
 @Getter @Setter
@@ -31,4 +31,7 @@ private Status status;
 private byte[] publicKey; //key in form of base64 by which
 @Getter @Setter
 private String[] mirrors; //links by which this repo will be access too
+public boolean isEnabled() {
+      return status == Status.Enabled;
+}
 }

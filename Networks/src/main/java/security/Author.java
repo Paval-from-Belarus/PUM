@@ -2,6 +2,8 @@ package security;
 
 import org.jetbrains.annotations.NotNull;
 import transfer.NetworkPacket;
+import transfer.Serializable;
+import transfer.Serializer;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -17,7 +19,7 @@ public record Author(@NotNull String name, @NotNull String email, @NotNull Strin
             };
             StringBuilder strText = new StringBuilder();
             for (var bytes : bytesList) {
-                  strText.append(NetworkPacket.toString(encoder.encode(bytes))).append("#");
+                  strText.append(Serializer.toString(encoder.encode(bytes))).append("#");
             }
             strText.setLength(strText.length() - 1);
             return strText.toString();
@@ -31,7 +33,7 @@ public record Author(@NotNull String name, @NotNull String email, @NotNull Strin
                   int index = 0;
                   for (String line : parts) {
                         byte[] converted = decoder.decode(line.getBytes(StandardCharsets.US_ASCII));
-                        params[index++] = NetworkPacket.toString(converted);
+                        params[index++] = Serializer.toString(converted);
                   }
                   result = new Author(params[0], params[1], params[2]);
             }

@@ -54,6 +54,7 @@ public void setEncryption(@NotNull Encryptor.Encryption type) {
  * The following methods are fully depends on OS. As rule, the following sample is very primitive and generalized
  */
 public void storeLocally(FullPackageInfoDTO dto, byte[] rawAssembly) throws PackageIntegrityException, PackageAssembly.VerificationException {
+      assert originUrl != null;
       getLocalKey().ifPresent(encryption::detachKey);
       PackageAssembly assembly = PackageAssembly.deserialize(rawAssembly, encryption);
       PayloadType type = convert(dto.payloadType);
@@ -66,7 +67,7 @@ public void storeLocally(FullPackageInfoDTO dto, byte[] rawAssembly) throws Pack
 		  removeFiles(normalized);
 	    }
 	    Files.createDirectory(normalized);
-	    storePackageInfo(normalized, dto, assembly);
+	    storePackageInfo(normalized, dto, assembly, originUrl);
 	    switch (type) {
 		  case Application -> saveBinary(normalized, assembly, dto);
 		  case Library -> saveLibrary(normalized, assembly, dto);
@@ -75,7 +76,6 @@ public void storeLocally(FullPackageInfoDTO dto, byte[] rawAssembly) throws Pack
 	    throw new PackageIntegrityException("Payload installation error: " + e.getMessage());
       }
 }
-
 //Each session should be committed
 public void commit(CommitState state) throws PackageIntegrityException {
       if (isManaged())
@@ -170,7 +170,9 @@ private @NotNull List<InstanceInfo> mapDependencies(FullPackageInfoDTO dto) thro
       }
       return instances;
 }
-
+public void assignSource(String originUrl) {
+      this.originUrl = originUrl;
+}
 protected Optional<Key> getForeignKey() {
       return Optional.ofNullable(foreignKey);
 }
@@ -178,7 +180,7 @@ protected Optional<Key> getForeignKey() {
 protected Optional<Key> getLocalKey() {
       return Optional.ofNullable(localKey);
 }
-
+private String originUrl = null;
 private Path centralPath; //central file for which each dependency belongs
 private File exeFile;//the executable file
 private final PackageStorage storage;

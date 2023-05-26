@@ -21,9 +21,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AcceptPendingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.Timestamp;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static transfer.SimplexService.*;
@@ -342,6 +347,9 @@ private void installAdvanced(ModifierSession parent, Integer id, FullPackageInfo
     throws PackageIntegrityException {
       try {
 	    var session = parent.getInstaller();
+	    Optional<RepositoryInfo> repoInfo = storage.getRepository(id);
+	    assert repoInfo.isPresent();
+	    session.assignSource(repoInfo.get().getBaseUrl());
 	    ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 	    output.sendMessage("", "Attempt to resolve dependencies");
 	    Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
@@ -687,14 +695,43 @@ private Optional<RepoInfoDTO> getRepoInfo(String url) {
       return Optional.ofNullable(wrapper.get());
 }
 
+private boolean isValidRepository(long lastUpdate, long timeout) {
+      long localTime = Clock.systemUTC().millis();
+      long futureTime = lastUpdate + timeout;
+      return futureTime > localTime;
+}
+
 private void printRepository(boolean isVerbose) {
       List<RepositoryInfo> repositories = storage.getRepositoryAll();
-      if (!repositories.isEmpty()) {
-	    if (isVerbose)
-		  repositories.forEach(this::printRepository);
-	    else
-		  repositories.forEach(this::printRepositoryHat);
-      } else {
+      output.sendMessage("", "Collect info about local repositories");
+      Consumer<RepositoryInfo> printHandler;
+      if (isVerbose)
+	    printHandler = this::printRepository;
+      else
+	    printHandler = this::printRepositoryHat;
+      output.sendMessage("", "Check repositories timeout");
+      for (var repoInfo : repositories) {
+	    if (repoInfo.isEnabled() && isValidRepository(repoInfo.getLastUpdate(), repoInfo.getTimeout())) {
+		  printHandler.accept(repoInfo);
+	    }
+	    if (repoInfo.isEnabled() && !isValidRepository(repoInfo.getLastUpdate(), repoInfo.getTimeout())) {
+		  Optional<RepoInfoDTO> dto = getRepoInfo(repoInfo.getBaseUrl());
+		  if (dto.isPresent()) {
+			try {
+			      storage.updateRepository(repoInfo.getBaseUrl(), dto.get());
+			      Optional<RepositoryInfo> info = storage.getRepository(repoInfo.getName());
+			      if (info.isPresent()) {
+				    printHandler.accept(info.get());
+			      } else {
+				    output.sendError("Storage error", dto.get().getName() + "is not set");
+			      }
+			} catch (IOException e) {
+			      output.sendError("Storage error", "Local repository database is not accessible");
+			}
+		  }
+	    }
+      }
+      if (repositories.isEmpty()) {
 	    output.sendMessage("", "No repository is available");
       }
 }
@@ -863,10 +900,12 @@ private void installAppPackage(String packageName) {
       if (packageId.isEmpty())
 	    packageId = getPackageIdByDefault(packageName);
       Optional<FullPackageInfoDTO> fullInfo = packageId.flatMap(id -> getFullInfo(id, UpdateMode.LATEST));
-      if (fullInfo.isPresent() && isApplication(fullInfo.get())) {
+      Optional<RepositoryInfo> repoInfo = packageId.flatMap(id -> storage.getRepository(id));
+      if (fullInfo.isPresent() && isApplication(fullInfo.get()) && repoInfo.isPresent()) {
 	    try (InstallerSession session = storage.initSession(InstallerSession.class)) {
 		  FullPackageInfoDTO dto = fullInfo.get();
 		  assignDependencies(packageId.get(), dto); //add to local storage mapping remote id to database
+		  session.assignSource(repoInfo.get().getBaseUrl());
 		  ResolutionMode mode = ResolutionMode.valueOf(ResolutionMode.Remote, storage);
 		  Map<Integer, FullPackageInfoDTO> dependencies = resolveDependencies(dto, mode);
 		  if (hasUserAgreement(dto, dependencies.values())) {

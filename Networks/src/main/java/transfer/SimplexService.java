@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +35,12 @@ private static @NotNull Socket getFirstSocket(UrlInfo info) throws IOException {
       urls.addAll(Arrays.asList(info.mirrors()));
       for (var url : urls) {
 	    try {
-		  socket = new Socket(url.url(), url.port());
+		  InetSocketAddress endPoint = new InetSocketAddress(url.url(), url.port());
+		  socket = new Socket();
+		  socket.connect(endPoint, REQUEST_TIMEOUT);
+		  break;
 	    } catch (ConnectException ignored) {
-
+		  socket = null;
 	    }
       }
       if (socket == null)
@@ -48,7 +52,6 @@ public SimplexService(UrlInfo info) throws ServerAccessException {
       Socket socket;
       try {
 	    socket = getFirstSocket(info);
-	    socket.setSoTimeout(REQUEST_TIMEOUT);
       } catch (IOException e) {
 	    throw new ServerAccessException(e);
       }

@@ -3,10 +3,8 @@ package transfer;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-
 import transfer.NetworkExchange.ResponseType;
 import transfer.NetworkExchange.RequestType;
 
@@ -123,7 +121,7 @@ public final byte[] data() {
       return this.data;
 }
 public @NotNull String stringData() {
-      return toString(data);
+      return Serializer.toString(data);
 }
 
 /**
@@ -135,7 +133,7 @@ public @NotNull String stringFrom(int offset) {
       if (BUFF_LENGTH != 0 && data.length != 0) {
 	    byte[] payload = new byte[BUFF_LENGTH];
 	    System.arraycopy(data, offset, payload, 0, payload.length);
-	    result = toString(payload);
+	    result = Serializer.toString(payload);
       }
       return result;
 }
@@ -216,24 +214,6 @@ private static @NotNull byte[] getRawPacket(NetworkPacket packet, RequestType ty
       buffer.putInt(requestSign);
       buffer.putInt(payloadSize);
       buffer.put(payload);
-      return buffer.array();
-}
-
-public static @NotNull String toString(@NotNull byte[] bytes) {
-      CharBuffer buffer = CharBuffer.allocate(bytes.length);
-      for (byte letter : bytes) {
-	    buffer.put((char) letter);
-      }
-      return String.valueOf(buffer.array());
-}
-public static @NotNull byte[] toBytes(String line) {
-   return line.getBytes(StandardCharsets.US_ASCII);
-}
-public static @NotNull byte[] toBytes(Integer... values) {
-      ByteBuffer buffer = ByteBuffer.allocate(values.length * 4);
-      for (Integer value : values) {
-	    buffer.putInt(value);
-      }
       return buffer.array();
 }
 /**

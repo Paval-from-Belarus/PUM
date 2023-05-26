@@ -763,7 +763,7 @@ private final Timer signTimer;
 private void init() {
       dbFactory = new Configuration().configure().buildSessionFactory();
       config = LocalConfig.load(DEFAULT_CONFIG_PATH);
-      signTimer.schedule(new KeyGenTimerTask(), 0L, config.getTimeout());
+      signTimer.schedule(new KeyGenTimerTask(), 0L, config.getTimeout() * 1000);
 }
 private PublicKey getPublicSign() {
       synchronized (signTimer) {

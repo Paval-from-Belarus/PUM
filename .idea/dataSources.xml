@@ -9,5 +9,13 @@
       <jdbc-url>jdbc:hsqldb:hsql://localhost/pum</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="HSQLDB (PetOS Boxes)" uuid="ba86b711-71e7-4bb0-b12d-f8802edd90b7">
+      <driver-ref>hsqldb.remote</driver-ref>
+      <synchronize>true</synchronize>
+      <configured-by-url>true</configured-by-url>
+      <jdbc-driver>org.hsqldb.jdbcDriver</jdbc-driver>
+      <jdbc-url>jdbc:hsqldb:hsql://petos.project.su/pum</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

@@ -21,7 +21,7 @@ import java.util.Optional;
 import static common.PackageStorage.*;
 import static transfer.NetworkExchange.*;
 
-import static transfer.NetworkPacket.toBytes;
+import static transfer.Serializer.toBytes;
 
 
 public class ServerDispatcher implements ServerController {

@@ -161,12 +161,21 @@ public Optional<RepositoryInfo> getRepository(Integer id) {
 	    if (repoUrl.isPresent()) {
 		  String url = repoUrl.get();
 		  repoInfo = repositories.stream()
+				 .filter(RepositoryInfo::isEnabled)
 				 .filter(info -> info.getBaseUrl().equalsIgnoreCase(url))
 				 .findAny();
 	    }
 	    repoInfo.ifPresent(repositoryInfo -> cachedRepositories.put(id, repositoryInfo));
       }
       return repoInfo;
+}
+
+public Optional<RepositoryInfo> getRepository(String repoName) {
+      assert repositories != null;
+      return repositories.stream()
+		 .filter(RepositoryInfo::isEnabled)
+		 .filter(info -> info.getName().equalsIgnoreCase(repoName))
+		 .findAny();
 }
 
 Optional<InstanceInfo> getInstanceInfo(@NotNull Integer id) {
@@ -182,6 +191,7 @@ Optional<PackageInfo> getPackageInfo(Integer id) {
 
 public List<RepositoryInfo> getRepositoryAll() {
       return repositories;
+//      return repositories.stream().filter(RepositoryInfo::isEnabled).collect(Collectors.toList());
 }
 
 public void updateRepository(String baseUrl, RepoInfoDTO dto) throws IOException {
@@ -211,13 +221,15 @@ private RepositoryInfo toLocalFormat(String baseUrl, RepoInfoDTO dto) {
 
 public void setRepoMapping(Integer packageId, String repoUrl) {
       assert repositories != null && cachedRepositories != null;
-      Optional<RepositoryInfo> repoInfo = repositories.stream().filter(repo -> {
-	    boolean result = repo.getBaseUrl().equals(repoUrl);
-	    if (!result && repo.getMirrors() != null) {
-		  result = Arrays.asList(repo.getMirrors()).contains(repoUrl);
-	    }
-	    return result;
-      }).findAny();
+      Optional<RepositoryInfo> repoInfo =
+	  repositories.stream().filter(RepositoryInfo::isEnabled).filter(repo -> {
+		boolean result = repo.getBaseUrl().equals(repoUrl);
+		if (!result && repo.getMirrors() != null) {
+		      result = Arrays.asList(repo.getMirrors()).contains(repoUrl);
+		}
+
+		return result;
+	  }).findAny();
       repoInfo.ifPresent(repo -> cachedRepositories.put(packageId, repo));
 }
 
@@ -376,8 +388,9 @@ public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
       return info.flatMap(this::toExternalFormat);
 }
 
-static void storePackageInfo(Path configDir, FullPackageInfoDTO dto, PackageAssembly assembly) throws IOException {
+static void storePackageInfo(Path configDir, FullPackageInfoDTO dto, PackageAssembly assembly, String repoUrl) throws IOException {
       PackageInfo info = toLocalFormat(assembly, dto);
+      info.repoUrl = repoUrl;
       String jsonInfo = toJson(info);
       Files.writeString(configDir.resolve("conf.pum"), jsonInfo);
 }
@@ -671,7 +684,6 @@ public static PayloadType convert(@NotNull String type) {
       }
       return result;
 }
-
 
 private Path getCachePath() {
       return Path.of(config.temp).resolve(CACHE_FILE_NAME);
