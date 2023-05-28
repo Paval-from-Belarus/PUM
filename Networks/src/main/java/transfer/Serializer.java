@@ -2,50 +2,62 @@ package transfer;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/**
+ * Some notes. The generalized classes, such as Number, cannot be interpreted explicitly.
+ */
 public class Serializer {
 public static final int BYTES_PER_SIGN = 2;
-
+public static final int FIRST_FREE_CODE = FieldType.Object.code() + 1;
 public enum FieldType {
-      Boolean, Byte, Short, Char, Int, Long, String, Array, Object;
+      Boolean, Byte, Short, Char, Int, Long, Float, Double, String, Array, Object;
       private short code;
       private Class<?> clazz = null;
       private int size = -1; //predefined size of value
 
       static {
-	    Boolean.code = 1;
+	    Boolean.code = 0;
 	    Byte.code = 1;
 	    Short.code = 2;
 	    Char.code = 2;
 	    Int.code = 3;
 	    Long.code = 4;
-	    String.code = 5;
-	    Array.code = 6;
-	    Object.code = 7; //not used as independent value but only to start
+	    Float.code = 5;
+	    Double.code = 6;
+	    String.code = 7;
+	    Array.code = 8;
+	    Object.code = 9; //not used as independent value but only to start
 
 	    Boolean.size = 1;
-	    Byte.size = 1;
-	    Short.size = 2;
-	    Char.size = 2;
-	    Int.size = 4;
-	    Long.size = 8;
+	    Byte.size = java.lang.Byte.BYTES;
+	    Short.size = java.lang.Short.BYTES;
+	    Char.size = java.lang.Character.BYTES;
+	    Int.size = java.lang.Integer.BYTES;
+
+	    Long.size = java.lang.Long.BYTES;
+	    Float.size = java.lang.Float.BYTES;
+	    Double.size = java.lang.Double.BYTES;
 
 	    Boolean.clazz = java.lang.Boolean.class;
-	    Byte.clazz = java.lang.Boolean.class;
+	    Byte.clazz = java.lang.Byte.class;
 	    Short.clazz = java.lang.Short.class;
 	    Char.clazz = java.lang.Character.class;
 	    Int.clazz = java.lang.Integer.class;
 	    Long.clazz = java.lang.Long.class;
+	    Float.clazz = java.lang.Float.class;
+	    Double.clazz = java.lang.Double.class;
+
 	    String.clazz = java.lang.String.class;
 	    Array.clazz = java.lang.Object[].class; //the dummy class to determine that array is lang native class
+      }
+
+      public static boolean isFreeCode(int code) {
+	    return code < Boolean.code || code > Object.code;
       }
 
       public short code() {
@@ -75,9 +87,18 @@ public enum FieldType {
       }
 }
 
+public static class SerializeException extends IllegalStateException {
+      public SerializeException(String msg) {
+	    super(msg);
+      }
+
+      public SerializeException(Throwable t) {
+	    super(t);
+      }
+}
+
 public Serializer() {
-      MINIMAL_REG_CODE = FieldType.Object.code();//the initial value to start with
-      codeMapper = new HashMap<>();
+      codeMapper = new HashMap<>(); //for external classes only
       fieldMapper = new HashMap<>();
       reverseMapper = new HashMap<>();
       for (FieldType field : FieldType.values()) {
@@ -89,11 +110,15 @@ public Serializer() {
 }
 
 public boolean isValidCode(int code) {
-      return code >= MINIMAL_REG_CODE && code <= Short.MAX_VALUE;
+      return FieldType.isFreeCode(code);
+}
+
+public boolean isValidClass(Class<?> clazz) {
+      return clazz != Object.class && clazz != Number.class;
 }
 
 public Serializer register(int code, Class<?> clazz) {
-      if (!isValidCode(code)) {
+      if (!(isValidCode(code) && isValidClass(clazz))) {
 	    throw new IllegalArgumentException("The code is invalid");
       }
       codeMapper.put(clazz, (short) code);
@@ -103,48 +128,55 @@ public Serializer register(int code, Class<?> clazz) {
 }
 
 public <T> T construct(byte[] source, Class<T> origin) {
-      return construct(ByteBuffer.wrap(source), origin);
+      boolean isRegistered = fieldMapper.get(origin) != null;
+      T result;
+      if (!isRegistered) {
+	    result = constructObject(ByteBuffer.wrap(source), origin);
+      } else {
+	    ByteBuffer buffer = ByteBuffer.wrap(source);
+	    short code = buffer.getShort();
+	    Class<?> clazz = reverseMapper.get(code);
+	    if (clazz == origin) {
+		  result = constructObject(buffer, origin);
+	    } else {
+		  throw new SerializeException("the source buffer holds incorrect values");
+	    }
+      }
+      return result;
 }
 
 /**
  * The Serializer should properly set (if source holds some Object types)
  */
-private <T> T construct(ByteBuffer buffer, Class<T> origin) {
+private <T> T constructObject(ByteBuffer buffer, Class<T> origin) {
       T instance;
       try {
-	    instance = origin.getDeclaredConstructor().newInstance();
-      } catch (NoSuchMethodException e) {
-	    throw new RuntimeException(e);
-      } catch (InvocationTargetException e) {
-	    throw new RuntimeException(e);
-      } catch (InstantiationException e) {
-	    throw new RuntimeException(e);
-      } catch (IllegalAccessException e) {
-	    throw new RuntimeException(e);
+	    Constructor<T> constructor = origin.getDeclaredConstructor();
+	    constructor.setAccessible(true);
+	    instance = constructor.newInstance();
+      } catch (Exception e) {
+	    throw new SerializeException(e);
       }
       List<Field> fields = collectFields(origin);
       for (Field field : fields) {
 	    short code = buffer.getShort();
 	    Class<?> clazz = reverseMapper.get(code);
+	    FieldType type;
 	    Object value;
-	    if (clazz != null) {
-		  FieldType type = fieldMapper.get(clazz);
-		  if (type == null) {
-			throw new IllegalStateException("Unknown field code " + code);
-		  }
+	    if (clazz != null && (type = fieldMapper.get(clazz)) != null) {
 		  if (type.hasSize()) {
 			value = constructPrimitive(buffer, type);
 		  } else {
 			value = constructComposite(buffer, clazz);
 		  }
 	    } else {
-		  throw new IllegalStateException("The class by code " + code + " is not specified");
+		  throw new SerializeException("The class by code " + code + " is not specified");
 	    }
 	    try {
 		  field.setAccessible(true);
 		  field.set(instance, value);
 	    } catch (IllegalAccessException e) {
-		  throw new RuntimeException(e);
+		  throw new SerializeException(e);
 	    }
       }
       return instance;
@@ -163,33 +195,78 @@ private @NotNull Object constructPrimitive(ByteBuffer wrapper, FieldType type) {
       };
 }
 
-private @NotNull Object constructComposite(ByteBuffer wrapper, Class<?> clazz) {
-      FieldType type = fieldMapper.get(clazz);
-      assert wrapper.position() < wrapper.capacity() && type != null;
+private @NotNull Object constructComposite(ByteBuffer buffer, Class<?> clazz) {
+      FieldType type;
+      if (clazz.isArray()) {
+	    type = fieldMapper.get(FieldType.Array.getJavaClass());
+      } else {
+	    type = fieldMapper.get(clazz);
+      }
+      assert buffer.position() < buffer.capacity() && type != null;
       return switch (type) {
-	    case String -> {
-		  int length = wrapper.getInt();
-		  yield toString(wrapper.array(), wrapper.position(), length);
-	    }
-	    case Array -> constructArray(wrapper, clazz);
-	    case Object -> construct(wrapper, clazz);
+	    case String -> constructString(buffer);
+	    case Array ->
+		constructArray(buffer); //the clazz is Object[].class. Dummy instance of class to simplify algo
+	    case Object -> constructObject(buffer, clazz);
 	    default ->
 		throw new IllegalArgumentException("Impossible construct composite value from primitive bytes " + type.getJavaClass());
       };
 }
-private @NotNull Object constructArray(ByteBuffer wrapper, Class<?> array) {
-      int length = wrapper.getInt();
-      short code = wrapper.getShort();
-      Class<?> element = array.getComponentType();
-//      Map.Entry<FieldType, Short> fieldInfo = collectInfo(element);
-//      FieldType type = fieldInfo.getKey();
-//      assert fieldInfo.getValue() == code && fieldMapper.get(element) == type;
-      Object instance = Array.newInstance(element, length);
-      for (int i = 0; i < length; i++) {
-	    Array.set(instance, i, construct(wrapper, element));
+
+private @NotNull Object constructString(ByteBuffer buffer) {
+      final int length = buffer.getInt();
+      final int offset = buffer.position();
+      String result = toString(buffer.array(), offset, length);
+      buffer.position(offset + length);
+      return result;
+}
+
+private @NotNull Object constructArray(ByteBuffer buffer) {
+      final int length = buffer.getInt();
+      final short code = buffer.getShort(); //element code
+      Class<?> element = reverseMapper.get(code);
+      Object instance;
+      if (element != null) {
+	    FieldType type = fieldMapper.get(element);
+	    assert type != null;
+	    if (element.isArray()) { //the initial condition for multi-dimensional arrays
+		  Map.Entry<Class<?>, int[]> dimensions = findArrayDimensions(buffer);
+		  element = Array.newInstance(dimensions.getKey(), dimensions.getValue()).getClass();
+	    }
+	    instance = Array.newInstance(element, length);
+	    for (int i = 0; i < length; i++) {
+		  if (type.hasSize()) {
+			Array.set(instance, i, constructPrimitive(buffer, type));
+		  } else {
+			Array.set(instance, i, constructComposite(buffer, element));
+		  }
+	    }
+      } else {
+	    throw new SerializeException("Unknown class with code " + code);
       }
       return instance;
 }
+
+/**
+ * @return the piece class and dimensional count
+ */
+public Map.Entry<Class<?>, int[]> findArrayDimensions(final ByteBuffer buffer) {
+      buffer.mark();
+      Class<?> element = FieldType.Array.getJavaClass();
+      int nestLevel = 0; //invocation of its function means at least two dimension
+      while (element != null && element.isArray()) {
+	    buffer.getInt(); //skip length bytes
+	    short code = buffer.getShort();
+	    element = reverseMapper.get(code);
+	    nestLevel += 1;
+      }
+      if (element == null) {
+	    throw new SerializeException("The bytes has unresolvable multi-dimensional array");
+      }
+      buffer.reset();
+      return Map.entry(element, new int[nestLevel]);
+}
+
 /**
  * @param object -> the value that is supposed to be serialized. Commonly, there are two ways to serialize.
  *               If object was registered serialization append the type code.
@@ -199,14 +276,17 @@ public byte[] serialize(Object object) {
       boolean isRegistered = fieldMapper.get(object.getClass()) != null;
       byte[] bytes;
       if (!isRegistered) {
-	    bytes = serializeObject(object);
+	    bytes = serializeObject(object); //serialize and save the type
       } else {
-	    bytes = serializeBatch(new Object[]{object});
+	    bytes = serializeFields(new Object[]{object}); //pure serialization
       }
       return bytes;
 }
 
-private byte[] serializeBatch(Object[] objects) {
+/**
+ * This method serialize the batch of any data (generally fields of certain object)
+ */
+private byte[] serializeFields(Object[] objects) {
       List<byte[]> bytesBatch = new ArrayList<>();
       for (Object object : objects) {
 	    ByteBuffer buffer;
@@ -244,29 +324,28 @@ private Map.Entry<FieldType, Short> collectInfo(Class<?> objClass) {
 		  code = codeMapper.get(objClass);
 	    }
       } else {
-	    throw new IllegalStateException("Cannot serialize unknown class: " + objClass);
+	    throw new SerializeException("Cannot serialize unknown class: " + objClass);
       }
       return Map.entry(type, code);
 }
 
 private byte[] serializeArray(Object[] objects, Class<?> element) {
-      assert element != Object.class && objects.getClass().getComponentType() == element;
+      ByteBuffer hugeBuffer;
       Map.Entry<FieldType, Short> fieldInfo = collectInfo(element);
       FieldType type = fieldInfo.getKey();
       Short code = fieldInfo.getValue();
-      ByteBuffer hugeBuffer;
       if (!type.hasSize()) {
 	    List<byte[]> bytesBatch = new ArrayList<>();
 	    for (Object object : objects) {
 		  bytesBatch.add(serializeComposite(object, type));
 	    }
 	    int commonSize = bytesBatch.stream().reduce(0, (sum, buffer) -> sum + buffer.length, Integer::sum);
-	    hugeBuffer = ByteBuffer.allocate(BYTES_PER_SIGN + commonSize);
-	    hugeBuffer.putShort(code);
+	    hugeBuffer = ByteBuffer.allocate(4 + BYTES_PER_SIGN + commonSize);
+	    hugeBuffer.putInt(objects.length).putShort(code);
 	    bytesBatch.forEach(hugeBuffer::put);
       } else {
-	    hugeBuffer = ByteBuffer.allocate(BYTES_PER_SIGN + type.size() * objects.length);
-	    hugeBuffer.putShort(code);
+	    hugeBuffer = ByteBuffer.allocate(4 + BYTES_PER_SIGN + type.size() * objects.length);
+	    hugeBuffer.putInt(objects.length).putShort(code);
 	    for (Object object : objects) {
 		  hugeBuffer.put(serializePrimitive(object, type));
 	    }
@@ -284,11 +363,10 @@ private byte[] serializeComposite(Object value, FieldType type) {
 		  buffer.putInt(source.length()).put(toBytes(source));
 	    }
 	    case Array -> {
-		  Object[] objects = multiplyArray(value);
-		  Class<?> element = objects.getClass().getComponentType();
+		  Class<?> element = mapElementType(value.getClass());
+		  Object[] objects = multiplyArray(value); //interpret the array as array of objects
 		  byte[] payload = serializeArray(objects, element);
-		  buffer = ByteBuffer.allocate(4 + payload.length);
-		  buffer.putInt(objects.length).put(payload);
+		  buffer = ByteBuffer.wrap(payload);
 	    }
 	    case Object -> buffer = ByteBuffer.wrap(serializeObject(value));
 	    default -> throw new IllegalArgumentException("The primitive type is passed");
@@ -305,7 +383,13 @@ private Object[] multiplyArray(@NotNull Object array) {
       }
       return result;
 }
-
+private Class<?> mapElementType(@NotNull Class<?> array) {
+      Class<?> element = array.getComponentType();
+      if (fieldMapper.get(element) == null) {
+	    System.out.println("catched");
+      }
+      return element;
+}
 private byte[] serializeObject(@NotNull Object value) {
       Class<?> clazz = value.getClass();
       byte[] result;
@@ -319,7 +403,7 @@ private byte[] serializeObject(@NotNull Object value) {
 		  throw new RuntimeException(e); //something incredible
 	    }
       }
-      result = serializeBatch(values.toArray(Object[]::new));
+      result = serializeFields(values.toArray(Object[]::new));
       return result;
 }
 
@@ -338,7 +422,7 @@ private byte[] serializePrimitive(Object value, FieldType type) {
 
 private List<Field> collectFields(@NotNull Class<?> origin) {
       return Arrays.stream(origin.getDeclaredFields())
-		 .filter(field -> !Modifier.isTransient(field.getModifiers()))
+		 .filter(field -> !Modifier.isTransient(field.getModifiers()) && !Modifier.isStatic(field.getModifiers()))
 		 .sorted(Comparator.comparing(Field::getName))
 		 .toList();
 }
@@ -371,8 +455,6 @@ public static @NotNull String toString(@NotNull byte[] bytes, int offset, int le
       }
       return String.valueOf(buffer.array());
 }
-
-private final short MINIMAL_REG_CODE;
 //Options for serialization
 private final Map<Class<?>, FieldType> fieldMapper;
 private final Map<Class<?>, Short> codeMapper; //the mapper is used only for Object field

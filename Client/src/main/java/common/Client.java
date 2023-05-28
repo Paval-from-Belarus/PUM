@@ -551,7 +551,7 @@ private @Nullable Integer onPublishResponse(@NotNull NetworkPacket response) {
 	    result = ByteBuffer.wrap(response.data()).getInt();
       }
       if (!approved && response.containsCode(ResponseCode.VERBOSE_FORMAT))
-	    output.sendError("Publish error", NetworkPacket.toString(response.data()));
+	    output.sendError("Publish error", Serializer.toString(response.data()));
       return result;
 }
 
