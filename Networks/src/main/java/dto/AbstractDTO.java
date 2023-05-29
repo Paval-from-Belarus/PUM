@@ -2,9 +2,10 @@ package dto;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import transfer.TransferEntity;
 
 import java.util.Optional;
-
+@TransferEntity
 abstract class AbstractDTO implements SimpleDTO {
 private static final Gson gson = new Gson();
 

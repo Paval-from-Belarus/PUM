@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import transfer.SimpleTransfer;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -13,10 +14,11 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Map;
 
 public class Encryptor {
 //todo: if want to use Encryption in multithreading ― replace signle method to two: foreign_key and local_key
-public enum Encryption {
+public enum Encryption implements SimpleTransfer<Encryption> {
       None, Rsa, Des;
       @Getter
       private String transformation = "";
@@ -57,24 +59,23 @@ public enum Encryption {
 		  case Rsa -> true;
 	    };
       }
-      public byte[] getEncoded() {
+      public byte[] serialize() {
 	    byte[] key = new byte[0];
 	    if (this.detached != null) {
 		  key = detached.getEncoded();
 	    }
-	    ByteBuffer buffer = ByteBuffer.allocate(4 + key.length);
-	    buffer.putInt(this.ordinal()).put(key);
+	    ByteBuffer buffer = ByteBuffer.allocate(1 + key.length);
+	    buffer.put((byte)this.ordinal()).put(key);
 	    return buffer.array();
       }
-      public static @Nullable Encryption restore(byte[] encoded) {
+      public Encryption deserialize(byte[] encoded) {
 	    Encryption result = null;
-	    if (encoded.length >= 4) {
+	    if (encoded.length >= 1) {
 		  ByteBuffer buffer = ByteBuffer.wrap(encoded);
-		  int ordinal = buffer.getInt();
-		  int length = encoded.length - 4;
-		  byte[] bytes = new byte[length];
-		  System.arraycopy(encoded, 4, bytes, 0, bytes.length);
-		  if (bytes.length > 0 && ordinal < Encryption.values().length) {
+		  int ordinal = buffer.get();
+		  byte[] bytes = new byte[encoded.length - 1]; //the rest
+		  System.arraycopy(encoded, 1, bytes, 0, bytes.length);
+		  if (ordinal < Encryption.values().length) {
 			Encryption self = Encryption.values()[ordinal];
 			Key key = Encryptor.restoreKey(bytes, self);
 			if (key != null && self != None) {
@@ -84,6 +85,11 @@ public enum Encryption {
 			      result = self;
 			}
 		  }
+	    } else {
+		  throw new IllegalStateException("The serialized array is not correct");
+	    }
+	    if (result == null) {
+		  throw new IllegalStateException("Impossible to construct encoded key by input source");
 	    }
 	    return result;
       }

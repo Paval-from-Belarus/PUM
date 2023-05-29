@@ -105,22 +105,27 @@ private InputProcessor input;
 private OutputProcessor output;
 private Encryptor.Encryption encryption = Encryption.Des;
 private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
-
+private final Serializer serializer;
 public Client(int port) throws ConfigFormatException {
       this.port = port;
       input = new InputProcessor();
       output = new OutputProcessor();
+      this.serializer = new Serializer();
       initConfig();
 }
-
 private static final String CONFIG_PATH = "config.json";
-
+private static final String CLASSES_PATH =
+private void initSerializer() {
+      ClassLoader loader = Client.class.getClassLoader();
+      loader.getResource()
+}
 private void initConfig() {
       try {
 	    Path configPath = Path.of(CONFIG_PATH);
 	    String content = Files.readString(configPath);
 	    this.config = new Gson().fromJson(content, Configuration.class);
 	    this.config.init();
+
 	    storage = new PackageStorage(this.config);//throws
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");

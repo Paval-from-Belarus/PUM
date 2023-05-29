@@ -1,13 +1,14 @@
 package dto;
 
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
 
 import java.util.Optional;
 
-
+@EqualsAndHashCode(callSuper = false)
 public class PublishInstanceDTO extends AbstractDTO {
 public static final String DEFAULT_LICENCE = "GNU";
 @Getter

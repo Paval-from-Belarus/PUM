@@ -8,7 +8,7 @@ import java.util.Optional;
 @Accessors(prefix = "", makeFinal = true, fluent = true)
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = false)
 public class DependencyInfoDTO extends AbstractDTO {
 @Getter
 private Integer packageId;

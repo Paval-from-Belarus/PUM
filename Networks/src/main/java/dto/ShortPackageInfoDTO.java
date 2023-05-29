@@ -1,18 +1,17 @@
 package dto;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PACKAGE)
 @Accessors(prefix="", makeFinal = true, fluent = true)
-public class ShortPackageInfoDTO extends AbstractDTO{
+@EqualsAndHashCode
+public class ShortPackageInfoDTO {
 @NotNull
 @Getter
 private Integer id;
@@ -22,27 +21,27 @@ private String name;
 @NotNull
 @Getter
 private String version;
-@NotNull
+@Nullable
 @Getter
 private String[] aliases;
-public boolean similar(String word) {
-      if (word == null || word.isEmpty())
-	    return false;
-      if (name.equals(word))
-	    return true;
-      boolean isFound = false;
-      for (String alias : aliases) {
-	    isFound = alias.equals(word);
-	    if (isFound)
-		  break;
-      }
-      return isFound;
-}
+//public boolean similar(String word) {
+//      if (word == null || word.isEmpty())
+//	    return false;
+//      if (name.equals(word))
+//	    return true;
+//      boolean isFound = false;
+//      for (String alias : aliases) {
+//	    isFound = alias.equals(word);
+//	    if (isFound)
+//		  break;
+//      }
+//      return isFound;
+//}
 
-public static ShortPackageInfoDTO valueOf(Integer id, FullPackageInfoDTO dto) {
-      return new ShortPackageInfoDTO(id, dto.name, dto.version, dto.aliases);
-}
-public static Optional<ShortPackageInfoDTO> valueOf(String content) {
-      return valueOf(ShortPackageInfoDTO.class, content);
-}
+//public static ShortPackageInfoDTO valueOf(Integer id, FullPackageInfoDTO dto) {
+//      return new ShortPackageInfoDTO(id, dto.name, dto.version, dto.aliases);
+//}
+//public static Optional<ShortPackageInfoDTO> valueOf(String content) {
+//      return valueOf(ShortPackageInfoDTO.class, content);
+//}
 }

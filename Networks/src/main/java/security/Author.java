@@ -1,8 +1,6 @@
 package security;
 
 import org.jetbrains.annotations.NotNull;
-import transfer.NetworkPacket;
-import transfer.Serializable;
 import transfer.Serializer;
 
 import java.nio.charset.StandardCharsets;
