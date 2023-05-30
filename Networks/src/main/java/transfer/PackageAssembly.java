@@ -35,7 +35,28 @@ private static final int BODY_SIGN = 0xCCEEDDFF;
 
 public enum AssemblyType {Library, Application}
 
-public enum ArchiveType {None, GZip, Brotli, LZ77}
+public enum ArchiveType implements SimpleTransfer<ArchiveType> {
+      None, GZip, Brotli, LZ77;
+
+      @Override
+      public byte[] serialize() {
+	    byte[] bytes = new byte[1];
+	    bytes[0] = (byte) this.ordinal();
+	    return bytes;
+      }
+
+      @Override
+      public ArchiveType deserialize(byte[] bytes) {
+	    int ordinal = bytes[0];
+	    ArchiveType type;
+	    if (ordinal < values().length) {
+		  type = values()[ordinal];
+	    } else {
+		  throw new IllegalStateException("Impossible to create archive type");
+	    }
+	    return type;
+      }
+}
 
 private final Encryptor encryptor;
 private ArchiveType archive = ArchiveType.None;

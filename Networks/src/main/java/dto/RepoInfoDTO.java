@@ -1,23 +1,27 @@
 package dto;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.jetbrains.annotations.Nullable;
+import transfer.TransferEntity;
+import transfer.TransferOrder;
 
-import java.util.Optional;
-
-@NoArgsConstructor
-public class RepoInfoDTO extends AbstractDTO {
+@TransferEntity(selective = true, ignoreNullable = true)
+public class RepoInfoDTO {
+public RepoInfoDTO(String name, long timeout) {
+      this.name = name;
+      this.timeout = timeout;
+}
+@Getter
+@TransferOrder(value = 0)
+private final String name;
+@Getter
+@TransferOrder(value = 1)
+private final long timeout;
 @Getter @Setter
-private String name;
-@Getter @Setter
+@TransferOrder(value = 2)
 private String[] mirrors;
 @Getter @Setter
-private Long timeout;
-@Getter @Setter
+@TransferOrder(value = 3)
 private byte[] publicKey;
-public static Optional<RepoInfoDTO> valueOf(String content) {
-      return valueOf(RepoInfoDTO.class, content);
-}
+
 }

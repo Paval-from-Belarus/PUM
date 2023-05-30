@@ -6,23 +6,24 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import transfer.TransferEntity;
+import transfer.TransferOrder;
 
 import java.util.Optional;
-@TransferEntity
+@TransferEntity(selective = true, ignoreNullable = true)
 @AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
-@Accessors(prefix = "", makeFinal = true, fluent = true)
-public class PublishInfoDTO extends AbstractDTO{
+public class PublishInfoDTO {
 @NotNull
 @Getter
-private String name;
+@TransferOrder(value = 0)
+private final String name;
 @NotNull
 @Getter
-private String[] aliases;
+@TransferOrder(value = 1)
+private final String payloadType;
+@Nullable
 @Getter
-private String payloadType;
-public static Optional<PublishInfoDTO> valueOf(String content) {
-      return valueOf(PublishInfoDTO.class, content);
-}
+@TransferOrder(value = 2)
+private final String[] aliases;
 }

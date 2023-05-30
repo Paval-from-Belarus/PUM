@@ -1,18 +1,23 @@
 package common;
 
 import org.jetbrains.annotations.NotNull;
+import org.w3c.dom.Document;
+import transfer.TransferConfig;
+import transfer.Serializer;
 
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class Configuration {
+public static final String TRANSFER_RESOURCE = "transfer-packages.xml";
 public static final String PACKAGES_INFO_FILE = "info.pum";
 public static final String PUBLISHER_CONFIG = "author.pum";
 public String programs;
@@ -50,6 +55,7 @@ public void init() {
 	    throw new RuntimeException(e);
       }
 }
+
 //todo :implements to any config files (such as InstanceInfo, Publisher)
 public static Map<String, String[]> mapOf(@NotNull String content) {
       if (content.length() <= 2)
@@ -66,4 +72,21 @@ public static Map<String, String[]> mapOf(@NotNull String content) {
       }
       return Map.of();
 }
+
+public void setSerializer(Serializer serializer) {
+      Document document;
+      ClassLoader loader = Client.class.getClassLoader();
+      URL resource = loader.getResource(TRANSFER_RESOURCE);
+      assert resource != null; //the resource cannot be null
+      TransferConfig transfer;
+      try {
+	    transfer = new TransferConfig(serializer);
+	    transfer.configure(resource.toURI());
+      } catch (ClassNotFoundException e) {
+	    throw new IllegalStateException("Class in config file is not specified");
+      } catch (URISyntaxException e) {
+	    throw new IllegalStateException("Impossible to configure the serializer");
+      }
+}
+
 }

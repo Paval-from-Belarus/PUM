@@ -6,20 +6,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+import transfer.TransferEntity;
+import transfer.TransferOrder;
 
 import java.util.Optional;
 
 @AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
-@Accessors(prefix="", makeFinal = true, fluent = true)
-public class VersionInfoDTO extends AbstractDTO{
+@TransferEntity(selective = true)
+public class VersionInfoDTO {
 @NotNull
 @Getter
-private Integer versionId;
+@TransferOrder(value = 0)
+private final Integer versionId;
 @NotNull
 @Getter
-private String label;
-public static Optional<VersionInfoDTO> valueOf(String content) {
-      return valueOf(VersionInfoDTO.class, content);
-}
+@TransferOrder(value = 1)
+private final String label;
 }

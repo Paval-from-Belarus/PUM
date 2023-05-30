@@ -3,11 +3,11 @@ package common;
 import com.google.gson.Gson;
 import database.CachedInfo;
 import database.RepositoryInfo;
+import dto.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import dto.*;
 import requests.*;
 import security.Author;
 import security.Encryptor;
@@ -16,28 +16,28 @@ import storage.ModifierSession.Rank;
 import storage.ModifierSession.VersionPredicate;
 import transfer.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.AcceptPendingException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.Timestamp;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static transfer.SimplexService.*;
 import static common.InputProcessor.*;
-import static common.OutputProcessor.*;
-import static security.Encryptor.*;
+import static common.OutputProcessor.QuestionResponse;
+import static common.OutputProcessor.QuestionType;
+import static security.Encryptor.Encryption;
 import static storage.PackageStorage.*;
-import static storage.StorageSession.*;
+import static storage.StorageSession.CommitState;
 import static transfer.NetworkExchange.*;
+import static transfer.SimplexService.ServerAccessException;
 
 
 public class Client {
@@ -57,7 +57,7 @@ public enum ResolutionMode {
       public boolean isSuitable(DependencyInfoDTO dto) {
 	    if (storage == null)
 		  return false;
-	    InstallationState state = storage.getPackageState(dto.packageId(), dto.label());
+	    InstallationState state = storage.getPackageState(dto.getPackageId(), dto.getLabel());
 	    boolean response = false;
 	    switch (this) {
 		  case Remote -> response = state.isRemote();
@@ -106,6 +106,7 @@ private OutputProcessor output;
 private Encryptor.Encryption encryption = Encryption.Des;
 private PackageAssembly.ArchiveType archive = PackageAssembly.ArchiveType.Brotli;
 private final Serializer serializer;
+
 public Client(int port) throws ConfigFormatException {
       this.port = port;
       input = new InputProcessor();
@@ -113,19 +114,16 @@ public Client(int port) throws ConfigFormatException {
       this.serializer = new Serializer();
       initConfig();
 }
+
 private static final String CONFIG_PATH = "config.json";
-private static final String CLASSES_PATH =
-private void initSerializer() {
-      ClassLoader loader = Client.class.getClassLoader();
-      loader.getResource()
-}
+
 private void initConfig() {
       try {
 	    Path configPath = Path.of(CONFIG_PATH);
 	    String content = Files.readString(configPath);
-	    this.config = new Gson().fromJson(content, Configuration.class);
-	    this.config.init();
-
+	    config = new Gson().fromJson(content, Configuration.class);
+	    config.init();
+	    config.setSerializer(this.serializer);
 	    storage = new PackageStorage(this.config);//throws
       } catch (IOException e) {
 	    throw new RuntimeException("Impossible to proceed client without config file");
@@ -307,8 +305,8 @@ private void changeInstalledPackage(ModifierSession session, String name, Versio
       if (packageId.isPresent() && local.isPresent()) {
 	    remote = function.getVersion(packageId.get(), local.get());
 	    if (remote.isPresent() && predicate.check(local.get(), remote.get())) {
-		  var lastInfo = getFullInfo(packageId.get(), remote.get().label());
-		  var oldInfo = storage.getFullInfo(packageId.get(), local.get().label());
+		  var lastInfo = getFullInfo(packageId.get(), remote.get().getLabel());
+		  var oldInfo = storage.getFullInfo(packageId.get(), local.get().getLabel());
 		  if (lastInfo.isPresent() && oldInfo.isPresent()) {
 			try {
 			      removeRetired(session, packageId.get(), oldInfo.get());
@@ -380,7 +378,7 @@ private Optional<VersionInfoDTO> getVersionByLevel(Integer packageId, int level)
       try (NetworkService service = packageService(packageId)) {
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.INT_FORMAT);
 	    VersionRequest request = new VersionRequest(packageId, level);
-	    packet.setPayload(request.stringify());
+	    packet.setPayload(serialize(request));
 	    service.setRequest(packet).setResponseHandler((NetworkPacket response) -> onVersionResponse(wrapper, response));
 	    service.run();
       } catch (Exception ignored) {
@@ -392,8 +390,8 @@ private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO loc
       Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
       try (NetworkService service = packageService(id)) {
 	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.STR_FORMAT);
-	    VersionRequest request = new VersionRequest(id, local.label());
-	    packet.setPayload(request.stringify());
+	    VersionRequest request = new VersionRequest(id, local.getLabel());
+	    packet.setPayload(serialize(request));
 	    service.setRequest(packet).setResponseHandler((NetworkPacket response) -> onVersionResponse(wrapper, response));
 	    service.run();
       } catch (Exception ignored) {
@@ -404,7 +402,7 @@ private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO loc
 private void onVersionResponse(Wrapper<VersionInfoDTO> wrapper, NetworkPacket response) {
       VersionInfoDTO dto;
       if (response.type(ResponseType.class) == ResponseType.Approve) {
-	    dto = fromJson(response.stringData(), VersionInfoDTO.class);
+	    dto = construct(VersionInfoDTO.class, response.data());
 	    wrapper.set(dto);
       }
 }
@@ -511,7 +509,7 @@ private Optional<Integer> publishPackageHat(Integer authorId, Publisher entity) 
 	    PublishInfoDTO dto = extractPublishHat(entity);
 	    var packet = new NetworkPacket(RequestType.PublishInfo, RequestCode.STR_FORMAT);
 	    var request = new PublishInfoRequest(authorId, dto);
-	    packet.setPayload(request.stringify());
+	    packet.setPayload(serialize(request));
 	    service.setRequest(packet)
 		.setResponseHandler((NetworkPacket p) -> response.set(onPublishResponse(p)))
 		.setExceptionHandler(this::onPublishException);
@@ -527,7 +525,7 @@ private Optional<Integer> publishPayload(String repoUrl, Integer authorId, Publi
       try (NetworkService service = urlService(repoUrl)) {
 	    var packet = new NetworkPacket(RequestType.PublishPayload, RequestCode.STR_FORMAT | RequestCode.TAIL_FORMAT);
 	    var request = new PublishInstanceRequest(authorId, dto);
-	    packet.setPayload(request.stringify());
+	    packet.setPayload(serialize(request));
 	    service.setRequest(packet)
 		.setTailWriter((outputStream) -> writePayload(fileStream, outputStream))
 		.setResponseHandler((NetworkPacket p) -> version.set(onPublishResponse(p)))
@@ -592,7 +590,7 @@ private void onPublishException(Exception e) {
 }
 
 private static PublishInfoDTO extractPublishHat(Publisher entity) {
-      return new PublishInfoDTO(entity.name, entity.aliases, entity.type.toString());
+      return new PublishInfoDTO(entity.name, entity.type.toString(), entity.aliases);
 }
 
 private void onRemoveCommand(ParameterMap params) {
@@ -677,7 +675,7 @@ private Optional<RepoInfoDTO> getRepoInfo(String url) {
 	    AtomicBoolean shouldRerun = new AtomicBoolean(false);
 	    service.setRequest(request).setResponseHandler((NetworkPacket p) -> {
 		  if (p.type(ResponseType.class) == ResponseType.Approve) {
-			RepoInfoDTO.valueOf(p.stringData()).ifPresent(wrapper::set);
+			wrapper.set(construct(RepoInfoDTO.class, p.data()));
 		  } else {
 			if (p.containsCode(ResponseCode.TRY_AGAIN)) {
 			      shouldRerun.set(true);
@@ -770,7 +768,7 @@ private void showPackagesLocally(boolean isVerbose) {
 	    packages.forEach(this::printPackageInfo);
       } else {
 	    packages.stream()
-		.map(full -> ShortPackageInfoDTO.valueOf(DUMMY_ID, full))
+		.map(fullInfo -> ShortPackageInfoDTO.mapDTO(fullInfo, DUMMY_ID))
 		.forEach(this::printShortInfo);
       }
       if (storage.getLastStatus() != OperationStatus.Success) {
@@ -781,8 +779,7 @@ private void showPackagesLocally(boolean isVerbose) {
 private void onListAllResponse(NetworkPacket response) throws IOException {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No payload to print");
-      String jsonInfo = response.stringData();
-      ShortPackageInfoDTO[] packages = fromJson(jsonInfo, ShortPackageInfoDTO[].class);
+      ShortPackageInfoDTO[] packages = construct(ShortPackageInfoDTO[].class, response.data());
       System.out.format("Available packages:\n");
       for (ShortPackageInfoDTO info : packages) {
 	    printShortInfo(info);
@@ -891,7 +888,7 @@ private void assignDependencies(Integer packageId, FullPackageInfoDTO dto) {
       if (repoInfo.isPresent() && dto.dependencies != null) {
 	    String baseUrl = repoInfo.get().getBaseUrl();
 	    for (var dependency : dto.dependencies) {
-		  storage.setRepoMapping(dependency.packageId(), baseUrl);
+		  storage.setRepoMapping(dependency.getPackageId(), baseUrl);
 	    }
       }
 }
@@ -945,7 +942,7 @@ private Optional<byte[]> getRawAssembly(Integer id, String label, Encryption enc
 		RequestCode.STR_FORMAT | RequestCode.TRANSFER_FORMAT);
 	    var request = new PayloadRequest(id, label, archive);
 	    request.setEncryption(encryption);
-	    packet.setPayload(request.stringify());
+	    packet.setPayload(serialize(request));
 	    service.setRequest(packet).setResponseHandler((NetworkPacket p) -> payload.set(onRawAssemblyResponse(p)));
 	    service.run();
       } catch (Exception e) {
@@ -963,7 +960,7 @@ private byte[] onRawAssemblyResponse(NetworkPacket response) {
 
 private void printShortInfo(ShortPackageInfoDTO info) {
       System.out.format("%-40s\t%-10s\t%-30s\n",
-	  info.name(), info.version(), "PetOS Central");
+	  info.getName(), info.getVersion(), "PetOS Central");
 }
 
 /**
@@ -976,15 +973,15 @@ private Map<Integer, FullPackageInfoDTO> resolveDependencies(FullPackageInfoDTO 
 						 .toList();
       Map<Integer, FullPackageInfoDTO> dependencyMap = new HashMap<>();
       for (var dependency : dependencies) {
-	    var fullInfo = storage.getFullInfo(dependency.packageId(), dependency.label()); //attempt to fetch data from local database
+	    var fullInfo = storage.getFullInfo(dependency.getPackageId(), dependency.getLabel()); //attempt to fetch data from local database
 	    if (fullInfo.isEmpty())
-		  fullInfo = getFullInfo(dependency.packageId(), dependency.label()); //fetch the info from remote server
+		  fullInfo = getFullInfo(dependency.getPackageId(), dependency.getLabel()); //fetch the info from remote server
 	    if (fullInfo.isPresent()) {
-		  dependencyMap.put(dependency.packageId(), fullInfo.get());
+		  dependencyMap.put(dependency.getPackageId(), fullInfo.get());
 		  dependencyMap.putAll(resolveDependencies(fullInfo.get(), mode));
 	    } else {
 		  logger.warn("Broken dependency:" +
-				  dependency.label() + " id=" + dependency.packageId());
+				  dependency.getLabel() + " id=" + dependency.getPackageId());
 		  throw new PackageIntegrityException("Broken dependency");
 	    }
       }
@@ -1025,7 +1022,7 @@ private Optional<Integer> getPackageId(NetworkService service, String packageNam
       AtomicReference<Integer> id = new AtomicReference<>(null);
       var packet = new NetworkPacket(RequestType.GetId, RequestCode.NO_CODE);
       var request = new IdRequest(packageName);
-      packet.setPayload(request.stringify());
+      packet.setPayload(serialize(request));
       service.setRequest(packet)
 	  .setResponseHandler((NetworkPacket p) -> {
 		Integer responseId = onPackageIdResponse(p);
@@ -1062,44 +1059,49 @@ private @Nullable Integer onPackageIdResponse(NetworkPacket response) {
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, String label) {
       var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.STR_FORMAT);
       var request = new InfoRequest(id, label);
-      packet.setPayload(request.stringify());
+      packet.setPayload(serialize(request));
       return getFullInfo(id, packet);
 }
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, Integer offset) {
       var packet = new NetworkPacket(RequestType.GetInfo, RequestCode.INT_FORMAT);
       var request = new InfoRequest(id, offset);
-      packet.setPayload(request.stringify());
+      packet.setPayload(serialize(request));
       return getFullInfo(id, packet);
 }
 
-private String onPackageInfoResponse(NetworkPacket response) {
+private byte[] onPackageInfoResponse(NetworkPacket response) {
       if (response.type() != ResponseType.Approve)
 	    throw new IllegalStateException("No valid package info");
-      return response.stringData();
+      return response.data();
 }
 
 private Optional<FullPackageInfoDTO> getFullInfo(Integer id, NetworkPacket request) {
-      FullPackageInfoDTO dto = null;
-      try (NetworkService service = packageService(id)) { //single thread ?
-	    Wrapper<String> info = new Wrapper<>();
+      Optional<FullPackageInfoDTO> dto = Optional.empty();
+      try (NetworkService service = packageService(id)) {
+	    Wrapper<byte[]> info = new Wrapper<>();
 	    service.setRequest(request).setResponseHandler((NetworkPacket p) -> info.set(onPackageInfoResponse(p)));
 	    service.run();
-	    var stringInfo = Optional.ofNullable(info.get());
-	    if (stringInfo.isPresent()) {
-		  dto = PackageStorage.fromJson(stringInfo.get(), FullPackageInfoDTO.class);
-	    }
+	    dto = Optional.ofNullable(info.get()).map(bytes -> construct(FullPackageInfoDTO.class, bytes));
       } catch (ServerAccessException e) {
 	    output.sendError("", e.getMessage());
       } catch (Exception e) {
 	    output.sendError("Unknown error", e.getMessage());
       }
-      return Optional.ofNullable(dto);
+      return dto;
 }
 
 private void defaultErrorHandler(Exception e) {
       e.printStackTrace();
       System.out.println(e.getMessage());
+}
+
+private byte[] serialize(Object instance) {
+      assert serializer != null;
+      return serializer.serialize(instance);
+}
+private <T> T construct(Class<T> clazz, byte[] bytes) {
+      return serializer.construct(bytes, clazz);
 }
 
 public static void main(String[] args) {

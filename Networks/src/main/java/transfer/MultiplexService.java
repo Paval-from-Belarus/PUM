@@ -88,7 +88,7 @@ public void run() {
       try {
 	    boolean isTerminated = false;
 	    //the possible cause in case of buggy SimplexService is
-	    while (!isTerminated) { //do while client is working
+		    while (!isTerminated) { //do while client is working
 		  isTerminated = scheduler.awaitTermination(RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
 	    }
       } catch (InterruptedException ignored) {

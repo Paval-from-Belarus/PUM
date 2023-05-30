@@ -1,17 +1,13 @@
 package common;
 
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import transfer.NetworkConnection;
-import transfer.NetworkExchange;
-import transfer.NetworkPacket;
+import transfer.*;
 
 import static transfer.NetworkExchange.*;
 
@@ -53,7 +49,7 @@ public void start() {
 }
 
 static class ClientService implements Runnable {
-      private final int DEFAULT_TIMEOUT = 2500;
+      private final int DEFAULT_TIMEOUT = 2500_000;
       private final Socket socket;
       private final ServerController handler;
 
@@ -63,10 +59,10 @@ static class ClientService implements Runnable {
       }
 
       private Optional<NetworkPacket> getRequest(InputStream input) throws IOException {
-	    byte[] controlBuffer = new byte[NetworkPacket.controlSize()];
+	    byte[] controlBuffer = new byte[NetworkPacket.BytesPerCommand];
 	    Optional<NetworkPacket> optional = Optional.empty();
 	    int cbRead = input.read(controlBuffer);
-	    if (cbRead == NetworkPacket.controlSize() && (optional = NetworkPacket.valueOf(controlBuffer)).isPresent()) {
+	    if (cbRead == NetworkPacket.BytesPerCommand && (optional = NetworkPacket.valueOf(controlBuffer)).isPresent()) {
 		  var packet = optional.get();
 		  byte[] payload = new byte[packet.payloadSize()];
 		  cbRead = input.read(payload);
@@ -91,25 +87,24 @@ static class ClientService implements Runnable {
 	    try (DataInputStream input = new DataInputStream(socket.getInputStream())) {
 		  DataOutputStream output = new DataOutputStream(socket.getOutputStream());
 		  socket.setSoTimeout(DEFAULT_TIMEOUT);
-		  Optional<NetworkPacket> packet;
-		  do {
-			packet = getRequest(input);
-		  } while (packet.isEmpty());
-		  NetworkConnection connection = new NetworkConnection(input);
-		  NetworkExchange message = new NetworkExchange(packet.get(), connection);
-		  try {
-			handler.accept(message);
-			if (message.response().isEmpty())
-			      ServerController.defaultResponse(message);
-		  } catch (Exception e) {
-			handler.error(message);//it's obligatory for Controller to process error
-   			logger.warn("Error in common.Server Controller: " + e.getMessage());
-		  } finally {
-			if (message.response().isPresent())
-			      sendResponse(message.response().get(), connection, output);
-			connection.close();
+		  Optional<NetworkPacket> request = getRequest(input);
+		  if (request.isPresent()) {
+			NetworkConnection connection = new NetworkConnection(input);
+			NetworkExchange exchange = new NetworkExchange(request.get(), connection);
+			try {
+			      handler.accept(exchange);
+			} catch (Exception e) {
+			      handler.error(exchange);//it's obligatory for Controller to process error
+			      logger.warn("Error in common.Server Controller: " + e.getMessage());
+			} finally {
+			      if (exchange.response().isPresent())
+				    sendResponse(exchange.response().get(), connection, output);
+			      connection.close();
+			}
+		  } else {
+			NetworkPacket packet = new NetworkPacket(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
+			output.write(packet.construct());
 		  }
-
 	    } catch (SocketTimeoutException e) {
 		  logger.warn("Client not response");
 	    } catch (IOException e) {
@@ -123,7 +118,18 @@ static class ClientService implements Runnable {
 public static void main(String[] args) {
       Server server = new Server(3344);
       PackageStorage storage = new PackageStorage();
-      server.setController(new ServerDispatcher(storage));
+      Serializer serializer = new Serializer();
+      try {
+	    URL resource =  Server.class.getClassLoader().getResource("transfer-packages.xml");
+	    assert resource != null;
+	    TransferConfig config = new TransferConfig(serializer);
+	    config.configure(resource.toURI());
+      } catch (URISyntaxException e) {
+	    throw new RuntimeException(e);
+      } catch (ClassNotFoundException e) {
+	    throw new RuntimeException(e);
+      }
+      server.setController(new ServerDispatcher(storage, serializer));
       server.start();
       storage.close();
 }

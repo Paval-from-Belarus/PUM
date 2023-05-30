@@ -124,8 +124,8 @@ private void amendAliases(PackageId id, @NotNull Collection<String> aliases) thr
 
 //it's forbidden for everyone to change existing PackageHat (if it's not valid)
 private void checkPermissions(AuthorId author, PublishInfoDTO info) throws StorageException {
-      List<String> aliases = new ArrayList<>(Arrays.asList(info.aliases()));
-      aliases.add(info.name());
+      List<String> aliases = new ArrayList<>(Arrays.asList(info.getAliases()));
+      aliases.add(info.getName());
       boolean isPermitted = true;
       try (Session session = dbFactory.openSession()) {
 	    for (String alias : aliases) {
@@ -151,7 +151,7 @@ private void checkInstance(AuthorId author, PublishInstanceDTO dto) throws Stora
       try (Session session = dbFactory.openSession()) {
 	    session.beginTransaction();
 	    Query query = session.createQuery("from PackageHat where authorId= :author and id= :packageId");
-	    query.setParameter("author", author.value()).setParameter("packageId", dto.packageId());
+	    query.setParameter("author", author.value()).setParameter("packageId", dto.getPackageId());
 	    List<PackageHat> hats = query.getResultList();
 	    session.getTransaction().commit();
 	    isValidInstance = hats != null && hats.size() != 0;
@@ -292,28 +292,26 @@ public Optional<ShortPackageInfoDTO> getShortInfo(PackageId id) {
 		    .setParameter("id", id.value()).setMaxResults(1);
 	    optionalInfo = query.getResultList().stream().findAny();
 	    session.getTransaction().commit();
-	    dto = optionalInfo.map(info -> new ShortPackageInfoDTO(id.value(), hat.get().getName(),
-		info.getVersionLabel(), hat.get().getAliases().toArray(String[]::new)));
+	    dto = optionalInfo.map(info -> {
+		  var shortInfo = new ShortPackageInfoDTO(hat.get().getName(), id.value(), info.getVersionLabel());
+		  shortInfo.setAliases(hat.get().getAliases().toArray(new String[0]));
+		  return shortInfo;
+	    });
       }
       return dto;
 }
 public RepoInfoDTO getRepoInfo() {
-      RepoInfoDTO dto = new RepoInfoDTO();
-      dto.setName(config.getRepoName());
-      dto.setMirrors(config.getMirrors());
-      completeRepoInfo(dto);
-      return dto;
-}
-private void completeRepoInfo(@NotNull RepoInfoDTO dto) {
-      Long currTime = Clock.systemUTC().millis();
-      Long lastUpdate = getLastTimerUpdate();
-      long diff = currTime - lastUpdate;
+      long currTime = Clock.systemUTC().millis();
+      long lastUpdate = getLastTimerUpdate();
+      long timeout = currTime - lastUpdate;
       if (!DEFAULT_ENCRYPTION.holdsKey()) {
 	    PublicKey key = getPublicSign();
 	    DEFAULT_ENCRYPTION.detachKey(key);
       }
-      dto.setPublicKey(DEFAULT_ENCRYPTION.getEncoded());
-      dto.setTimeout(diff);
+      RepoInfoDTO dto = new RepoInfoDTO(config.getRepoName(), timeout);
+      dto.setPublicKey(DEFAULT_ENCRYPTION.serialize());
+      dto.setMirrors(config.getMirrors());
+      return dto;
 }
 public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull VersionId version) {
       FullPackageInfoDTO dto = null;
@@ -321,24 +319,17 @@ public Optional<FullPackageInfoDTO> getFullInfo(@NotNull PackageId id, @NotNull 
 	    var optionalInfo = getInstanceInfo(session, id, version);
 	    var optionalHat = getValidPackageHat(session, id);
 	    if (optionalHat.isPresent() && optionalInfo.isPresent()) {
-
 		  PackageHat hat = optionalHat.get();
 		  PackageInfo info = optionalInfo.get();
-		  dto = new FullPackageInfoDTO();
-		  dto.version = info.getVersionLabel();
-		  dto.aliases = hat.getAliases().toArray(new String[0]);
-		  dto.name = hat.getName();
-		  dto.licenseType = info.getLicence().getName();
-		  dto.payloadType = hat.getPayload().getName();
-		  var payload = info.getPayloads().stream().findAny(); //replace
+		  var payload = info.getPayloads().stream().findAny();
 		  if (payload.isPresent()) {
-			dto.payloadSize = (int) Files.size(Path.of(payload.get().getPath()));
-			dto.dependencies = collectDependencies(info).toArray(new DependencyInfoDTO[0]);
-		  } else {
-			dto = null;
+			dto = new FullPackageInfoDTO(hat.getName(), info.getVersionLabel(), (int) Files.size(Path.of(payload.get().getPath())));
+			dto.setLicenseType(info.getLicence().getName());
+			dto.setAliases(hat.getAliases().toArray(new String[0]));
+			dto.setPayloadType(hat.getPayload().getName());
+			dto.setDependencies(collectDependencies(info).toArray(new DependencyInfoDTO[0]));
 		  }
 		  //todo: exhause max file size to Long
-
 	    }
       } catch (StorageException | IOException e) {
 	    dto = null;
@@ -438,7 +429,7 @@ private @NotNull Path toPayloadPath(PackageHat hat, PublishInstanceDTO dto) thro
       if (!Files.exists(packagesPath)) {
 	    Files.createDirectory(packagesPath);
       }
-      return packagesPath.resolve(hat.getPayload().getName() + dto.version());
+      return packagesPath.resolve(hat.getPayload().getName() + dto.getVersion());
 }
 
 /**
@@ -507,21 +498,23 @@ private void removePackageAll(@NotNull Session session, PackageId id) {
 private PackageInfo constructFrom(@NotNull Session session, VersionId version, @NotNull PublishInstanceDTO dto, @NotNull String path) throws StorageException {
       Licence licence = fetchLicense(session, dto.getLicense());
       Archive archive = fetchArchive(session, DEFAULT_ARCHIVE);
-      PackageInfo info = PackageInfo.valueOf(dto.packageId(), version.value());
-      info.setPackageId(dto.packageId());
-      info.setVersionLabel(dto.version());
+      PackageInfo info = PackageInfo.valueOf(dto.getPackageId(), version.value());
+      info.setPackageId(dto.getPackageId());
+      info.setVersionLabel(dto.getVersion());
       info.setLicence(licence);
       info.setPayloadPath(archive, path);
       Set<DependencyId> dependencies = new HashSet<>();
-      for (DependencyInfoDTO libDTO : dto.dependencies()) {
-	    Optional<PackageId> libId = getPackageId(libDTO.packageId());
-	    Optional<VersionId> libVersion = libId.flatMap(id -> mapVersion(id, dto.version()));
-	    var instance = libVersion.flatMap(v -> getInstanceInfo(session, libId.get(), v));
-	    if (instance.isPresent()) {
-		  dependencies.add(new DependencyId(libId.get().value(), libVersion.get().value()));
-	    } else {
-		  logger.error("The package " + dto.packageId() + " has broken dependencies");
-		  throw new StorageException("Broken dependencies");
+      if (dto.getDependencies() != null) {
+	    for (DependencyInfoDTO libDTO : dto.getDependencies()) {
+		  Optional<PackageId> libId = getPackageId(libDTO.getPackageId());
+		  Optional<VersionId> libVersion = libId.flatMap(id -> mapVersion(id, dto.getVersion()));
+		  var instance = libVersion.flatMap(v -> getInstanceInfo(session, libId.get(), v));
+		  if (instance.isPresent()) {
+			dependencies.add(new DependencyId(libId.get().value(), libVersion.get().value()));
+		  } else {
+			logger.error("The package " + dto.getPackageId() + " has broken dependencies");
+			throw new StorageException("Broken dependencies");
+		  }
 	    }
       }
       info.setDependencies(dependencies);
@@ -534,10 +527,10 @@ private PackageInfo constructFrom(@NotNull Session session, VersionId version, @
 private VersionId updatePackageInfo(@NotNull PublishInstanceDTO dto, byte[] payload) throws StorageException {
       VersionId version;
       try (Session session = dbFactory.openSession()) {
-	    PackageId id = PackageId.valueOf(dto.packageId());
+	    PackageId id = PackageId.valueOf(dto.getPackageId());
 	    Optional<PackageHat> hat = getAnyPackageHat(session, id);
 	    if (hat.isPresent()) {
-		  version = nextVersionId(id, dto.version());//each time unique)
+		  version = nextVersionId(id, dto.getVersion());//each time unique)
 		  PackageInfo info;
 		  try {
 			Path path = toPayloadPath(hat.get(), dto);
@@ -560,8 +553,8 @@ private VersionId updatePackageInfo(@NotNull PublishInstanceDTO dto, byte[] payl
 
 @SessionMethod
 private PackageHat constructFrom(Session session, @NotNull AuthorId authorId, @NotNull PublishInfoDTO dto) throws StorageException {
-      PackageHat hat = PackageHat.valueOf(dto.name(), dto.aliases());
-      Payload payload = fetchPayload(session, dto.payloadType()); //throws StorageException
+      PackageHat hat = PackageHat.valueOf(dto.getName(), dto.getAliases());
+      Payload payload = fetchPayload(session, dto.getPayloadType()); //throws StorageException
       hat.setPayload(payload);
       hat.setAuthorId(authorId.value());
       return hat;

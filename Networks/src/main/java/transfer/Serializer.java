@@ -1,17 +1,18 @@
 package transfer;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import sun.misc.Unsafe;
 
-import java.io.File;
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Stream;
-
-import org.jetbrains.annotations.Nullable;
-import sun.misc.Unsafe;
 
 /**
  * Some notes. The generalized classes, such as Number, cannot be interpreted explicitly.
@@ -172,7 +173,14 @@ public Serializer register(int code, Class<?> clazz) {
 }
 
 public <T> T construct(byte[] source, Class<T> origin) {
-      return constructObject(ByteBuffer.wrap(source), origin);
+      ByteBuffer buffer = ByteBuffer.wrap(source).mark();
+      T instance;
+      if (origin.isArray() && buffer.getShort() == FieldType.Array.code()) {
+	     instance = origin.cast(constructArray(buffer, origin));
+      } else {
+	    instance = constructObject(buffer, origin);
+      }
+      return instance;
 }
 
 @SuppressWarnings("unchecked")
@@ -218,7 +226,7 @@ private <T> T constructObject(ByteBuffer buffer, Class<T> origin) {
 	    byte[] bytes = new byte[length];
 	    System.arraycopy(buffer.array(), buffer.position(), bytes, 0, length);
 	    instance = ((SimpleTransfer<T>) instance).deserialize(bytes);
-	    buffer.position(buffer.position() + bytes.length + 4);
+	    buffer.position(buffer.position() + bytes.length);
       } else {
 	    completeObjectByFields(buffer, instance);
       }
@@ -243,7 +251,7 @@ private <T> void completeObjectByFields(ByteBuffer buffer, T instance) {
 			continue;
 		  }
 		  if (type == FieldType.Array) {
-			clazz = field.getType(); //construct a array according the field requirements
+			clazz = field.getType(); //construct an array according the field requirements
 		  }
 		  if (value != null) {
 			if (type.hasSize()) {
@@ -260,6 +268,9 @@ private <T> void completeObjectByFields(ByteBuffer buffer, T instance) {
 		  field.set(instance, value);
 	    } catch (IllegalAccessException e) {
 		  throw new SerializeException(e);
+	    }
+	    if (buffer.position() == buffer.capacity()) {
+		  break;
 	    }
       }
 }
@@ -380,7 +391,15 @@ public Map.Entry<Class<?>, int[]> findArrayDimensions(final ByteBuffer buffer) {
  *               If object type is not specified then only fields will be serialized
  */
 public byte[] serialize(@NotNull Object object) {
-      return serializeObject(object);
+      byte[] bytes;
+      if (object.getClass().isArray()) {
+	    Object[] elements = multiplyArray(object);
+	    bytes = serializeArray(elements, object.getClass().getComponentType());
+	    bytes = ByteBuffer.allocate(BYTES_PER_SIGN + bytes.length).putShort(FieldType.Array.code()).put(bytes).array();
+      } else {
+	    bytes = serializeObject(object);
+      }
+      return bytes;
 }
 
 /**
@@ -452,7 +471,7 @@ private byte[] serializeNullableArray(Object[] objects, FieldType type, Short co
 	    }
 	    bytesBatch.add(ByteBuffer.allocate(BYTES_PER_SIGN).putShort(elementCode).array());
 	    if (object != null) {
-		  if (type.hasSize()) { //the cycle will inverted
+		  if (type.hasSize()) { //the cycle will invert
 			bytesBatch.add(serializePrimitive(object, type));
 		  } else {
 			bytesBatch.add(serializeComposite(object, type));
@@ -478,7 +497,7 @@ private byte[] serializePureArray(Object[] objects, FieldType type, Short code) 
 	    hugeBuffer.putInt(objects.length).putShort(code);
 	    bytesBatch.forEach(hugeBuffer::put);
       } else {
-	    hugeBuffer = ByteBuffer.allocate(4 + BYTES_PER_SIGN + type.size() * objects.length); //the max performance)
+	    hugeBuffer = ByteBuffer.allocate(4 + BYTES_PER_SIGN + type.size() * objects.length); //let's make the max performance
 	    hugeBuffer.putInt(objects.length).putShort(code);
 	    for (@NotNull Object object : objects) {
 		  hugeBuffer.put(serializePrimitive(object, type));
@@ -601,7 +620,7 @@ private int sortSelective(Field left, Field right) {
 	    result = leftOrder.value() - rightOrder.value();
       }
       if (leftOrder != null || rightOrder != null) { //the annotated fields has higher priority
-	    result = leftOrder != null ? 1 : -1;
+	    result = leftOrder != null ? -1 : 1;
       }
       return result;
 }
@@ -615,7 +634,7 @@ private boolean filterNullable(Field field, Object instance) {
       } catch (Exception e) {
 	    throw new IllegalStateException("Field is not accessible");
       }
-      return result != null; //non null values will be passed
+      return result != null; //not null values will be passed
 }
 
 public static @NotNull byte[] toBytes(String line) {

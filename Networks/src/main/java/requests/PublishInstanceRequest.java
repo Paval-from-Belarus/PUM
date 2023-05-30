@@ -3,36 +3,23 @@ package requests;
 import lombok.*;
 import org.jetbrains.annotations.NotNull;
 import dto.PublishInstanceDTO;
+import transfer.TransferEntity;
+import transfer.TransferOrder;
 
 import java.util.List;
 import java.util.Optional;
 
 
 @AllArgsConstructor
-@MethodRequest(name="PublishPayload")
 @EqualsAndHashCode(callSuper = false)
+@TransferEntity(selective = true)
 public class PublishInstanceRequest  {
 @Getter
 @NotNull
+@TransferOrder(value = 0)
 private Integer authorId;
 @Getter
 @NotNull
+@TransferOrder(value = 1)
 private PublishInstanceDTO dto;
-
-//@Override
-//public String stringify() {
-//      String result = stringify(authorId);
-//      return join(result, dto.stringify());
-//}
-//
-//public static Optional<PublishInstanceRequest> valueOf(String content) {
-//      Optional<PublishInstanceRequest> optional = Optional.empty();
-//      List<byte[]> bytes = split(content, 2);
-//      if (bytes.size() == 2) {
-//	    Integer author = toInteger(bytes.get(0));
-//	    var dto = PublishInstanceDTO.valueOf(toString(bytes.get(1)));
-//	    optional = dto.map(info -> new PublishInstanceRequest(author, info));
-//      }
-//      return optional;
-//}
 }

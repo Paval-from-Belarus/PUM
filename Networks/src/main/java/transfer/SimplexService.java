@@ -28,6 +28,7 @@ private ResponseHandler responseHandler = (p) -> {
 };
 private TailWriter tailWriter = (s) -> {
 };
+
 private static @NotNull Socket getFirstSocket(UrlInfo info) throws IOException {
       List<UrlInfo> urls = new ArrayList<>(info.mirrors().length + 1);
       urls.add(info);
@@ -48,6 +49,7 @@ private static @NotNull Socket getFirstSocket(UrlInfo info) throws IOException {
       return socket;
 
 }
+
 public SimplexService(UrlInfo info) throws ServerAccessException {
       Socket socket;
       try {
@@ -58,13 +60,20 @@ public SimplexService(UrlInfo info) throws ServerAccessException {
       this.socket = socket;
       this.url = info;
 }
-public UrlInfo getUrlInfo(){
+public SimplexService(Socket socket) {
+      this.socket = socket;
+      this.url = UrlInfo.valueOf(socket.getInetAddress().toString(), socket.getPort());
+}
+
+public UrlInfo getUrlInfo() {
       return url;
 }
+
 public SimplexService setTailWriter(TailWriter tailWriter) {
       this.tailWriter = tailWriter;
       return this;
 }
+
 public SimplexService setExceptionHandler(Consumer<Exception> handler) {
       this.errorHandler = handler;
       return this;
@@ -102,17 +111,19 @@ public void run() {
 	   DataInputStream input = new DataInputStream(socket.getInputStream())) {
 	    output.write(request.construct());
 	    tailWriter.write(output);
-	    Optional<NetworkPacket> packet;
-	    do {
-		  packet = getResponse(input);
-	    } while (packet.isEmpty());
-	    responseHandler.accept(packet.get());
+	    Optional<NetworkPacket> packet = getResponse(input);
+	    if (packet.isPresent()) {
+		  responseHandler.accept(packet.get());
+	    } else {
+		  errorHandler.accept(new ServerAccessException("The no data to read"));
+	    }
       } catch (Exception e) {
 	    errorHandler.accept(e);
       }
 }
+
 @Override
 public void close() throws Exception {
-	socket.close();
+      socket.close();
 }
 }

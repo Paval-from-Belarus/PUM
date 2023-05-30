@@ -345,9 +345,9 @@ public Optional<PublishInstanceDTO> collectPublishInstance(Integer id, Publisher
       }
       File payload = Path.of(entity.exePath).toFile();
       if (index == dependencies.length && payload.exists()) {
-	    dto = new PublishInstanceDTO(id, entity.version, dependencies);
-	    dto.setLicense(entity.licence.toString());
-	    dto.setPayloadSize((int) payload.length()); //the current limitation is payload size
+	    dto = new PublishInstanceDTO(id, entity.version, (int) payload.length());
+	    dto.setLicense(entity.licence.toString());//the current limitation is payload size
+	    dto.setDependencies(dependencies);
       }
       return Optional.ofNullable(dto);
 }
@@ -385,7 +385,7 @@ private VersionInfoDTO getVersionInfo(FullPackageInfoDTO dto, InstanceInfo insta
 }
 
 public Optional<FullPackageInfoDTO> completeFullInfo(ShortPackageInfoDTO dto) {
-      var info = getPackageInfo(dto.id(), dto.version());
+      var info = getPackageInfo(dto.getPackageId(), dto.getVersion());
       return info.flatMap(this::toExternalFormat);
 }
 
@@ -400,10 +400,10 @@ private static PackageInfo toLocalFormat(PackageAssembly assembly, FullPackageIn
       var info = new PackageInfo();
       info.packageId = assembly.getId();
       info.versionId = assembly.getVersion();
-      info.license = dto.licenseType;
-      info.payload = dto.payloadType;
-      info.version = dto.version;
-      info.dependencies = dto.dependencies;
+      info.license = dto.getLicenseType();
+      info.payload = dto.getPayloadType();
+      info.version = dto.getVersion();
+      info.dependencies = dto.getDependencies();
       return info;
 }
 
@@ -415,31 +415,30 @@ private Optional<FullPackageInfoDTO> toExternalFormat(PackageInfo info) {
 			 .findAny();
       if (optional.isPresent()) {
 	    InstanceInfo instance = optional.get();
-	    dto = new FullPackageInfoDTO();
-	    dto.payloadType = info.payload;
-	    dto.licenseType = info.license;
-	    dto.dependencies = info.dependencies;
-	    dto.version = info.version;
 	    String[] commonNames = instance.getAliases();
 	    assert commonNames.length > 0;
-	    dto.name = commonNames[0];
-	    dto.aliases = new String[commonNames.length - 1];
-	    System.arraycopy(commonNames, 1, dto.aliases, 0, dto.aliases.length);
 	    Path directory = Path.of(instance.getStringPath());
 	    PayloadType payload = convert(info.payload);
 	    if (directory.toFile().isDirectory() && payload != PayloadType.Unknown) {
-		  Long packageSize;
+		  Long packageSize = 0l;
 		  PackageWalker walker = new PackageWalker();
 		  if (payload == PayloadType.Application)
 			directory = directory.resolve("bin");
 		  try {
 			Files.walkFileTree(directory, walker);
 			packageSize = walker.getCommonSize();
-			dto.payloadSize = packageSize.intValue();
 		  } catch (IOException e) { //if so, the size of package equals zero
 			logger.warn("The package size is not available: " + e.getMessage());
 		  }
+		  dto = new FullPackageInfoDTO(commonNames[0], info.version, packageSize.intValue());
+		  dto.setPayloadType(info.payload);
+		  dto.setLicenseType(info.license);
+		  dto.setDependencies(info.dependencies);
+		  String[] aliases = new String[commonNames.length - 1];
+		  System.arraycopy(commonNames, 1, aliases, 0, aliases.length);
+		  dto.setAliases(aliases);
 	    }
+
       }
       return Optional.ofNullable(dto);
 }
@@ -470,7 +469,7 @@ void unlinkLibraries(InstanceInfo central) throws PackageIntegrityException, IOE
       List<InstanceInfo> instanceList = new ArrayList<>();
       if (packageInfo.isPresent()) {
 	    for (var depInfo : packageInfo.get().dependencies) {
-		  Optional<InstanceInfo> depInstance = getInstanceInfo(depInfo.packageId(), depInfo.label());
+		  Optional<InstanceInfo> depInstance = getInstanceInfo(depInfo.getPackageId(), depInfo.getLabel());
 		  if (depInstance.isPresent()) {
 			depInstance.get().updateLinksCnt(InstanceInfo.LinkState.Remove);
 			instanceList.add(depInstance.get());
@@ -514,7 +513,7 @@ void linkLibraries(Path central, @NotNull List<InstanceInfo> instances) throws I
 		  String jsonInfo = Files.readString(configPath);
 		  PackageInfo info = fromJson(jsonInfo, PackageInfo.class);
 		  for (DependencyInfoDTO depLink : info.dependencies) {
-			InstanceInfo depInfo = installed.get(depLink.packageId());
+			InstanceInfo depInfo = installed.get(depLink.getPackageId());
 			if (depInfo != null && !instances.contains(depInfo)) {
 			      instances.add(depInfo);
 			}

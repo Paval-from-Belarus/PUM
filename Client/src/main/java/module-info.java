@@ -4,6 +4,7 @@ module org.petos.packagemanager.Client {
       requires static lombok;
       requires org.apache.logging.log4j;
       requires org.petos.packagemanager.Networks;
+      requires java.xml;
       opens database;
       opens common;
       opens storage;

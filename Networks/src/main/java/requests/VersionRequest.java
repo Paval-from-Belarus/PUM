@@ -6,6 +6,7 @@ import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import transfer.TransferEntity;
+import transfer.TransferOrder;
 
 @Accessors(fluent = true)
 @TransferEntity(selective = true, ignoreNullable = true)
@@ -13,15 +14,18 @@ import transfer.TransferEntity;
 public class VersionRequest {
 @Getter
 @Accessors(fluent = false)
+@TransferOrder(value = 0)
 final private Integer packageId;
 @Nullable
 @Getter
+@TransferOrder(value = 1)
 private String label;
+@Nullable
 @Getter
+@TransferOrder(value = 1)
 private int offset;
 private VersionRequest(Integer id) {
       this.packageId = id;
-//      label = null;
 }
 public VersionRequest(Integer id, @NotNull String label) {
       this(id);
@@ -31,30 +35,4 @@ public VersionRequest(Integer id, int offset) {
       this(id);
       this.offset = offset;
 }
-
-//@Override
-//public String stringify() {
-//      String result = stringify(packageId);
-//      if (label.isEmpty()) {
-//	    result = join(result, offset);
-//      } else {
-//	    result = join(result, label);
-//      }
-//      return result;
-//}
-//
-//public static Optional<VersionRequest> valueOf(String content, VersionFormat format) {
-//      final int fieldCnt = 2;
-//      VersionRequest request = null;
-//      List<byte[]> bytes = split(content, fieldCnt);
-//      if (bytes.size() == fieldCnt) {
-//	    int id = toInteger(bytes.get(0));
-//	    request = switch(format) {
-//		  case String -> new VersionRequest(id, toString(bytes.get(1)));
-//		  case Int -> new VersionRequest(id, toInteger(bytes.get(1)));
-//		  case Unknown -> null;
-//	    };
-//      }
-//      return Optional.ofNullable(request);
-//}
 }

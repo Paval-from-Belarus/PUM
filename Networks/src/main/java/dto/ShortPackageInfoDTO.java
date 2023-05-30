@@ -1,47 +1,36 @@
 package dto;
 
 import lombok.*;
-import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import transfer.TransferEntity;
+import transfer.TransferOrder;
 
-import java.util.Optional;
-
-@AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
-@Accessors(prefix="", makeFinal = true, fluent = true)
 @EqualsAndHashCode
+@TransferEntity(ignoreNullable = true, selective = true)
 public class ShortPackageInfoDTO {
+public ShortPackageInfoDTO(@NotNull String name, int id, @NotNull String version) {
+      this.name = name;
+      this.packageId = id;
+      this.version = version;
+}
 @NotNull
 @Getter
-private Integer id;
+@TransferOrder(value = 0)
+private final Integer packageId;
 @NotNull
 @Getter
-private String name;
+@TransferOrder(value = 1)
+private final String name;
 @NotNull
 @Getter
-private String version;
+@TransferOrder(value = 2)
+private final String version;
 @Nullable
-@Getter
+@Getter @Setter
+@TransferOrder(value = 3)
 private String[] aliases;
-//public boolean similar(String word) {
-//      if (word == null || word.isEmpty())
-//	    return false;
-//      if (name.equals(word))
-//	    return true;
-//      boolean isFound = false;
-//      for (String alias : aliases) {
-//	    isFound = alias.equals(word);
-//	    if (isFound)
-//		  break;
-//      }
-//      return isFound;
-//}
-
-//public static ShortPackageInfoDTO valueOf(Integer id, FullPackageInfoDTO dto) {
-//      return new ShortPackageInfoDTO(id, dto.name, dto.version, dto.aliases);
-//}
-//public static Optional<ShortPackageInfoDTO> valueOf(String content) {
-//      return valueOf(ShortPackageInfoDTO.class, content);
-//}
+public static ShortPackageInfoDTO mapDTO(FullPackageInfoDTO fullInfo, Integer id) {
+      return new ShortPackageInfoDTO(fullInfo.name, id, fullInfo.version);
+}
 }

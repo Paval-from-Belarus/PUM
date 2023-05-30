@@ -164,7 +164,7 @@ protected void appendJournal(Integer packageId, Path instancePath, FullPackageIn
 private @NotNull List<InstanceInfo> mapDependencies(FullPackageInfoDTO dto) throws PackageIntegrityException {
       List<InstanceInfo> instances = new ArrayList<>(dto.dependencies.length);
       for (var dependency : dto.dependencies) {
-	    Optional<InstanceInfo> instance = storage.getInstanceInfo(dependency.packageId(), dependency.label());
+	    Optional<InstanceInfo> instance = storage.getInstanceInfo(dependency.getPackageId(), dependency.getLabel());
 	    instance.map(instances::add)
 		.orElseThrow(() -> new PackageIntegrityException("Library dependency is broken"));
       }

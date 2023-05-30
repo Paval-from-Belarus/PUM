@@ -4,6 +4,7 @@ module org.petos.packagemanager.Networks {
       requires com.aayushatharva.brotli4j;
       requires com.google.gson;
       requires jdk.unsupported;
+      requires java.xml;
       opens dto;
       opens transfer;
       opens requests;

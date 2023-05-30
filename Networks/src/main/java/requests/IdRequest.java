@@ -3,11 +3,10 @@ package requests;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.Optional;
-
 @AllArgsConstructor
-@MethodRequest(name="GetId")
-public class IdRequest {
+public final class IdRequest {
 @Getter
-private String alias;
+private final String alias;
+
+
 }

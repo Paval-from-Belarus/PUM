@@ -33,8 +33,10 @@ public static class UnsupportedRequestException extends Exception {
 
 private static final Logger logger = LogManager.getLogger(Server.class);
 private final PackageStorage storage;
+private final Serializer serializer;
 
-public ServerDispatcher(PackageStorage storage) {
+public ServerDispatcher(PackageStorage storage, Serializer serializer) {
+      this.serializer = serializer;
       this.storage = storage;
 }
 
@@ -64,9 +66,9 @@ public void error(NetworkExchange exchange) {
 private void onRepoInfo(NetworkExchange exchange) {
       RepoInfoDTO dto = storage.getRepoInfo();
       if (dto.getTimeout() > 10) {
-	    exchange.setResponse(ResponseType.Approve, ResponseCode.BIN_FORMAT, toBytes(dto.stringify()));
+	    exchange.setResponse(ResponseType.Approve, ResponseCode.BIN_FORMAT, serialize(dto));
       } else {
-	    exchange.setResponse(ResponseType.Decline, ResponseCode.TRY_AGAIN | ResponseCode.BIN_FORMAT, toBytes(dto.stringify()));
+	    exchange.setResponse(ResponseType.Decline, ResponseCode.TRY_AGAIN | ResponseCode.BIN_FORMAT, serialize(dto));
       }
 }
 
@@ -77,14 +79,13 @@ private void onAllPackages(NetworkExchange exchange) throws IOException {
       var packages = storage.shortInfoList()
 			 .toArray(ShortPackageInfoDTO[]::new);
       OutputStream output = exchange.getOutputStream();
-      String payload = toJson(packages); //replace with concatenation of string)
-      output.write(payload.getBytes(StandardCharsets.US_ASCII));
+      output.write(serialize(packages));
       exchange.setResponse(ResponseType.Approve, ResponseCode.ALL_PACKAGES_RESPONSE);
 }
 
 private void onPackageId(NetworkExchange exchange) {
-      String alias = exchange.request().stringData();
-      var optional = storage.toPackageId(alias);
+      Optional<IdRequest> request = construct(exchange.request().data(), IdRequest.class);
+      Optional<PackageId> optional = request.flatMap(alias -> storage.toPackageId(alias.getAlias()));
       if (optional.isPresent()) {
 	    ByteBuffer buffer = ByteBuffer.allocate(4);
 	    buffer.putInt(optional.get().value());
@@ -152,12 +153,12 @@ private VersionFormat getVersionFormat(NetworkPacket request) {
 }
 
 private void onPackageInfo(NetworkExchange exchange) {
-      String data = exchange.request().stringData();
+      byte[] data = exchange.request().data();
       VersionFormat format = getVersionFormat(exchange.request());
-      Optional<InfoRequest> clientRequest = InfoRequest.valueOf(data, format);
+      Optional<InfoRequest> clientRequest = construct(data, InfoRequest.class);
       Optional<PackageHandle> serverRequest = clientRequest.flatMap(request -> switch (format) {
-	    case String -> toPackageHandle(request.getPackageId(), request.label());
-	    case Int -> toPackageHandle(request.getPackageId(), request.offset());
+	    case String -> toPackageHandle(request.getPackageId(), request.getLabel());
+	    case Int -> toPackageHandle(request.getPackageId(), request.getOffset());
 	    case Unknown -> Optional.empty();
       });
       if (serverRequest.isPresent()) {
@@ -165,7 +166,7 @@ private void onPackageInfo(NetworkExchange exchange) {
 	    var info = storage.getFullInfo(request.id(), request.version());
 	    if (info.isPresent()) {
 		  exchange.setResponse(
-		      ResponseType.Approve, ResponseCode.PACKAGE_INFO_FORMAT, toBytes(info.get().stringify()));
+		      ResponseType.Approve, ResponseCode.PACKAGE_INFO_FORMAT, serialize(info.get()));
 	    } else {
 		  exchange.setResponse(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
 	    }
@@ -179,9 +180,9 @@ private void onPackageInfo(NetworkExchange exchange) {
  * The versionInfo can be replaced by GetInfo. But it's supposed to be more suitable and fast
  */
 private void onVersionInfo(NetworkExchange exchange) {
-      String data = exchange.request().stringData();
+      byte[] data = exchange.request().data();
       VersionFormat format = getVersionFormat(exchange.request());
-      Optional<VersionRequest> userRequest = VersionRequest.valueOf(data, format);
+      Optional<VersionRequest> userRequest = construct(data, VersionRequest.class);
       Optional<PackageHandle> serverRequest = userRequest.flatMap(request -> switch (format) {
 		case String -> toPackageHandle(request.getPackageId(), request.label());
 		case Int -> toPackageHandle(request.getPackageId(), request.offset());
@@ -196,7 +197,7 @@ private void onVersionInfo(NetworkExchange exchange) {
 		      request.version().value(),
 		      fullInfo.get().version
 		  );
-		  exchange.setResponse(ResponseType.Approve, ResponseCode.VERSION_INFO_FORMAT, toBytes(versionInfo.stringify()));
+		  exchange.setResponse(ResponseType.Approve, ResponseCode.VERSION_INFO_FORMAT, serialize(versionInfo));
 	    } else {
 		  exchange.setResponse(ResponseType.Decline, ResponseCode.NO_PAYLOAD);
 	    }
@@ -216,12 +217,12 @@ private byte[] readBytes(NetworkExchange exchange, Integer cbRead) throws IOExce
 }
 
 private void onPayload(NetworkExchange exchange) throws IOException {
-      String data = exchange.request().stringData();
+      byte[] data = exchange.request().data();
       VersionFormat format = getVersionFormat(exchange.request());
-      Optional<PayloadRequest> clientRequest = PayloadRequest.valueOf(data, format);
+      Optional<PayloadRequest> clientRequest = construct(data, PayloadRequest.class);
       Optional<PackageHandle> packageHandle = clientRequest.flatMap(request -> switch (format) {
-	    case String -> toPackageHandle(request.getPackageId(), request.label());
-	    case Int -> toPackageHandle(request.getPackageId(), request.offset());
+	    case String -> toPackageHandle(request.getPackageId(), request.getLabel());
+	    case Int -> toPackageHandle(request.getPackageId(), request.getOffset());
 	    case Unknown -> Optional.empty();
       });
       if (packageHandle.isPresent()) {
@@ -245,13 +246,13 @@ private void onPayload(NetworkExchange exchange) throws IOException {
 }
 
 private void onPublishInfo(NetworkExchange exchange) {
-      String data = exchange.request().stringData();
-      Optional<PublishInfoRequest> userRequest = PublishInfoRequest.valueOf(data);
+      byte[] data = exchange.request().data();
+      Optional<PublishInfoRequest> userRequest = construct(data, PublishInfoRequest.class);
       Optional<AuthorId> author = userRequest.flatMap(request -> storage.getAuthorId(request.getAuthorId()));
       if (author.isPresent()) {
 	    AuthorId authorId = author.get();
 	    PublishInfoDTO dto = userRequest.get().getDto();
-	    Optional<PackageId> packageId = storage.toPackageId(dto.name());
+	    Optional<PackageId> packageId = storage.toPackageId(dto.getName());
 	    PackageId id;
 	    try {
 		  if (packageId.isPresent()) {
@@ -272,8 +273,8 @@ private void onPublishInfo(NetworkExchange exchange) {
 }
 
 private void onPublishPayload(NetworkExchange exchange) throws IOException {
-      String data = exchange.request().stringData();
-      Optional<PublishInstanceRequest> userRequest = PublishInstanceRequest.valueOf(data);
+      byte[] data = exchange.request().data();
+      Optional<PublishInstanceRequest> userRequest = construct(data, PublishInstanceRequest.class);
       Optional<AuthorId> author = userRequest.flatMap(request -> storage.getAuthorId(request.getAuthorId()));
       if (author.isPresent()) {
 	    AuthorId authorId = author.get();
@@ -329,6 +330,20 @@ private static final Gson gson;
 
 static {
       gson = new Gson();
+}
+
+private <T> Optional<T> construct(byte[] source, Class<T> origin) {
+      T instance = null;
+      try {
+	    instance = serializer.construct(source, origin);
+      } catch (Exception e) {
+	    logger.warn("Serialization exception: " + e.getMessage());
+      }
+      return Optional.ofNullable(instance);
+}
+
+private @NotNull byte[] serialize(@NotNull Object source) {
+      return serializer.serialize(source);
 }
 
 private static <T> @Nullable T fromJson(String source, Class<T> classType) {

@@ -28,9 +28,9 @@ public enum Mode {Downgrade, Upgrade}
 
 public static Rank compare(VersionInfoDTO old, VersionInfoDTO last) {
       Rank rank = Rank.Jumping;
-      if (old.label().equals(last.label())) {
+      if (old.getLabel().equals(last.getLabel())) {
 	    rank = Rank.Silent;
-	    if (old.versionId().equals(last.versionId())) {
+	    if (old.getVersionId().equals(last.getVersionId())) {
 		  rank = Rank.None;
 	    }
       }
@@ -57,6 +57,7 @@ public RemovableSession getRemover() {
 ModifierSession(PackageStorage storage) {
       this.storage = storage;
 }
+
 @Override
 public void commit(CommitState state) throws PackageIntegrityException {
       if (isManaged())
@@ -129,9 +130,9 @@ private static class ProxyInstaller extends InstallerSession {
 	    try {
 		  stringInfo = Files.readString(resolveInfo(packageDir));
 		  byte[] assembly = Files.readAllBytes(resolveAssembly(packageDir));
-		  var dto = FullPackageInfoDTO.valueOf(stringInfo);
-		  if (dto.isPresent()) {
-			super.storeLocally(dto.get(), assembly);
+		  var dto = PackageStorage.fromJson(stringInfo, FullPackageInfoDTO.class);
+		  if (dto != null) {
+			super.storeLocally(dto, assembly);
 		  } else {
 			throw new PackageIntegrityException("The temp package info is damaged");
 		  }
@@ -152,7 +153,7 @@ private static class ProxyInstaller extends InstallerSession {
 			removeFiles(cacheDir);
 		  Files.createDirectory(cacheDir);
 		  Files.write(resolveAssembly(cacheDir), assembly);
-		  Files.writeString(resolveInfo(cacheDir), dto.stringify());
+		  Files.writeString(resolveInfo(cacheDir), PackageStorage.toJson(dto));
 		  appendJournal(DUMMY_PACKAGE_ID, cacheDir, dto);
 	    } catch (IOException e) {
 		  throw new RuntimeException(e);

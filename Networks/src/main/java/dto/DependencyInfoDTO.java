@@ -1,21 +1,24 @@
 package dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
+import transfer.TransferEntity;
+import transfer.TransferOrder;
 
-import java.util.Optional;
-
-@Accessors(prefix = "", makeFinal = true, fluent = true)
+@EqualsAndHashCode
+@TransferEntity(selective = true)
 @AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
-@EqualsAndHashCode(callSuper = false)
-public class DependencyInfoDTO extends AbstractDTO {
+public final class DependencyInfoDTO {
 @Getter
-private Integer packageId;
+@NotNull
+@TransferOrder(value = 0)
+private final Integer packageId;
 @Getter
-private String label;
+@NotNull
+@TransferOrder(value = 1)
+private final String label;
 
-public static Optional<DependencyInfoDTO> valueOf(String content) {
-      return valueOf(DependencyInfoDTO.class, content);
-}
 }
