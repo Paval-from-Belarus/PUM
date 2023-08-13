@@ -12,7 +12,12 @@ import requests.PublishInstanceRequest;
 import requests.VersionRequest;
 import security.Encryptor;
 
-import java.util.*;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -106,6 +111,41 @@ public void simpleDtoTest() {
       constructed = serializer.construct(bytes, FullPackageInfoDTO.class);
       assertEquals(fullInfo, constructed);
 }
+interface Dummy<T> {
+      public void invoke(T other);
+}
+public static class SuperDummy implements Dummy<String> {
+      private boolean isForbidden = false;
+      @Override
+      public void invoke(String other) {
+	    System.out.println(other);
 
+      }
+      public synchronized void doWork(int base, int limit) {
+	    for (int i = base; i < limit; i++) {
+		  if (i % 2 == 0) {
+			isForbidden = true;
+			System.out.println("based on 2");
+		  }
+		  if (i % 3 == 0) {
+			isForbidden = true;
+			System.out.println("based on 3");
+		  }
+		  isForbidden = false;
+	    }
+      }
+}
+public static void main(String[] args) {
+      SuperDummy invoker = new SuperDummy();
+      List<String> list = new ArrayList<>();
+      MethodHandles.Lookup lookup = MethodHandles.lookup();
+      MethodType.methodType(int.class, void.class);
+//      invoker.doWork(2, 10);
+      Class<?> clazz = invoker.getClass();
+      Method[] methods = clazz.getDeclaredMethods();
+      for (var method : methods) {
+	    System.out.println(method.getName() + method.isSynthetic());
+      }
+}
 
 }

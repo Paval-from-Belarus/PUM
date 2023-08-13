@@ -31,6 +31,8 @@ private Status status;
 private byte[] publicKey; //key in form of base64 by which
 @Getter @Setter
 private String[] mirrors; //links by which this repo will be access too
+@Setter @Getter
+private int priority;
 public boolean isEnabled() {
       return status == Status.Enabled;
 }

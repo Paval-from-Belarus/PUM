@@ -1,5 +1,6 @@
 package transfer;
 
+import lombok.EqualsAndHashCode;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -28,12 +29,11 @@ public enum WindowType {
 	    cb32768.bytes = 32768;
 	    cb65536.bytes = 65536;
       }
-
       public int getSize() {
 	    return bytes;
       }
 }
-
+@EqualsAndHashCode
 private static class Entry {
       final int offset;
       final int length;
@@ -60,7 +60,7 @@ private static class FloatWindow {
       private final int windowSize;
       private int lPivot;
       private int rPivot;
-
+      private final int MAX_LENGTH = 4095;
       FloatWindow(int windowSize) {
 	    this.windowSize = windowSize;
 	    lPivot = 0;
@@ -68,27 +68,29 @@ private static class FloatWindow {
       }
 
       Entry nextEntry(byte[] source, int offset) {
+//	    final int floatSize = Math.min(rPivot - lPivot, windowSize);
 	    final int floatSize = (rPivot - lPivot);//should be zero!!!
 	    int byteOffset = offset; //always the following byte after current
 	    int pivotOffset = lPivot;
-	    boolean isOverJumped = false;
+	    boolean isOverJumped = floatSize <= 0;
 	    boolean wasTouched = false;
-	    for (int pivot = lPivot; !isOverJumped && pivot < rPivot; pivot++) {
+	    for (int pivot = 0; !isOverJumped && pivot < floatSize; pivot++) {
 		  int tempOffset = offset;
 		  int tinyPivot = pivot;
-		  while (tempOffset < source.length && source[tempOffset] == source[tinyPivot]) {
+		  while (tempOffset - offset < MAX_LENGTH && tempOffset < source.length && source[tempOffset] == source[tinyPivot + lPivot]) {
 			wasTouched = true;
 			tempOffset += 1;
-			tinyPivot = (tinyPivot + 1) % floatSize + lPivot;
+			tinyPivot = (tinyPivot + 1) % (floatSize);
 		  }
 		  if (tempOffset >= byteOffset) {
 			byteOffset = tempOffset;
-			pivotOffset = pivot;
+			pivotOffset = pivot + lPivot;
 		  }
 //		    if (tempOffset >= source.length)
 //			  tempOffset += 1;//align to empty byte
 //		    byteOffset = Math.max(byteOffset, tempOffset);
-		  isOverJumped = (tempOffset - offset) >= floatSize;
+		  isOverJumped = (tempOffset - offset) >= floatSize; //tempOffset == rightWindowBorder + 1 -> always greater
+		  							//the +1 is already defined
 	    }
 	    Entry result;
 	    if (wasTouched)
@@ -196,7 +198,8 @@ public byte[] zip() {
 		  entry.isDummy = true;
 	    result.add(entry);
       }
-      result.forEach(System.out::println);
+      lastEntries = result;
+//      result.forEach(System.out::println);
       return toBytes(result, source.length);
 }
 
@@ -217,12 +220,15 @@ private byte[] toBytes(List<Entry> entries, int payloadSize) {
       buffer.put(tailMarker);
       return buffer.array();
 }
-
+private static int WINDOW_SIZE;
 private static int fillBytesAndGetOffset(byte[] result, int byteOffset, Entry entry) {
+      final int floatSize = WINDOW_SIZE - 1;
+      final int lBorder = Math.max(0, byteOffset - floatSize);
       if (entry.length > 0) {
-	    int start = byteOffset - entry.offset;
-	    for (int i = 0; i < entry.length; i++) {
-		  result[byteOffset++] = result[start + i];
+	    int pivot = byteOffset - entry.offset - lBorder;
+	    for (int i = 0; i < entry.length; i += 1) {
+		  result[byteOffset++] = result[pivot + lBorder];
+		  pivot = (pivot + 1) % floatSize;
 	    }
       }
       return byteOffset;
@@ -242,7 +248,7 @@ private static byte[] unzip(List<Entry> entries, int resultSize) {
 	    result[byteOffset] = node.next;
       return deltaDecode(result);
 }
-
+private static List<Entry> lastEntries;
 //utils methods
 public static Optional<byte[]> unzip(byte[] source) {
       if (source.length <= 5) {
@@ -253,6 +259,7 @@ public static Optional<byte[]> unzip(byte[] source) {
       List<Entry> nodes = new ArrayList<>();
       if (props.isPresent()) {
 	    var header = props.get();
+	    LZ77Compressor.WINDOW_SIZE = header.type.getSize();
 	    byte[] content = new byte[source.length - header.size() - 1];
 	    System.arraycopy(source, header.size(), content, 0, content.length);
 	    int bytesCnt = 0;
@@ -270,8 +277,17 @@ public static Optional<byte[]> unzip(byte[] source) {
 	    byte last = source[source.length - 1];
 	    if (last == DUMMY_TAIL_MARKER)
 		  nodes.get(nodes.size() - 1).isDummy = true;
-	    System.out.println("UNZIP");
-	    nodes.forEach(System.out::println);
+//	    System.out.println("UNZIP");
+//	    nodes.forEach(System.out::println);
+	    assert lastEntries != null && lastEntries.size() == nodes.size();
+	    int index = 0;
+	    System.out.println("The following nodes are diff:");
+	    for (var node : nodes) {
+		  if (!node.equals(lastEntries.get(index))) {
+			System.out.println(node);
+		  }
+		  index += 1;
+	    }
 	    result = unzip(nodes, header.payloadSize);
       }
       return Optional.ofNullable(result);
@@ -279,6 +295,7 @@ public static Optional<byte[]> unzip(byte[] source) {
 
 
 public static byte[] deltaEncode(byte[] source) {
+//      return source;
       byte last = 0;
       byte[] output = new byte[source.length];
       int index = 0;
@@ -291,6 +308,7 @@ public static byte[] deltaEncode(byte[] source) {
 }
 
 public static byte[] deltaDecode(byte[] source) {
+//      return source;
       byte last = 0;
       byte[] output = new byte[source.length];
       int index = 0;
@@ -304,7 +322,6 @@ public static byte[] deltaDecode(byte[] source) {
 
 private final WindowType windowType;
 private byte[] content;
-
 public static void main(String[] args) {
       List<String> testCases = new ArrayList<>(List.of(
 	  "abehhilopsu", "Salamandra", "abcde", "Nothing But", "ButButBut", "Okke", "a",
@@ -326,13 +343,13 @@ public static void main(String[] args) {
       }
       try {
 //	    var bytes = Files.readAllBytes(Path.of("client/usr/programs/pum/packages/PetOS Kernel/bin/PetOS Kernel.exe"));
-	    var bytes = Files.readAllBytes(Path.of("source.exe"));
-	    LZ77Compressor lz = new LZ77Compressor(WindowType.cb4096, bytes);
+	    var bytes = Files.readAllBytes(Path.of("Server/target/Server-0.0.1.jar"));
+	    LZ77Compressor lz = new LZ77Compressor(WindowType.cb32768, bytes);
 	    var compressed = lz.zip();
 	    var uncompressed = LZ77Compressor.unzip(compressed);
 	    if (uncompressed.isPresent())
-		  Files.write(Path.of("pure.exe"), uncompressed.get());
-	    Files.write(Path.of("test.zip"), compressed);
+		  Files.write(Path.of("Networks/pure.exe"), uncompressed.get());
+	    Files.write(Path.of("Networks/test.zip"), compressed);
 //	    Files.write(Path.of("pure.exe"), uncompressed);
 
       } catch (IOException e) {

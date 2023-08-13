@@ -366,26 +366,6 @@ private @NotNull Object constructNullableArray(ByteBuffer buffer, Class<?> eleme
 }
 
 /**
- * @return the piece class and dimensional count
- */
-public Map.Entry<Class<?>, int[]> findArrayDimensions(final ByteBuffer buffer) {
-      buffer.mark();
-      Class<?> element = FieldType.Array.getJavaClass();
-      int nestLevel = 0; //invocation of its function means at least two dimension
-      while (element != null && element.isArray()) {
-	    buffer.getInt(); //skip length bytes
-	    short code = buffer.getShort();
-	    element = reverseMapper.get(code);
-	    nestLevel += 1;
-      }
-      if (element == null) {
-	    throw new SerializeException("The bytes has unresolvable multi-dimensional array");
-      }
-      buffer.reset();
-      return Map.entry(element, new int[nestLevel]);
-}
-
-/**
  * @param object -> the value that is supposed to be serialized. Commonly, there are two ways to serialize.
  *               If object was registered serialization append the type code.
  *               If object type is not specified then only fields will be serialized
