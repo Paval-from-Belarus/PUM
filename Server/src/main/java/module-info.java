@@ -1,13 +1,15 @@
 module org.petos.packagemanager.Server {
-      requires annotations;
       requires static lombok;
-      requires com.google.gson;
-      requires org.apache.logging.log4j;
-      requires java.sql;
-      requires org.hsqldb;
-      requires org.hibernate.orm.core;
-      requires java.persistence;
+      requires static annotations;
       requires org.petos.packagemanager.Networks;
+      requires jakarta.persistence;
+      requires spring.boot;
+      requires spring.context;
+      requires spring.beans;
+      requires spring.core;
+      requires spring.boot.autoconfigure;
+      requires spring.integration.core;
+      requires spring.integration.ip;
       opens database;
-      opens common;
+      opens main;
 }
