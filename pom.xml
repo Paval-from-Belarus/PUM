@@ -9,14 +9,14 @@
             <url>https://projectlombok.org/edge-releases</url>
         </repository>
     </repositories>
-    <groupId>org.petos.packagemanager</groupId>
-    <artifactId>PackageManager</artifactId>
+    <groupId>org.petos.pum</groupId>
+    <artifactId>pum-parent</artifactId>
     <version>0.0.1</version>
     <packaging>pom</packaging>
     <modules>
-        <module>Networks</module>
-        <module>Server</module>
-        <module>Client</module>
+        <module>networks</module>
+        <module>server</module>
+        <module>client</module>
     </modules>
 
     <properties>

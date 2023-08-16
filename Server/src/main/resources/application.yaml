@@ -1,8 +1,0 @@
-networks:
-  connection:
-    port: 7744
-    timeout: 3000
-    single: true
-logging:
-  level:
-    root: info

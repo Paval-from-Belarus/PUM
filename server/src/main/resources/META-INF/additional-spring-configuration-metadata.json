@@ -1,0 +1,18 @@
+{
+  "properties": [
+    {
+      "name": "networks.connection.port",
+      "type": "java.lang.Integer",
+      "description": "Local machine port to be used in Server TCP connect. If zero ― random port."
+    },
+    {
+      "name": "networks.connection.timeout",
+      "type": "java.lang.Integer",
+      "description": "Timeout for connection will be disrupted."
+    },
+    {
+      "name": "networks.connection.single",
+      "type": "java.lang.Boolean",
+      "description": "Thread accept strategy: new thread on new request nor."
+    }
+  ] }
