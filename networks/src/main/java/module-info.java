@@ -1,4 +1,4 @@
-module org.petos.pum.Networks {
+module org.petos.pum.networks {
       requires annotations;
       requires static lombok;
       requires com.aayushatharva.brotli4j;

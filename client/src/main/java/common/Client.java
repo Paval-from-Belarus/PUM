@@ -1020,7 +1020,7 @@ private Optional<Integer> getPackageIdByDefault(String packageName) {
 
 private Optional<Integer> getPackageId(NetworkService service, String packageName) {
       AtomicReference<Integer> id = new AtomicReference<>(null);
-      var packet = new NetworkPacket(RequestType.GetId, RequestCode.DEFAULT_FORMAT);
+      var packet = new NetworkPacket(RequestType.GetId, RequestCode.TRANSFER_ATTACHED_FORMAT);
       var request = new IdRequest(packageName);
       packet.setPayload(serialize(request));
       service.setRequest(packet)

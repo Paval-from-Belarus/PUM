@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Component
-@ConfigurationProperties(prefix = "networks.connect")
+@ConfigurationProperties(prefix = "networks.connection")
 public class NetworkProperties {
 	@Getter @Setter
 	private int port;

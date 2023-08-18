@@ -1,31 +1,29 @@
 package org.petos.pum.server;
 
 import org.petos.pum.server.common.NetworkProperties;
+import org.petos.pum.server.common.ManagerService;
 import org.petos.pum.server.common.SerializationProperties;
 import org.petos.pum.server.network.MessageBuilder;
+import org.petos.pum.server.network.PacketBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
+import org.springframework.integration.annotation.Transformer;
 import org.springframework.integration.channel.DirectChannel;
-import org.springframework.integration.channel.QueueChannel;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.dsl.Transformers;
+import org.springframework.integration.handler.advice.AbstractRequestHandlerAdvice;
 import org.springframework.integration.ip.dsl.Tcp;
-import org.springframework.integration.ip.tcp.connection.MessageConvertingTcpMessageMapper;
-import org.springframework.integration.ip.tcp.serializer.MapJsonSerializer;
+import org.springframework.integration.ip.tcp.TcpSendingMessageHandler;
+import org.springframework.integration.ip.tcp.connection.*;
+import org.springframework.integration.transformer.MethodInvokingTransformer;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.messaging.handler.annotation.Payload;
-import transfer.BinaryObjectMapper;
-import transfer.BinaryObjectProperties;
-import transfer.NetworkPacket;
 
 /**
  * @author Paval Shlyk
@@ -38,6 +36,9 @@ public class ServerApp {
 public static void main(String[] args) {
       SpringApplication.run(ServerApp.class, args);
 }
+
+@Autowired
+ManagerService repository;
 @Autowired
 public ServerApp(NetworkProperties networkProperties, SerializationProperties serializationProperties) {
       this.networkProperties = networkProperties;
@@ -45,67 +46,105 @@ public ServerApp(NetworkProperties networkProperties, SerializationProperties se
 }
 
 @Bean
-public MessageConvertingTcpMessageMapper messageConverter() {
-      MessageBuilder builder = new MessageBuilder(serializationProperties.serializer());
-      new MapJsonSerializer()
-      return new MessageConvertingTcpMessageMapper(builder);
+public MessageBuilder messageBuilder() {
+      return new MessageBuilder(serializationProperties.mapper(), serializationProperties.requestMap());
+}
+@Bean
+public MessageConvertingTcpMessageMapper messageMapper() {
+      return new MessageConvertingTcpMessageMapper(messageBuilder());
+
+}
+@Bean
+public PacketBuilder builder() {
+      return new PacketBuilder();
 }
 @Bean
 public IntegrationFlow integrationFlow() {
       var netServer = Tcp.netServer(networkProperties.getPort())
 			  .singleUseConnections(networkProperties.isSingle())
 			  .soTimeout(networkProperties.getTimeout())
-//                          .serializer()
-//                          .deserializer()
-			  .serializer()
-			  .mapper(messageConverter())
-			  .get();
-      Object someService = new Object();
-      IntegrationFlow
-	  .from(Tcp.inboundGateway(netServer)
-		    .requestChannel("unsecureInput")
-		    .replyChannel("unsecureOutput"));
-      Transformers.objectToString()
+			  .serializer(builder())
+			  .deserializer(builder())
+			  .mapper(messageMapper());
+//			  .interceptorFactoryChain() FactoryChain to add SSL support
+      var gateway = Tcp.inboundGateway(netServer)
+			.replyChannel("output")
+			.errorChannel("output");
+//      Object someService = new Object();
+//      IntegrationFlow
+//	  .from(Tcp.inboundGateway(netServer)
+//		    .requestChannel("unsecureInput")
+//		    .replyChannel("unsecureOutput"))
+//      Transformers.objectToString()
       return IntegrationFlow
-		 .from(Tcp.inboundGateway(netServer))
-		 .route(p -> null, m -> null)
-		 .<String>filter((payload) -> !"junk".equals(payload))
-		 .transform(someService, "methodOfService")
-		 .channel("nextServiceChannel")
+		 .from(gateway)
+		 .channel("input")
+		 .handle(repository)
+		 .channel("output")
 		 .get();
+//		 .from(Tcp.inboundGateway(netServer))
+//		 .route(p -> null, m -> null)
+//		 .<String>filter((payload) -> !"junk".equals(payload))
+//		 .transform(someService, "methodOfService")
+//		 .handle("repository")
+//		 .channel("nextServiceChannel")
+//		 .get();
 //      MessageHandlerChain
 }
+//@Bean
+//@ServiceActivator(inputChannel = "tcpInput")
+//public MessageHandler sendChatMessageHandler(String data) {
+//      return new MessageHandler() {
+//
+//	    @Override
+//	    public void handleMessage(Message<?> message) throws MessagingException {
+//
+//	    }
+//      };
+//}
 
-@Bean
-public IntegrationFlow outputChannel(NetworkPacket packet) {
-      return f -> f
-		      .handle
-}
-@Bean
-@ServiceActivator(inputChannel = "tcpInput")
-public MessageHandler sendChatMessageHandler(String data) {
-      return new MessageHandler(){
+//@Bean
+//public MessageChannel insecureInput() {
+//
+//}
+//
+//@Bean
+//public MessageChannel insecureOutput() {
+//
+//}
+//
+//@Bean
+//public MessageChannel secureInput() {
+//
+//}
+//
+//@Bean
+//public MessageChannel secureOutput() {
+//
+//}
 
-	    @Override
-	    public void handleMessage(Message<?> message) throws MessagingException {
 
-	    }
-      };
-}
-@Bean
+@Bean({"input", "inputChannel"})
 public MessageChannel inputChannel() {
-      QueueChannel channel = new QueueChannel(12);
-      DirectChannel directChannel = new DirectChannel();
-      directChannel.setDatatypes();
+//      MessageChannel channel = new QueueChannel(12);
+//      directChannel.setDatatypes();
 //      msg.getHeaders().getReplyChannel()
-      MessageChannel other = new DirectChannel();
+      DirectChannel channel = new DirectChannel();
       return channel;
 }
-@Bean
-@ServiceActivator(inputChannel = "input")
-public String myService(@Header("value")String header, @Payload String payload) {
-	return "";
+@Bean({"output", "outputChannel"})
+public MessageChannel outputChannel() {
+	return new DirectChannel();
 }
+//@Bean
+//public Object advice() {
+//      return new RequestHandlerRetryAdvice();
+//}
+//@Bean
+//@ServiceActivator(inputChannel = "input")
+//public String myService(@Header("value") String header, @Payload String payload) {
+//      return "";
+//}
 
 private final NetworkProperties networkProperties;
 private final SerializationProperties serializationProperties;

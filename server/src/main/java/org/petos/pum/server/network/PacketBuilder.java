@@ -16,7 +16,7 @@ import java.util.Optional;
  * @author Paval Shlyk
  * @since 15/08/2023
  */
-@Component
+
 public class PacketBuilder implements Serializer<NetworkPacket>, Deserializer<NetworkPacket> {
 @Override
 public @NotNull NetworkPacket deserialize(@NotNull InputStream input) throws IOException {

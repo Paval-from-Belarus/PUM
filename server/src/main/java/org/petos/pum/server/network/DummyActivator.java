@@ -9,7 +9,7 @@ import transfer.NetworkPacket;
  * @author Paval Shlyk
  * @since 15/08/2023
  */
-@Service
+
 public class DummyActivator {
 //@EndpointId("anyEndPoint")
 /*

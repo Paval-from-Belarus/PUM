@@ -3,7 +3,7 @@ module org.petos.pum.Client {
       requires com.google.gson;
       requires static lombok;
       requires org.apache.logging.log4j;
-      requires org.petos.pum.Networks;
+      requires org.petos.pum.networks;
       requires java.xml;
       opens database;
       opens common;

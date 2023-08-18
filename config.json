@@ -1,8 +1,8 @@
 {
-"programs": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs",
-"libraries": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/libraries",
-"temp": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/temp",
-"packagesInfo": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/pum/packages",
-"publishers": "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/pum/publishers",
-"repositories" : "/home/Paval/Triggers/Java/PackageManager/PackageManager/Client/local/usr/programs/pum/repositories.pum"
+"programs": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/usr/programs",
+"libraries": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/usr/libraries",
+"temp": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/temp",
+"packagesInfo": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/usr/programs/pum/packages",
+"publishers": "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/usr/programs/pum/publishers",
+"repositories" : "/home/Paval/Triggers/Java/PackageManager/PackageManager/client/local/usr/programs/pum/repositories.pum"
 }
