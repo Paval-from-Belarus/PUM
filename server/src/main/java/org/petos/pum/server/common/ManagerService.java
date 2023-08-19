@@ -1,5 +1,7 @@
 package org.petos.pum.server.common;
 
+import org.petos.pum.server.database.PackageAlias;
+import org.petos.pum.server.database.StorageDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -14,7 +16,7 @@ import requests.VersionRequest;
 @Service("repository")
 public class ManagerService {
 @Autowired
-public ManagerService(StorageDao storage) {
+public ManagerService(StorageDao<Integer, PackageAlias> storage) {
       this.storage = storage;
 }
 

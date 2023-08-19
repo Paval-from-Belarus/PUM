@@ -3,6 +3,7 @@ package org.petos.pum.server;
 import org.petos.pum.server.common.NetworkProperties;
 import org.petos.pum.server.common.ManagerService;
 import org.petos.pum.server.common.SerializationProperties;
+import org.petos.pum.server.database.JpaConfig;
 import org.petos.pum.server.network.MessageBuilder;
 import org.petos.pum.server.network.PacketBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.integration.annotation.Transformer;
@@ -32,6 +34,7 @@ import org.springframework.messaging.handler.annotation.Header;
 @SpringBootApplication
 @Configuration
 @EnableIntegration
+@Import({JpaConfig.class})
 public class ServerApp {
 public static void main(String[] args) {
       SpringApplication.run(ServerApp.class, args);
