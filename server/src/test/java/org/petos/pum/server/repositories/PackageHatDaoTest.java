@@ -14,6 +14,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.util.Optional;
+
 /**
  * @author Paval Shlyk
  * @since 23/08/2023
@@ -25,19 +27,26 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 class PackageHatDaoTest {
 @Autowired
 public PackageHatDao packageHatDao;
-@Autowired
-public PackageHatDao packageHatDaoImpl;
 @Test
 public void start() {
-      	var hat = new PackageHat();
+      Optional<PackageHat> hat = packageHatDao.findById(1);
+      if (hat.isPresent()) {
+	    var realHat = hat.get();
+	    realHat.setName("petos");
+	    realHat = packageHatDao.save(realHat);
+      }
+      var list = packageHatDao.findAll();
+      for (PackageHat packageHat : list) {
+	    System.out.println(packageHat.getName());
+      }
 //      var hats = packageHatDao.findAll();
 //      for (PackageHat hat : hats) {
 //            int id = hat.getId();
 //      }
-      try{
-	    packageHatDaoImpl.count();
-      } catch (Exception e) {
-	    System.out.println(e.getMessage());
-      }
+//      try{
+//	    packageHatDaoImpl.count();
+//      } catch (Exception e) {
+//	    System.out.println(e.getMessage());
+//      }
 }
 }

@@ -26,11 +26,11 @@ private String name;
 private boolean valid;
 
 @OneToOne(fetch = FetchType.LAZY)
-@MapsId("author_id")
+@JoinColumn(name = "author_id")
 private PublisherInfo publisher;
 
 @OneToOne(fetch = FetchType.LAZY)
-@MapsId("package_type")
+@JoinColumn(name = "package_type")
 private PackageType payload;
 
 @ElementCollection(fetch = FetchType.LAZY)
@@ -39,6 +39,9 @@ private PackageType payload;
 //@OneToMany(mappedBy = "alias", orphanRemoval = true)
 private Set<String> aliases;
 
+@OneToMany
+@JoinColumn(name = "package_id")
+private List<PackageInfo> infoList;
 //@OneToMany(mappedBy = "packages_info",fetch = FetchType.LAZY)
 //private List<PackageInfo> infoList;
 @Override
