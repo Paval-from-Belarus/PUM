@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:hsqldb:mem:pum"
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+logging:
+  level:
+    root: info
+    sql: info

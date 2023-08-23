@@ -1,9 +1,9 @@
 package org.petos.pum.server;
 
-import org.petos.pum.server.common.NetworkProperties;
-import org.petos.pum.server.common.ManagerService;
-import org.petos.pum.server.common.SerializationProperties;
-import org.petos.pum.server.database.JpaConfig;
+import org.petos.pum.server.services.ManagerService;
+import org.petos.pum.server.properties.NetworkProperties;
+import org.petos.pum.server.properties.SerializationProperties;
+import org.petos.pum.server.repositories.JpaConfig;
 import org.petos.pum.server.network.MessageBuilder;
 import org.petos.pum.server.network.PacketBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,20 +12,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.integration.annotation.Transformer;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
-import org.springframework.integration.handler.advice.AbstractRequestHandlerAdvice;
 import org.springframework.integration.ip.dsl.Tcp;
-import org.springframework.integration.ip.tcp.TcpSendingMessageHandler;
-import org.springframework.integration.ip.tcp.connection.*;
-import org.springframework.integration.transformer.MethodInvokingTransformer;
-import org.springframework.messaging.Message;
+import org.springframework.integration.ip.tcp.connection.MessageConvertingTcpMessageMapper;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.handler.annotation.Header;
 
 /**
  * @author Paval Shlyk

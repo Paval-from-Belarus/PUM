@@ -1,7 +1,8 @@
-package org.petos.pum.server.common;
+package org.petos.pum.server.properties;
 
 import lombok.*;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,5 +19,4 @@ public class NetworkProperties {
 	private int timeout;
 	@Getter @Setter
 	private boolean single;
-
 }

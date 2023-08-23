@@ -3,20 +3,12 @@ networks:
     port: 3344
     timeout: 3000
     single: true
-logging:
-  level:
-    root: info
-    sql: warn
-storage:
-  data-source:
-    driver-class: "org.hsqldb.jdbc.JDBCDriver"
-    url: "jdbc:hsqldb:hsql://localhost/pum"
-    username: "server"
-    password: "UnixOneLove"
 spring:
   datasource:
-    driver-class-name: org.hsqldb.jdbc.JDBCDriver
-    url: "jdbc:hsqldb:hsql://localhost/pum"
-    username: "server"
-    password: "UnixOneLove"
     type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.hsqldb.jdbc.JDBCDriver
+  profiles:
+    include:
+      - dev
+      - test
+    active: dev

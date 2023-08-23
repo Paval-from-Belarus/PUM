@@ -16,12 +16,16 @@ module org.petos.pum.server {
       requires spring.jdbc;
       requires spring.tx;
       requires com.zaxxer.hikari;
+      requires org.hibernate.orm.core;
       //messaging
       requires spring.messaging;
       requires spring.integration.core;
       requires spring.integration.ip;
+      //tests
       opens org.petos.pum.server;
-      opens org.petos.pum.server.database;
+      opens org.petos.pum.server.repositories;
       opens org.petos.pum.server.network;
-      opens org.petos.pum.server.common;
+      opens org.petos.pum.server.properties;
+      opens org.petos.pum.server.services;
+      opens org.petos.pum.server.repositories.entities;
 }

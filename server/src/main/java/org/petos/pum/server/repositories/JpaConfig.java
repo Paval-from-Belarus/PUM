@@ -1,15 +1,15 @@
-package org.petos.pum.server.database;
+package org.petos.pum.server.repositories;
 
-import jakarta.persistence.EntityManagerFactory;
+import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
@@ -25,6 +25,7 @@ import java.util.Properties;
 @EnableJpaRepositories
 @EnableTransactionManagement
 public class JpaConfig {
+@Autowired
 public JpaConfig(DataSource dataSource) {
       this.dataSource = dataSource;
 }
@@ -34,21 +35,34 @@ public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
       JpaVendorAdapter adapter = new HibernateJpaVendorAdapter();
       LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
       factory.setDataSource(this.dataSource);
-      factory.setPackagesToScan();
-      //factory.setPackagesToScan is redundant because @EntityScan is enabled
+      //shouldn't pass any package name because @EntityScan is marked
+      //in future should consider to use PersistenceManagedTypes instead
+      factory.setPackagesToScan("org.petos.pum.server.repositories");
       factory.setJpaVendorAdapter(adapter);
       factory.setJpaProperties(jpaProperties());
       return factory;
 }
 
+//@Bean
+//public PlatformTransactionManager
+//transactionManager(EntityManagerFactory emf) {
+//      JpaTransactionManager transactionManager = new JpaTransactionManager();
+//      transactionManager.setEntityManagerFactory(emf);
+//      return transactionManager;
+//}
+//@Bean
+//public PersistenceExceptionTranslationPostProcessor
+//exceptionTranslation(){
+//      return new PersistenceExceptionTranslationPostProcessor();
+//}
+//consider in future to implements own PlatformTransactionManager and own PersistenceExceptionBeanPostProcessor
+//now -> Spring boot automatically create such instances
 private Properties jpaProperties() {
       Map<String, String> vendorProperties = Map.of(
 	  "hibernate.c3po.min_size", "5",
 	  "hibernate.c3po.max_size", "30",
 	  "hibernate.c3po.timeout", "1500",
-	  "hbm2dll.auto", "update",
-	  "show_sql", "true",
-	  "dialect", "org.hibernate.dialect.HSQLDialect"
+	  "hibernate.dialect", "org.hibernate.dialect.HSQLDialect"
       );
       var properties = new Properties();
       properties.putAll(vendorProperties);
@@ -56,5 +70,4 @@ private Properties jpaProperties() {
 }
 
 private final DataSource dataSource;
-
 }

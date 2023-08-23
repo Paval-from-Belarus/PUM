@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: "jdbc:hsqldb:hsql://localhost/pum"
+    username: "server"
+    password: "UnixOneLove"
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+logging:
+    level:
+      root: info
+      sql: warn

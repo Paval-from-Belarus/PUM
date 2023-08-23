@@ -1,13 +1,10 @@
-package org.petos.pum.server.common;
+package org.petos.pum.server.properties;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import requests.*;
 import transfer.BinaryObjectMapper;
 import transfer.BinaryObjectProperties;
-import transfer.NetworkExchange;
 
 import java.net.URL;
 import java.util.Collections;
