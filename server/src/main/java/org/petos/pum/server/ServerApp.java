@@ -1,6 +1,6 @@
 package org.petos.pum.server;
 
-import org.petos.pum.server.services.ManagerService;
+import org.petos.pum.server.network.ManagerController;
 import org.petos.pum.server.properties.NetworkProperties;
 import org.petos.pum.server.properties.SerializationProperties;
 import org.petos.pum.server.repositories.JpaConfig;
@@ -33,7 +33,7 @@ public static void main(String[] args) {
 }
 
 @Autowired
-ManagerService repository;
+ManagerController repository;
 @Autowired
 public ServerApp(NetworkProperties networkProperties, SerializationProperties serializationProperties) {
       this.networkProperties = networkProperties;
