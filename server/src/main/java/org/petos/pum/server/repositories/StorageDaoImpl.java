@@ -2,9 +2,12 @@ package org.petos.pum.server.repositories;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import lombok.Builder;
 import org.petos.pum.server.repositories.entities.PackageHat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.RepositoryDefinition;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
@@ -33,6 +36,7 @@ public <S extends PackageHat> Iterable<S> saveAll(Iterable<S> entities) {
       return null;
 }
 
+@Builder
 @Override
 public Optional<PackageHat> findById(Long aLong) {
       return Optional.empty();

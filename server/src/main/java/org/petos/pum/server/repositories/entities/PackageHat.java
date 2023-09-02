@@ -2,7 +2,10 @@ package org.petos.pum.server.repositories.entities;
 
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.util.Arrays;
@@ -34,16 +37,11 @@ private PublisherInfo publisher;
 private PackageType payload;
 
 @ElementCollection(fetch = FetchType.LAZY)
-@CollectionTable(name = "PACKAGES_ALIASES", joinColumns = @JoinColumn(name = "id"))
+@CollectionTable(name = "packages_aliases", joinColumns = @JoinColumn(name = "id"))
 @Column(name = "alias")
 //@OneToMany(mappedBy = "alias", orphanRemoval = true)
 private Set<String> aliases;
 
-@OneToMany
-@JoinColumn(name = "package_id")
-private List<PackageInfo> infoList;
-//@OneToMany(mappedBy = "packages_info",fetch = FetchType.LAZY)
-//private List<PackageInfo> infoList;
 @Override
 public String toString() {
       return "PackageHat: (id=" + id + ";name=" + name + ")";

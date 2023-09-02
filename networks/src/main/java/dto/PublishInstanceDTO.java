@@ -4,14 +4,10 @@ package dto;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import transfer.TransferEntity;
 import transfer.TransferOrder;
-
-
-import java.util.Optional;
 
 @EqualsAndHashCode(callSuper = false)
 @TransferEntity(selective = true, ignoreNullable = true)
@@ -38,9 +34,8 @@ private String license;
 private DependencyInfoDTO[] dependencies;
 
 /**
- * @param dependencies is any alias (or package name) of dependency that should be used to install package.
- *                     Each dependency should be verified and exists other package will no publish.
  * @param version      is unique String label for package Family
+ * @param payloadSize size of payload in bytes
  */
 public PublishInstanceDTO(int id, @NotNull String version, int payloadSize) {
       this.packageId = id;

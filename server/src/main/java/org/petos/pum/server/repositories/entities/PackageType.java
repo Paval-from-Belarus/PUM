@@ -12,6 +12,9 @@ import lombok.experimental.Accessors;
 @Entity
 @Table(name = "PACKAGES_TYPES")
 public class PackageType {
+public static final String APP = "Application";
+public static final String LIBRARY = "Library";
+public static final String DOCS = "Documentation";
 @Id
 @Column(name = "id")
 private Integer id;

@@ -12,3 +12,5 @@ spring:
       - dev
       - test
     active: dev
+  application:
+    name: pum

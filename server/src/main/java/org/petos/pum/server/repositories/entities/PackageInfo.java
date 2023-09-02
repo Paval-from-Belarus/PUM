@@ -6,19 +6,26 @@ import lombok.Setter;
 
 
 import jakarta.persistence.*;
+import lombok.experimental.Accessors;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
 import java.util.*;
 
 @Data
+@Accessors(chain = true)
 @Entity
+@IdClass(InstanceId.class)
 @Table(name = "packages_info")
 public class PackageInfo {
-@EmbeddedId
-private InstanceId id;
+@Id
+@Column(name = "package_id")
+private Integer packageId;
+@Id
+@Column(name = "version_id")
+private Integer versionId;
 @Column(name = "version_label")
-private String versionLabel;
+private String version;
 @GeneratedValue
 @CreatedDate
 @Column(name = "create_time")
@@ -27,8 +34,6 @@ private Timestamp time;
 @MapsId("licence_type")
 private Licence licence; //replace LicenceId directly to Licence value
 
-@Setter
-@Getter
 @ElementCollection
 @CollectionTable(name = "DEPENDENCIES", joinColumns = {
     @JoinColumn(name = "PACKAGE_ID", referencedColumnName = "package_id"),

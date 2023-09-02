@@ -3,13 +3,10 @@ spring:
     url: "jdbc:hsqldb:mem:pum"
     username: "sa"
     password:
-#    url: "jdbc:hsqldb:hsql://localhost/pum"
-#    username: "server"
-#    password: "UnixOneLove"
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: create-drop
     defer-datasource-initialization: true
   sql:
     init:
@@ -17,4 +14,4 @@ spring:
 logging:
   level:
     root: info
-    sql: info
+    sql: trace
