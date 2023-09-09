@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.annotation.Rollback;
-import requests.IdRequest;
+import org.petos.pum.networks.requests.IdRequest;
 
 /**
  * @author Paval Shlyk

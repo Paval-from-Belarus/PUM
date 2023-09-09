@@ -1,13 +1,20 @@
 package org.petos.pum.server.repositories.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
-@Accessors(chain = true)
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
-@Table(name = "PUBLISHERS_INFO")
+@Table(name = "PUBLISHER_INFO")
 public class PublisherInfo {
 @Id
 @GeneratedValue(strategy = GenerationType.AUTO)
@@ -17,16 +24,13 @@ private Integer id;
 private String name;
 @Column(name = "email")
 private String email;
-@Column(name = "hash")
-private String hash;
-@Column(name = "salt")
-private String salt;
+//@OneToMany(mappedBy = "publisher", cascade = CascadeType.ALL, orphanRemoval = true)
+//private List<PackageHat> comments = new ArrayList<>();
 
-public static PublisherInfo valueOf(String name, String hash, String salt) {
+
+public static PublisherInfo valueOf(String name) {
       PublisherInfo author = new PublisherInfo();
       author.name = name;
-      author.hash = hash;
-      author.salt = salt;
       author.email = "";
       return author;
 }

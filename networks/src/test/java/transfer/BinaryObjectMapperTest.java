@@ -1,16 +1,18 @@
 package transfer;
 
-import dto.DependencyInfoDTO;
-import dto.FullPackageInfoDTO;
-import dto.PublishInstanceDTO;
-import dto.ShortPackageInfoDTO;
+import org.petos.pum.networks.dto.DependencyInfoDTO;
+import org.petos.pum.networks.dto.FullPackageInfoDTO;
+import org.petos.pum.networks.dto.PublishInstanceDTO;
+import org.petos.pum.networks.dto.ShortPackageInfoDTO;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import requests.PayloadRequest;
-import requests.PublishInstanceRequest;
-import requests.VersionRequest;
-import security.Encryptor;
+import org.petos.pum.networks.requests.PayloadRequest;
+import org.petos.pum.networks.requests.PublishInstanceRequest;
+import org.petos.pum.networks.requests.VersionRequest;
+import org.petos.pum.networks.security.Encryptor;
+import org.petos.pum.networks.transfer.BinaryObjectMapper;
+import org.petos.pum.networks.transfer.PackageAssembly;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;

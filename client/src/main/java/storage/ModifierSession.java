@@ -1,9 +1,9 @@
 package storage;
 
 import database.InstanceInfo;
-import dto.FullPackageInfoDTO;
-import transfer.PackageAssembly;
-import dto.VersionInfoDTO;
+import org.petos.pum.networks.dto.FullPackageInfoDTO;
+import org.petos.pum.networks.transfer.PackageAssembly;
+import org.petos.pum.networks.dto.VersionInfoDTO;
 
 import java.io.IOException;
 import java.nio.file.Files;

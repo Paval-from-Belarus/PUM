@@ -6,14 +6,14 @@ import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.converter.MessageConverter;
-import transfer.BinaryObjectMapper;
-import transfer.NetworkExchange;
-import transfer.NetworkPacket;
+import org.petos.pum.networks.transfer.BinaryObjectMapper;
+import org.petos.pum.networks.transfer.NetworkExchange;
+import org.petos.pum.networks.transfer.NetworkPacket;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static transfer.NetworkExchange.*;
+import static org.petos.pum.networks.transfer.NetworkExchange.*;
 
 /**
  * @author Paval Shlyk

@@ -1,6 +1,7 @@
 module org.petos.pum.server {
       requires static lombok;
       requires static annotations;
+      requires static org.mapstruct;
       requires org.petos.pum.networks;
       requires jakarta.persistence;
       requires jakarta.annotation;
@@ -23,6 +24,7 @@ module org.petos.pum.server {
       requires spring.integration.ip;
       //tests
       opens org.petos.pum.server;
+      opens org.petos.pum.server.dto;
       opens org.petos.pum.server.repositories;
       opens org.petos.pum.server.network;
       opens org.petos.pum.server.properties;

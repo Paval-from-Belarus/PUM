@@ -1,19 +1,15 @@
 package org.petos.pum.server.repositories.entities;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-
-
 import jakarta.persistence.*;
-import lombok.experimental.Accessors;
+import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Data
-@Accessors(chain = true)
 @Entity
 @IdClass(InstanceId.class)
 @Table(name = "packages_info")
@@ -47,15 +43,20 @@ private Licence licence; //replace LicenceId directly to Licence value
 private Set<DependencyId> dependencies;
 
 //@ElementCollection
-//@CollectionTable(name = "PACKAGES_PAYLOADS", joinColumns = {
-//    @JoinColumn(name = "PACKAGE_ID", referencedColumnName = "packageId"),
-//   @JoinColumn(name = "VERSION_ID", referencedColumnName = "versionId")
+//@CollectionTable(name = "packages_payloads", joinColumns = {
+//    @JoinColumn(name = "package_id", referencedColumnName = "package_id"),
+//   @JoinColumn(name = "version_id", referencedColumnName = "version_id")
 //})
 //@Columns(columns = {
 //    @Column(name="ARCHIVE_TYPE"),
 //    @Column(name="PATH")
 //})
-@OneToMany(mappedBy = "packageInfo", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+@OneToMany
+@JoinColumns({
+    @JoinColumn(name = "package_id"),
+    @JoinColumn(name = "version_id")
+})
+//@OneToMany(targetEntity = PayloadInstance.class, fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
 private List<PayloadInstance> payloads = new ArrayList<>();
 
 public void addInstance(PayloadInstance instance) {

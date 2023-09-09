@@ -1,17 +1,10 @@
 package security;
 
 import org.junit.jupiter.api.Test;
-import requests.VersionFormat;
-import transfer.PackageAssembly;
-import requests.PayloadRequest;
 
 import javax.crypto.SecretKey;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ForkJoinPool;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static security.Encryptor.*;
+import static org.petos.pum.networks.security.Encryptor.*;
 
 class EncryptorTest {
 

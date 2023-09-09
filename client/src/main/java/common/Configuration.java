@@ -2,8 +2,8 @@ package common;
 
 import org.jetbrains.annotations.NotNull;
 import org.w3c.dom.Document;
-import transfer.BinaryObjectProperties;
-import transfer.BinaryObjectMapper;
+import org.petos.pum.networks.transfer.BinaryObjectProperties;
+import org.petos.pum.networks.transfer.BinaryObjectMapper;
 
 
 import java.io.File;

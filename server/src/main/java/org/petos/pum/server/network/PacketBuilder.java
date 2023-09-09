@@ -3,8 +3,7 @@ package org.petos.pum.server.network;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.serializer.Deserializer;
 import org.springframework.core.serializer.Serializer;
-import org.springframework.stereotype.Component;
-import transfer.NetworkPacket;
+import org.petos.pum.networks.transfer.NetworkPacket;
 
 import java.io.IOException;
 import java.io.InputStream;

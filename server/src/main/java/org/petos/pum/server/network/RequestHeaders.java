@@ -1,8 +1,7 @@
 package org.petos.pum.server.network;
 
-import transfer.NetworkExchange;
+import org.petos.pum.networks.transfer.NetworkExchange;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

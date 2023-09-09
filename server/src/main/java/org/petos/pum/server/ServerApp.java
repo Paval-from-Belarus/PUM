@@ -34,6 +34,7 @@ public static void main(String[] args) {
 
 @Autowired
 ManagerController repository;
+
 @Autowired
 public ServerApp(NetworkProperties networkProperties, SerializationProperties serializationProperties) {
       this.networkProperties = networkProperties;
@@ -44,15 +45,18 @@ public ServerApp(NetworkProperties networkProperties, SerializationProperties se
 public MessageBuilder messageBuilder() {
       return new MessageBuilder(serializationProperties.mapper(), serializationProperties.requestMap());
 }
+
 @Bean
 public MessageConvertingTcpMessageMapper messageMapper() {
       return new MessageConvertingTcpMessageMapper(messageBuilder());
 
 }
+
 @Bean
 public PacketBuilder builder() {
       return new PacketBuilder();
 }
+
 @Bean
 public IntegrationFlow integrationFlow() {
       var netServer = Tcp.netServer(networkProperties.getPort())
@@ -127,9 +131,10 @@ public MessageChannel inputChannel() {
       DirectChannel channel = new DirectChannel();
       return channel;
 }
+
 @Bean({"output", "outputChannel"})
 public MessageChannel outputChannel() {
-	return new DirectChannel();
+      return new DirectChannel();
 }
 //@Bean
 //public Object advice() {

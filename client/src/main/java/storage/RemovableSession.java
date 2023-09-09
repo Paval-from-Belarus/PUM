@@ -1,7 +1,7 @@
 package storage;
 
 import database.InstanceInfo;
-import dto.FullPackageInfoDTO;
+import org.petos.pum.networks.dto.FullPackageInfoDTO;
 import storage.JournalTransaction.Type;
 
 import java.io.IOException;

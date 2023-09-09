@@ -1,11 +1,9 @@
 package org.petos.pum.server.repositories;
 
-import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -17,6 +15,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
+ * This configuration class should be placed in repository package on high level. Because this configuration scan package for entities and repositories
  * @author Paval Shlyk
  * @since 19/08/2023
  */
@@ -37,7 +36,7 @@ public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
       factory.setDataSource(this.dataSource);
       //shouldn't pass any package name because @EntityScan is marked
       //in future should consider to use PersistenceManagedTypes instead
-      factory.setPackagesToScan("org.petos.pum.server.repositories");
+      factory.setPackagesToScan(this.getClass().getPackageName());
       factory.setJpaVendorAdapter(adapter);
       factory.setJpaProperties(jpaProperties());
       return factory;
@@ -62,7 +61,8 @@ private Properties jpaProperties() {
 	  "hibernate.c3po.min_size", "5",
 	  "hibernate.c3po.max_size", "30",
 	  "hibernate.c3po.timeout", "1500",
-	  "hibernate.dialect", "org.hibernate.dialect.HSQLDialect"
+	  "hibernate.dialect", "org.hibernate.dialect.HSQLDialect",
+	  "hibernate.id.new_generator_mappings", "false"
       );
       var properties = new Properties();
       properties.putAll(vendorProperties);

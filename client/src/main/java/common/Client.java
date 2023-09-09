@@ -3,18 +3,18 @@ package common;
 import com.google.gson.Gson;
 import database.CachedInfo;
 import database.RepositoryInfo;
-import dto.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import requests.*;
-import security.Author;
-import security.Encryptor;
+import org.petos.pum.networks.dto.*;
+import org.petos.pum.networks.requests.*;
+import org.petos.pum.networks.transfer.*;
+import org.petos.pum.networks.security.Author;
+import org.petos.pum.networks.security.Encryptor;
 import storage.*;
 import storage.ModifierSession.Rank;
 import storage.ModifierSession.VersionPredicate;
-import transfer.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
 import static common.InputProcessor.*;
 import static common.OutputProcessor.QuestionResponse;
 import static common.OutputProcessor.QuestionType;
-import static security.Encryptor.Encryption;
+import static org.petos.pum.networks.security.Encryptor.Encryption;
 import static storage.PackageStorage.*;
 import static storage.StorageSession.CommitState;
-import static transfer.NetworkExchange.*;
-import static transfer.SimplexService.ServerAccessException;
+import static org.petos.pum.networks.transfer.NetworkExchange.*;
+import static org.petos.pum.networks.transfer.SimplexService.ServerAccessException;
 
 
 public class Client {
@@ -389,7 +389,7 @@ private Optional<VersionInfoDTO> getVersionByLevel(Integer packageId, int level)
 private Optional<VersionInfoDTO> getLatestRelease(Integer id, VersionInfoDTO local) {
       Wrapper<VersionInfoDTO> wrapper = new Wrapper<>();
       try (NetworkService service = packageService(id)) {
-	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.RESPONSE_VERBOSE_FORMAT | RequestCode.TRANSFER_ATTACHED_FORMAT );
+	    NetworkPacket packet = new NetworkPacket(RequestType.GetVersion, RequestCode.RESPONSE_VERBOSE_FORMAT | RequestCode.TRANSFER_ATTACHED_FORMAT);
 	    VersionRequest request = new VersionRequest(id, local.getLabel());
 	    packet.setPayload(serialize(request));
 	    service.setRequest(packet).setResponseHandler((NetworkPacket response) -> onVersionResponse(wrapper, response));
@@ -1100,6 +1100,7 @@ private byte[] serialize(Object instance) {
       assert binaryObjectMapper != null;
       return binaryObjectMapper.serialize(instance);
 }
+
 private <T> T construct(Class<T> clazz, byte[] bytes) {
       return binaryObjectMapper.construct(bytes, clazz);
 }

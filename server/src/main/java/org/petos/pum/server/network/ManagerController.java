@@ -7,8 +7,8 @@ import org.petos.pum.server.services.PublisherService;
 import org.springframework.integration.annotation.MessageEndpoint;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.handler.annotation.Payload;
-import requests.IdRequest;
-import requests.VersionRequest;
+import org.petos.pum.networks.requests.IdRequest;
+import org.petos.pum.networks.requests.VersionRequest;
 
 import java.io.OutputStream;
 

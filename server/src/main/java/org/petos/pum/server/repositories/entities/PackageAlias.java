@@ -1,14 +1,23 @@
 package org.petos.pum.server.repositories.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Table;
-import lombok.Data;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.NaturalId;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor(force = true)
+@Entity
 @Table(name = "packages_aliases")
 public class PackageAlias {
-@Column(name="alias")
+@Id
+@Column(name = "id")
+private final Long id;
+@NaturalId
+@Column(name = "alias")
 private String alias;
-@Column(name="id")
-private Integer id;
+@ManyToOne(fetch = FetchType.LAZY)//mapped by hat_id
+private PackageHat hat;
+
 }

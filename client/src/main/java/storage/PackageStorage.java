@@ -10,9 +10,9 @@ import database.RepositoryInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import dto.*;
-import security.Author;
-import transfer.PackageAssembly;
+import org.petos.pum.networks.dto.*;
+import org.petos.pum.networks.security.Author;
+import org.petos.pum.networks.transfer.PackageAssembly;
 
 import java.io.BufferedWriter;
 import java.io.File;

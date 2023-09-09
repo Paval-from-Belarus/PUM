@@ -1,6 +1,6 @@
 <?xml version = "1.0"?>
 <packages-mapping>
-    <registration package="requests">
+    <registration package="org.petos.pum.networks.requests">
         <class id="10">IdRequest</class>
         <class id="11">InfoRequest</class>
         <class id="12">PayloadRequest</class>
@@ -8,7 +8,7 @@
         <class id="14">PublishInstanceRequest</class>
         <class id="15">VersionRequest</class>
     </registration>
-    <registration package="dto">
+    <registration package="org.petos.pum.networks.dto">
         <class id="16">ShortPackageInfoDTO</class>
         <class id="17">FullPackageInfoDTO</class>
         <class id="18">DependencyInfoDTO</class>
@@ -17,10 +17,10 @@
         <class id="21">RepoInfoDTO</class>
         <class id="22">VersionInfoDTO</class>
     </registration>
-    <registration package="security">
+    <registration package="org.petos.pum.networks.security">
         <class id="23">Encryptor$Encryption</class>
     </registration>
-    <registration package="transfer">
+    <registration package="org.petos.pum.networks.transfer">
         <class id="24">PackageAssembly$ArchiveType</class>
     </registration>
 </packages-mapping>

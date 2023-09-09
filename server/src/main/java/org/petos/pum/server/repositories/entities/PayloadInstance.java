@@ -5,21 +5,25 @@ import lombok.*;
 
 import jakarta.persistence.*;
 
-import java.util.List;
-
 //@SuppressWarnings("JpaDataSourceORMInspection")//foreign key for collection table
 //@Embeddable
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
-@Table(name = "PACKAGES_PAYLOADS")
+@IdClass(InstanceId.class)
+@Table(name = "packages_payloads")
 public class PayloadInstance {
-@EmbeddedId
-private InstanceId instanceId;
+@Id
+@Column(name = "package_id")
+private Integer packageId;
+@Id
+@Column(name = "package_id")
+private Integer versionId;
 @Column(name = "path")
-private String path;
+private String path = "";
 @OneToOne(fetch = FetchType.EAGER)
-@JoinColumn(name = "ARCHIVE_TYPE")
-private Archive archiveType;
-@ManyToOne(fetch = FetchType.LAZY)
-private PackageInfo packageInfo;
+@JoinColumn(name = "archive_type")
+private ArchiveType archiveType;
 }

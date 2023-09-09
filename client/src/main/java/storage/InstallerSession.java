@@ -2,9 +2,9 @@ package storage;
 
 import database.InstanceInfo;
 import org.jetbrains.annotations.NotNull;
-import dto.FullPackageInfoDTO;
-import transfer.PackageAssembly;
-import security.Encryptor;
+import org.petos.pum.networks.dto.FullPackageInfoDTO;
+import org.petos.pum.networks.transfer.PackageAssembly;
+import org.petos.pum.networks.security.Encryptor;
 
 import java.io.File;
 import java.io.IOException;

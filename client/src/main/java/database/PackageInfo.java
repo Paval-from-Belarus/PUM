@@ -1,6 +1,6 @@
 package database;
 
-import dto.DependencyInfoDTO;
+import org.petos.pum.networks.dto.DependencyInfoDTO;
 
 import java.util.Objects;
 
