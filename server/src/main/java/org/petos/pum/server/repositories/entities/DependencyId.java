@@ -14,5 +14,5 @@ public class DependencyId implements Serializable {
 private Integer packageId;
 @Column(name="DEPENDENCY_VERSION")
 private Integer versionId;
-
+private String version;
 }

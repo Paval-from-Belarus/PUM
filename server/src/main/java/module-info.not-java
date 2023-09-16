@@ -4,7 +4,6 @@ module org.petos.pum.server {
       requires static org.mapstruct;
       requires org.petos.pum.networks;
       requires jakarta.persistence;
-      requires jakarta.annotation;
       requires spring.boot;
       requires spring.boot.autoconfigure;
       requires spring.context;

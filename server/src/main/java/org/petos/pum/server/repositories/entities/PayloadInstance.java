@@ -23,6 +23,8 @@ private Integer packageId;
 private Integer versionId;
 @Column(name = "path")
 private String path = "";
+@Column(name = "payload_size")
+private Long payloadSize;
 @OneToOne(fetch = FetchType.EAGER)
 @JoinColumn(name = "archive_type")
 private ArchiveType archiveType;

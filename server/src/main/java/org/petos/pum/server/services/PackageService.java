@@ -1,6 +1,5 @@
 package org.petos.pum.server.services;
 
-import org.petos.pum.server.dto.ShortPackageInfo;
 import org.petos.pum.server.repositories.entities.PublisherInfo;
 import org.springframework.stereotype.Service;
 
@@ -11,12 +10,10 @@ import java.io.OutputStream;
  * @since 24/08/2023
  */
 @Service
-public class DistributionService {
-public enum PackageType {
-}
-public void initPackage(ShortPackageInfo info, PublisherInfo publisher) {
-
-}
+public class PackageService {
+//public void initPackage(ShortPackageInfo info, PublisherInfo publisher) {
+//
+//}
 public OutputStream uploadPackage() {
       return null;
 }

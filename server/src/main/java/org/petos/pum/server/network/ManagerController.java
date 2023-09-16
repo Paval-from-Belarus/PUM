@@ -2,7 +2,7 @@ package org.petos.pum.server.network;
 
 import lombok.RequiredArgsConstructor;
 import org.petos.pum.server.services.LocalService;
-import org.petos.pum.server.services.DistributionService;
+import org.petos.pum.server.services.PackageService;
 import org.petos.pum.server.services.PublisherService;
 import org.springframework.integration.annotation.MessageEndpoint;
 import org.springframework.integration.annotation.ServiceActivator;
@@ -20,7 +20,7 @@ import java.io.OutputStream;
 @MessageEndpoint("repository")
 @RequiredArgsConstructor
 public class ManagerController {
-private final DistributionService packageService;
+private final PackageService packageService;
 private final PublisherService publisherService;
 private final LocalService localService;
 @ServiceActivator(inputChannel = "input", outputChannel = "output")

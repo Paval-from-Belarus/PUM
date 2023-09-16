@@ -5,11 +5,20 @@ module org.petos.pum.networks {
       requires jdk.unsupported;
       requires java.xml;
       requires annotations;
+      requires java.annotation;
+      //grpc dependencies
+      requires com.google.protobuf;
+      requires com.google.common;
+      requires grpc.stub;
+      requires grpc.api;
+      requires grpc.protobuf;
       opens org.petos.pum.networks.dto;
       opens org.petos.pum.networks.transfer;
       opens org.petos.pum.networks.requests;
+      opens org.petos.pum.networks.grpc;
       exports org.petos.pum.networks.transfer;
       exports org.petos.pum.networks.dto;
       exports org.petos.pum.networks.security;
       exports org.petos.pum.networks.requests;
+      exports org.petos.pum.networks.grpc;
 }

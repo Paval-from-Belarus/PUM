@@ -43,6 +43,7 @@ private final PackageType type;//the package without any type is impossible
 //@Column(name = "alias")
 //private Set<String> aliases;
 @OneToMany(mappedBy = "hat", orphanRemoval = true)
+@Builder.Default
 private List<PackageAlias> aliases = new ArrayList<>();
 
 //@ElementCollection(fetch = FetchType.LAZY)

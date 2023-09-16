@@ -19,7 +19,6 @@ import java.util.Optional;
 public interface PackageHatDao extends ListCrudRepository<PackageHat, Integer> {
 
 Optional<PackageHat> findByIdAndValid(Integer id, boolean valid);
-
 List<PackageHat> findAllByPublisherId(Integer id);
 
 List<PackageHat> findAll();

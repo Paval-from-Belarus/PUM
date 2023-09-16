@@ -19,8 +19,10 @@ public class PackageAlias {
 private final Long id;
 @NaturalId
 @Column(name = "alias")
-private String alias;
-@ManyToOne(fetch = FetchType.LAZY)//mapped by hat_id
+private String name;
+//fetching alias obviously entails fetching package hat
+//let's it will be a single sql request
+@ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
 @JoinColumn(name = "hat_id")
 private PackageHat hat;
 }
