@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.*;
 import lombok.experimental.Accessors;
 
-@Getter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor(force = true)
 @Entity

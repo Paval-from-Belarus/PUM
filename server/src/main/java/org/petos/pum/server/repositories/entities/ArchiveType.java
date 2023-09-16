@@ -15,7 +15,7 @@ public static final String NONE = "NONE";
 public static final String BROTLI = "BROTLI";
 public static final String GZIP = "GZIP";
 @Id
-@GeneratedValue
+@GeneratedValue(strategy = GenerationType.IDENTITY)
 @Column(name = "id", nullable = false)
 private Integer id = null;
 private String type = "";

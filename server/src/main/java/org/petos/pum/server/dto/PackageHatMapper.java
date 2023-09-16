@@ -18,7 +18,6 @@ import java.util.List;
 public interface PackageHatMapper {
 @Mapping(target = "domainName", source = "hat.name")
 ShortPackageInfo toShortInfo(PackageHat hat);
-
 default String mapType(PackageType type) {
       return type.getName();
 }

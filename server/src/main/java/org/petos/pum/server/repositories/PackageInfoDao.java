@@ -12,18 +12,6 @@ import java.util.Optional;
  * @since 24/08/2023
  */
 public interface PackageInfoDao extends Repository<PackageInfo, InstanceId> {
-public static class CustomBean implements FactoryBean<Integer> {
-
-      @Override
-      public Integer getObject() throws Exception {
-	    return null;
-      }
-
-      @Override
-      public Class<?> getObjectType() {
-	    return null;
-      }
-}
 Iterable<PackageInfo> findPackageInfoByPackageId(Integer packageId);
 
 Iterable<PackageInfo> findPackageInfoByPackageIdAndVersionIdBetween(Integer packageId, Integer startVersion, Integer endVersion);

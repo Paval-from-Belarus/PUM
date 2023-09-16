@@ -1,5 +1,11 @@
 package org.petos.pum.server.repositories;
 
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
@@ -11,11 +17,14 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
+import java.sql.CallableStatement;
+import java.sql.Clob;
 import java.util.Map;
 import java.util.Properties;
 
 /**
  * This configuration class should be placed in repository package on high level. Because this configuration scan package for entities and repositories
+ *
  * @author Paval Shlyk
  * @since 19/08/2023
  */
@@ -39,6 +48,7 @@ public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
       factory.setPackagesToScan(this.getClass().getPackageName());
       factory.setJpaVendorAdapter(adapter);
       factory.setJpaProperties(jpaProperties());
+
       return factory;
 }
 

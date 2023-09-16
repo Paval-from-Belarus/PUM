@@ -16,7 +16,7 @@ public static final String GNU = "GNU";
 public static final String APACHE = "Apache";
 public static final String BEAR = "Bear";
 @Id
-@GeneratedValue(strategy = GenerationType.AUTO)
+@GeneratedValue(strategy = GenerationType.IDENTITY)
 @Column(name = "id", nullable = false)
 private Integer id = null;
 @Column(name = "name")

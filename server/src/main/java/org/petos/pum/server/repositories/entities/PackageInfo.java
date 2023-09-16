@@ -22,7 +22,7 @@ private Integer packageId;
 private Integer versionId;
 @Column(name = "version_label")
 private String version;
-@GeneratedValue
+@GeneratedValue(strategy = GenerationType.IDENTITY)
 @CreatedDate
 @Column(name = "create_time")
 private Timestamp time;

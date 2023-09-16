@@ -1,7 +1,10 @@
 package org.petos.pum.server.repositories.entities;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.NaturalId;
 
 @Data
@@ -18,6 +21,6 @@ private final Long id;
 @Column(name = "alias")
 private String alias;
 @ManyToOne(fetch = FetchType.LAZY)//mapped by hat_id
+@JoinColumn(name = "hat_id")
 private PackageHat hat;
-
 }
