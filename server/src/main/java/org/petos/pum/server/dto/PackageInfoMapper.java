@@ -1,7 +1,5 @@
 package org.petos.pum.server.dto;
 
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.mapstruct.*;
 import org.petos.pum.networks.grpc.FullInstanceInfo;
 import org.petos.pum.networks.grpc.ShortInstanceInfo;

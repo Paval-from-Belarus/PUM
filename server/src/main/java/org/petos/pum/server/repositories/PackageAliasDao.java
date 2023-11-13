@@ -1,6 +1,5 @@
 package org.petos.pum.server.repositories;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import org.petos.pum.server.repositories.entities.PackageAlias;
 import org.springframework.data.repository.Repository;
 

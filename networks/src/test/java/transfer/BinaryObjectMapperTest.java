@@ -1,9 +1,9 @@
 package transfer;
 
-import org.petos.pum.networks.dto.DependencyInfoDTO;
-import org.petos.pum.networks.dto.FullPackageInfoDTO;
-import org.petos.pum.networks.dto.PublishInstanceDTO;
-import org.petos.pum.networks.dto.ShortPackageInfoDTO;
+import org.petos.pum.networks.old_dto.DependencyInfoDTO;
+import org.petos.pum.networks.old_dto.FullPackageInfoDTO;
+import org.petos.pum.networks.old_dto.PublishInstanceDTO;
+import org.petos.pum.networks.old_dto.ShortPackageInfoDTO;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;

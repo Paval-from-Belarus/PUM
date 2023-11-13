@@ -2,10 +2,7 @@ package org.petos.pum.server.repositories;
 
 
 import org.petos.pum.server.repositories.entities.PackageHat;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.ListCrudRepository;
-import org.springframework.data.repository.query.ParameterAccessor;
 
 import java.util.List;
 import java.util.Optional;

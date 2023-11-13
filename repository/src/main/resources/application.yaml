@@ -1,0 +1,4 @@
+kafka:
+  server: "kafka-server"
+  group:
+    id: "kafka-group-id"

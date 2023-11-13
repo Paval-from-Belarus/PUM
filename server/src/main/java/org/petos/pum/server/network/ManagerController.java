@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.petos.pum.server.services.LocalService;
 import org.petos.pum.server.services.PackageService;
 import org.petos.pum.server.services.PublisherService;
+import org.petos.pum.networks.requests.IdRequest;
+import org.petos.pum.networks.requests.VersionRequest;
 import org.springframework.integration.annotation.MessageEndpoint;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.petos.pum.networks.requests.IdRequest;
-import org.petos.pum.networks.requests.VersionRequest;
 
 import java.io.OutputStream;
 

@@ -1,0 +1,5 @@
+service DistributionService {
+    rpc onHeaderRequest(HeaderRequest) returns (HeaderInfo) {};
+    rpc onInstanceRequest(InstanceRequest) returns (FullInstanceInfo) {};
+    rpc onPayloadRequest(PayloadRequest) returns (stream PayloadChunk) {};
+}

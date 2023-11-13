@@ -4,14 +4,6 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.petos.pum.networks.grpc.DistributionServiceGrpc;
-import org.petos.pum.networks.grpc.FullInstanceInfo;
-import org.petos.pum.networks.grpc.HeaderInfo;
-import org.petos.pum.networks.grpc.HeaderRequest;
-import org.petos.pum.networks.grpc.InstanceRequest;
-import org.petos.pum.networks.grpc.PayloadChunk;
-import org.petos.pum.networks.grpc.PayloadRequest;
-import org.petos.pum.server.dto.PackageHatMapper;
 import org.petos.pum.server.dto.PackageInfoMapper;
 import org.petos.pum.server.repositories.PackageAliasDao;
 import org.petos.pum.server.repositories.PackageHatDao;
@@ -20,6 +12,14 @@ import org.petos.pum.server.repositories.PackageTypeDao;
 import org.petos.pum.server.repositories.entities.PackageAlias;
 import org.petos.pum.server.repositories.entities.PackageHat;
 import org.petos.pum.server.repositories.entities.PackageInfo;
+import org.petos.pum.networks.grpc.DistributionServiceGrpc;
+import org.petos.pum.networks.grpc.FullInstanceInfo;
+import org.petos.pum.networks.grpc.HeaderInfo;
+import org.petos.pum.networks.grpc.HeaderRequest;
+import org.petos.pum.networks.grpc.InstanceRequest;
+import org.petos.pum.networks.grpc.PayloadChunk;
+import org.petos.pum.networks.grpc.PayloadRequest;
+import org.petos.pum.server.dto.PackageHatMapper;
 
 import java.util.Optional;
 
@@ -29,6 +29,7 @@ import java.util.Optional;
  */
 @GrpcService
 @RequiredArgsConstructor
+@Deprecated
 public class DistributionService extends DistributionServiceGrpc.DistributionServiceImplBase {
 private final PackageTypeDao typeDao;
 private final PackageInfoDao infoDao;

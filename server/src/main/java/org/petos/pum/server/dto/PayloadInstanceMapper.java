@@ -2,13 +2,11 @@ package org.petos.pum.server.dto;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
-import org.petos.pum.server.repositories.entities.ArchiveType;
 import org.petos.pum.server.repositories.entities.PayloadInstance;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.AbstractMap;

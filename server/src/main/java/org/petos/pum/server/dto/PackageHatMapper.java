@@ -1,15 +1,10 @@
 package org.petos.pum.server.dto;
 
 import org.mapstruct.*;
-import org.petos.pum.server.repositories.PackageHatDao;
 import org.petos.pum.server.repositories.entities.PackageAlias;
 import org.petos.pum.server.repositories.entities.PackageHat;
 import org.petos.pum.server.repositories.entities.PackageType;
 import org.petos.pum.networks.grpc.HeaderInfo;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 
 /**
  * @author Paval Shlyk

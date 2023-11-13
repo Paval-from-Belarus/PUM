@@ -5,10 +5,10 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.petos.pum.networks.transfer.TransferRequest;
 import org.petos.pum.networks.transfer.NetworkExchange;
 import org.petos.pum.networks.transfer.TransferEntity;
 import org.petos.pum.networks.transfer.TransferOrder;
-import org.petos.pum.networks.transfer.TransferRequest;
 
 @TransferRequest(NetworkExchange.RequestType.GetVersion)
 @TransferEntity(ignoreNullable = true, code = 15)

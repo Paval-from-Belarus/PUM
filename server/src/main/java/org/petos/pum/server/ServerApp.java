@@ -1,10 +1,10 @@
 package org.petos.pum.server;
 
-import org.petos.pum.server.network.ManagerController;
 import org.petos.pum.server.properties.NetworkProperties;
 import org.petos.pum.server.properties.SerializationProperties;
-import org.petos.pum.server.repositories.JpaConfig;
+import org.petos.pum.server.network.ManagerController;
 import org.petos.pum.server.network.MessageBuilder;
+import org.petos.pum.server.repositories.JpaConfig;
 import org.petos.pum.server.network.PacketBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;

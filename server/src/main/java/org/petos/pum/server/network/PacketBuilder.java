@@ -1,9 +1,9 @@
 package org.petos.pum.server.network;
 
 import org.jetbrains.annotations.NotNull;
+import org.petos.pum.networks.transfer.NetworkPacket;
 import org.springframework.core.serializer.Deserializer;
 import org.springframework.core.serializer.Serializer;
-import org.petos.pum.networks.transfer.NetworkPacket;
 
 import java.io.IOException;
 import java.io.InputStream;

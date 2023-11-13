@@ -1,10 +1,10 @@
 package org.petos.pum.networks.requests;
 
 import lombok.Getter;
+import org.petos.pum.networks.transfer.TransferRequest;
 import org.petos.pum.networks.transfer.NetworkExchange;
 import org.petos.pum.networks.transfer.TransferEntity;
 import org.petos.pum.networks.transfer.TransferOrder;
-import org.petos.pum.networks.transfer.TransferRequest;
 
 @TransferRequest(NetworkExchange.RequestType.GetInfo)
 @TransferEntity(ignoreNullable = true, code = 11)

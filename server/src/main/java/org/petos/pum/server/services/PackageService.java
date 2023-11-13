@@ -1,6 +1,5 @@
 package org.petos.pum.server.services;
 
-import org.petos.pum.server.repositories.entities.PublisherInfo;
 import org.springframework.stereotype.Service;
 
 import java.io.OutputStream;

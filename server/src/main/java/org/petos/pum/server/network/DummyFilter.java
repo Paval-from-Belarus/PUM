@@ -1,7 +1,6 @@
 package org.petos.pum.server.network;
 
 import org.springframework.integration.annotation.Filter;
-import org.springframework.integration.annotation.MessageEndpoint;
 
 /**
  * @author Paval Shlyk

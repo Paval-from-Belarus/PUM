@@ -1,0 +1,5 @@
+kafka:
+  server: petos.project.su:9092
+  schema: petos.project.su:8081
+  group:
+    id: "kafka-group-id"

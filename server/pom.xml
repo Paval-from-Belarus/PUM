@@ -154,7 +154,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                    <!--                    <mainClass>main.ServerApp</mainClass>-->
+<!--                                        <mainClass>org.petos.pum.</mainClass>-->
                 </configuration>
             </plugin>
         </plugins>
