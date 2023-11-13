@@ -1,5 +1,4 @@
-package org.petos.pum.repository.model;
-
+package model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -12,16 +11,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "LICENCES")
-public class Licence {
-public static final String MIT = "MIT";
-public static final String GNU = "GNU";
-public static final String APACHE = "Apache";
-public static final String BEAR = "Bear";
+@Table(name = "ARCHIVES")
+public class ArchiveType {
+public static final String NONE = "NONE";
+public static final String BROTLI = "BROTLI";
+public static final String GZIP = "GZIP";
 @Id
 @GeneratedValue(strategy = GenerationType.IDENTITY)
 @Column(name = "id", nullable = false)
 private Integer id = null;
-@Column(name = "name")
-private String name = "";
+private String type = "";
 }

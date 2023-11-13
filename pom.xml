@@ -37,16 +37,15 @@
         <gson.version>2.10.1</gson.version>
         <log4j.version>2.20.0</log4j.version>
         <lombok.version>1.18.26</lombok.version>
-        <kafka.version>3.0.0</kafka.version>
+        <kafka.version>3.6.0</kafka.version>
         <jakarta.validation.version>3.0.2</jakarta.validation.version>
-        <kafka.serializer.version>5.5.1</kafka.serializer.version>
         <spring.annotation.processor.version>3.0.9</spring.annotation.processor.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
         <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
-        <spring-cloud.version>Finchley.SR2</spring-cloud.version>
+        <spring-cloud.version>2022.0.3</spring-cloud.version>
         <spring-maven-plugin.version>3.1.2</spring-maven-plugin.version>
-        <kafka-client.version>3.4.1</kafka-client.version>
+        <confluent-serializer.version>6.2.12</confluent-serializer.version>
     </properties>
     <dependencies>
         <dependency>
@@ -77,6 +76,35 @@
             <artifactId>log4j-api</artifactId>
             <version>2.20.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-api</artifactId>
+            <version>3.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.13</artifactId>
+            <version>3.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-protobuf-serializer</artifactId>
+            <version>6.2.12</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-schema-registry-client</artifactId>
+            <version>6.2.12</version>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -84,11 +112,6 @@
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>
                 <version>${gson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.confluent</groupId>
-                <artifactId>kafka-protobuf-serializer</artifactId>
-                <version>${kafka.serializer.version}</version>
             </dependency>
             <dependency>
                 <!-- Import dependency management from Spring Boot -->
@@ -99,22 +122,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>org.springframework.kafka</groupId>
-                <artifactId>spring-kafka</artifactId>
-                <version>${kafka.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.kafka</groupId>
-                <artifactId>kafka-clients</artifactId>
-                <version>${kafka-client.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
+                <version>2022.0.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
     <build>
@@ -171,7 +185,6 @@
                                 <artifactId>lombok</artifactId>
                             </exclude>
                         </excludes>
-                        <!--                                        <mainClass>org.petos.pum.</mainClass>-->
                     </configuration>
                 </plugin>
             </plugins>

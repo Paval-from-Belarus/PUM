@@ -1,9 +1,11 @@
 package org.petos.pum.http;
 
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer;
+import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializerConfig;
+import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.LongDeserializer;
-import org.petos.pum.networks.dto.packages.HeaderInfo;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.petos.pum.networks.dto.transfer.PackageInfo;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,22 +23,23 @@ import java.util.Map;
  */
 @Configuration
 public class KafkaConsumerConfig {
-@Value("${kafka.server}")
+@Value("${spring.kafka.bootstrap-servers}")
 private String kafkaServer;
-@Value("${kafka.group.id}")
+@Value("${spring.kafka.consumer.group-id}")
 private String kafkaGroupId;
+@Value("${kafka.schema}")
+private String schemaUrl;
 
 @Bean
 public KafkaListenerContainerFactory<?> headerInfoFactory() {
-      ConcurrentKafkaListenerContainerFactory<Long, HeaderInfo> factory =
+      ConcurrentKafkaListenerContainerFactory<String, PackageInfo> factory =
 	  new ConcurrentKafkaListenerContainerFactory<>();
-//      factory.setConsumerFactory(co);
-//      ConcurrentKafkaListenerContainerFactory<Long, HeaderRequest>
-      return null;
+      factory.setConsumerFactory(consumerFactory());
+      return factory;
 }
 
 @Bean
-public ConsumerFactory<Long, HeaderInfo> consumerFactory() {
+public ConsumerFactory<String, PackageInfo> consumerFactory() {
       return new DefaultKafkaConsumerFactory<>(consumerConfigs());
 }
 
@@ -44,10 +47,11 @@ public ConsumerFactory<Long, HeaderInfo> consumerFactory() {
 public Map<String, Object> consumerConfigs() {
       Map<String, Object> props = new HashMap<>();
       props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);
-      props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class);
+      props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
       props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaProtobufDeserializer.class);
       props.put(ConsumerConfig.GROUP_ID_CONFIG, kafkaGroupId);
       props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+      props.put(KafkaProtobufDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
       return props;
 }
 }

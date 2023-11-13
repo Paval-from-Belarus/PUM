@@ -1,5 +1,7 @@
 kafka:
-  server: petos.project.su:9092
-  schema: petos.project.su:8081
-  group:
-    id: "kafka-group-id"
+  schema: http://petos.project.su:8081
+spring:
+  kafka:
+    bootstrap-servers: petos.project.su:9092
+    consumer:
+      group-id: "first"

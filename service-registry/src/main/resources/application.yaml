@@ -1,6 +1,8 @@
 spring:
   application:
     name: eureka-server
+  kafka:
+    bootstrap-servers: petos.project.su:9092
 server:
   port: 8765
 eureka:

@@ -1,0 +1,21 @@
+syntax = "proto3";
+package networks.packages;
+option java_package = "org.petos.pum.networks.dto.transfer";
+option java_multiple_files = true;
+import "dto.proto";
+
+message PackageRequest {
+  oneof request {
+    HeaderRequest header = 1;
+    InstanceRequest instance = 2;
+    PayloadRequest payload = 3;
+  }
+}
+message PackageInfo {
+  oneof info {
+    HeaderInfo header = 1;
+    ShortInstanceInfo short = 2;
+    FullInstanceInfo full = 3;
+    PayloadInfo payload = 4;
+  }
+}

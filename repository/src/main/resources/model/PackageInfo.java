@@ -1,4 +1,4 @@
-package org.petos.pum.repository.model;
+package model;
 
 import jakarta.persistence.*;
 import lombok.Data;

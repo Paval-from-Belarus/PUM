@@ -1,7 +1,6 @@
 package org.petos.pum.registry;
 
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.common.internals.Topic;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
@@ -15,7 +14,16 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class TopicConfig {
 @Bean
-public NewTopic topic() {
-      return TopicBuilder.name("client").build();
+public NewTopic packageRequestsTopic() {
+      return TopicBuilder
+		 .name("package-requests")
+		 .build();
+}
+
+@Bean
+public NewTopic packageInfoTopic() {
+      return TopicBuilder
+		 .name("package-info")
+		 .build();
 }
 }

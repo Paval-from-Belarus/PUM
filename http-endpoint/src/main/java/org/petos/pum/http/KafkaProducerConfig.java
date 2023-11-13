@@ -2,10 +2,10 @@ package org.petos.pum.http;
 
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer;
 import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializerConfig;
-import io.confluent.kafka.serializers.subject.RecordNameStrategy;
+import io.confluent.kafka.serializers.subject.TopicNameStrategy;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.LongSerializer;
-import org.petos.pum.networks.dto.packages.HeaderInfo;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.petos.pum.networks.dto.transfer.PackageRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,30 +23,33 @@ import java.util.Map;
 @Configuration
 public class KafkaProducerConfig {
 
-@Value("${kafka.server}")
+@Value("${spring.kafka.bootstrap-servers}")
 private String bootstrapServers;
-@Value("${kafka.schema")
+@Value("${kafka.schema}")
 private String schemaUrl;
-@Value("${kafka.producer.id}")
-private String kafkaProducerId;
+@Value("${spring.kafka.consumer.group-id}")
+private String kafkaConsumerId;
 
 @Bean
 public Map<String, Object> producerConfig() {
       Map<String, Object> props = new HashMap<>();
       props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class);
+      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
       props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class);
-      props.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaProducerId);
+      props.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaConsumerId);
       props.put(KafkaProtobufSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
-      props.put(KafkaProtobufSerializerConfig.VALUE_SUBJECT_NAME_STRATEGY, RecordNameStrategy.class);
+      props.put(KafkaProtobufSerializerConfig.VALUE_SUBJECT_NAME_STRATEGY, TopicNameStrategy.class);
       return props;
 }
+
 @Bean
-public ProducerFactory<Long, HeaderInfo> headerInfoProducerFactory() {
+public ProducerFactory<String, PackageRequest> requestProducerFactory() {
       return new DefaultKafkaProducerFactory<>(producerConfig());
 }
+
 @Bean
-public KafkaTemplate<Long, HeaderInfo> headerInfoTemplate() {
-      return new KafkaTemplate<>(headerInfoProducerFactory());
+public KafkaTemplate<String, PackageRequest> requestKafkaTemplate() {
+      return new KafkaTemplate<>(requestProducerFactory());
 }
+
 }

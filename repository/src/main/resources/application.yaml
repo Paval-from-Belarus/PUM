@@ -1,4 +1,27 @@
-kafka:
-  server: "kafka-server"
-  group:
-    id: "kafka-group-id"
+spring:
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.hsqldb.jdbc.JDBCDriver
+    url: "jdbc:hsqldb:mem:repository"
+    username: "sa"
+    password:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: embedded
+  application:
+    name: repository
+  kafka:
+    bootstrap-servers: petos.project.su:9092
+    consumer:
+      group-id: "first"
+      properties:
+        schema.registry.url: "http://petos.project.su:8081"
+      value-deserializer: io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
