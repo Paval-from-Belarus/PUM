@@ -12,6 +12,7 @@ import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.petos.pum.networks.dto.packages.HeaderInfo;
 import org.petos.pum.networks.dto.transfer.PackageInfo;
 import org.petos.pum.networks.dto.transfer.PackageRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,22 +38,6 @@ import java.util.Map;
  */
 @SpringBootApplication
 public class RepositoryApplication {
-
-
-public void listener() {
-//      final Consumer<String, Message> consumer = new KafkaConsumer<>(consumerConfig());
-//      consumer.subscribe(List.of("package-requests"));
-//      try {
-//	    ConsumerRecords<String, Message> messages = consumer.poll(1000);
-//	    for (ConsumerRecord<String, Message> message : messages) {
-//		  System.out.println(message.value());
-//	    }
-//      } catch (Exception e) {
-//	    consumer.close();
-//      }
-
-}
-
 //@Bean
 //public KafkaListenerContainerFactory<?> batchFactory() {
 //      ConcurrentKafkaListenerContainerFactory<String, PackageRequest> factory =
@@ -85,6 +70,7 @@ private String bootstrapServers;
 private String schemaUrl;
 @Value("${spring.kafka.consumer.group-id}")
 private String kafkaConsumerId;
+
 @Bean
 public Map<String, Object> producerConfig() {
       Map<String, Object> props = new HashMap<>();
@@ -96,6 +82,7 @@ public Map<String, Object> producerConfig() {
       props.put(KafkaProtobufSerializerConfig.VALUE_SUBJECT_NAME_STRATEGY, TopicNameStrategy.class);
       return props;
 }
+
 @Bean
 public ProducerFactory<String, PackageInfo> requestProducerFactory() {
       return new DefaultKafkaProducerFactory<>(producerConfig());
@@ -106,6 +93,7 @@ public ProducerFactory<String, PackageInfo> requestProducerFactory() {
 public KafkaTemplate<String, PackageInfo> requestKafkaTemplate() {
       return new KafkaTemplate<>(requestProducerFactory());
 }
+
 public static void main(String[] args) {
       SpringApplication.run(RepositoryApplication.class, args);
 }

@@ -55,9 +55,10 @@ public Mono<ResponseEntity<String>> getPayloadInfo(@PathVariable("package_id") i
 
 @GetMapping("/repo/info")
 public Object getRepositoryInfo(@NotNull @RequestParam("repo_name") String repoName) {
-
       return null;
 }
+//@GetMapping("/repo/info/full")
+//@GetMapping("/repo/info/archives")
 
 
 //probably, replace such request to Authorization filter

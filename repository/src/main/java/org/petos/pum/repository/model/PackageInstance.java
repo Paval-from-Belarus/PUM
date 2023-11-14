@@ -1,4 +1,4 @@
-package org.petos.pum.repository.new_model;
+package org.petos.pum.repository.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.NaturalId;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author Paval Shlyk
@@ -21,19 +23,25 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PackageInstance {
-@EmbeddedId
-private PackageInstanceId id;
+@Id
+@GeneratedValue(strategy = GenerationType.AUTO)
+@Column(name = "package_instance_id")
+private long id;
 @ManyToOne(fetch = FetchType.LAZY)
-@MapsId("packageId")
+@MapsId("instanceId")
 private PackageInfo packageInfo;
+@OneToMany(mappedBy = "target", fetch = FetchType.LAZY,
+    cascade = CascadeType.ALL, orphanRemoval = true)
+@Builder.Default
+private List<PackageDependency> dependencies = new ArrayList<>();
+@OneToMany(mappedBy = "instance", fetch = FetchType.LAZY,
+    cascade = CascadeType.ALL, orphanRemoval = true)
+@Builder.Default
+private List<PackageInstanceArchive> archives = new ArrayList<>();
 @NaturalId
 @Column(name = "version")
 private String version;
 @CreationTimestamp
 @Column(name = "publication_time")
 private Date publicationTime;
-@Column(name = "payload_size")
-private long payloadSize;
-@Column(name = "payload_path")
-private String payloadPath;
 }

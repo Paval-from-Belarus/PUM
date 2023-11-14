@@ -11,7 +11,6 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: create-drop
-    defer-datasource-initialization: true
   sql:
     init:
       mode: embedded
@@ -19,10 +18,14 @@ spring:
     name: repository
   kafka:
     bootstrap-servers: petos.project.su:9092
+    properties:
+      schema.registry.url: "http://petos.project.su:8081"
+    producer:
+      client-id: "first"
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer
     consumer:
       group-id: "first"
-      properties:
-        schema.registry.url: "http://petos.project.su:8081"
       value-deserializer: io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest

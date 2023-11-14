@@ -1,4 +1,4 @@
-package org.petos.pum.repository.new_model;
+package org.petos.pum.repository.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

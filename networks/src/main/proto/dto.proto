@@ -28,6 +28,7 @@ message PayloadRequest {//the response on this request is
 message HeaderInfo {
   uint32 package_id = 1;
   string package_type = 2;
+  string license = 4;
   repeated string aliases = 3; //all available names for package, to client caching
 }
 message ShortInstanceInfo {
@@ -37,8 +38,8 @@ message ShortInstanceInfo {
 message FullInstanceInfo {
   uint32 package_id = 1;
   string version = 2;
-  string licence = 3;
   map<string, uint64> archives = 5; //archive type name and corresponding archive size
+  //consider to replace by following: map<uint16, uint64> archives = 7;
   repeated ShortInstanceInfo dependencies = 6; //dependencies
 }
 message PayloadInfo {

@@ -1,6 +1,8 @@
 kafka:
   schema: http://petos.project.su:8081
 spring:
+  application:
+    name: http-endpoint
   kafka:
     bootstrap-servers: petos.project.su:9092
     properties:
@@ -15,5 +17,3 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
       enable-auto-commit: false
-  application:
-    name: http-endpoint
