@@ -12,17 +12,17 @@ import org.petos.pum.networks.dto.transfer.PackageInfo;
 import org.petos.pum.networks.dto.transfer.PackageRequest;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.LongFunction;
 
 /**
  * @author Paval Shlyk
@@ -41,11 +41,12 @@ private PackageInfo buildInfo(DynamicMessage message) {
       return PackageInfo.parseFrom(message.toByteArray());
 }
 
-private UUID nextUniqueId() {
+private UUID nextUniqueSessionId() {
       UUID uuid;
       do {
 	    uuid = UUID.randomUUID();
-      } while ((packageInfoMap.putIfAbsent(uuid, (value) -> {})) != null);
+      } while ((packageInfoMap.putIfAbsent(uuid, (value) -> {
+      })) != null);
       return uuid;
 }
 
@@ -81,38 +82,95 @@ public void processKafkaSupplier(DynamicMessage message) {
       }
 }
 
+private void sendRequest(PackageRequest request) {
+      requestTemplate.send("package-requests", request);
+}
+private <T> Mono<T> nextMonoResponse(UUID sessionId) {
+      return Mono.<T>create(sink -> {
+	    packageInfoMap.put(sessionId, (info) -> {
+		  sink.success((T) info);
+		  packageInfoMap.remove(sessionId);
+		  LOGGER.trace("Mono is committed by sessionId {}", sessionId);
+	    });
+	    sink.onDispose(() -> {
+		  packageInfoMap.remove(sessionId);
+		  LOGGER.trace("Mono is canceled by sessionId {}", sessionId.toString());
+	    });
+      });
+}
+
+private <T> Flux<T> nextFluxResponse(UUID sessionId) {
+      return Flux.create(sink -> {
+	    packageInfoMap.put(sessionId, (info) -> {
+		sink.next((T) info);
+		LOGGER.trace("Flux is appended with sessionId {}", sessionId);
+	    });
+	    sink.onDispose(() -> {
+		packageInfoMap.remove(sessionId);
+		LOGGER.trace("Flux is canceled by sessionId {}", sessionId);
+	    });
+      });
+}
+
 @Override
 public Mono<HeaderInfo> getHeaderInfo(String packageName) {
       HeaderRequest header = HeaderRequest.newBuilder()
-				 .setPackageAlias("package_name")
+				 .setPackageAlias(packageName)
 				 .build();
-      UUID sessionId = nextUniqueId();
+      UUID sessionId = nextUniqueSessionId();
       PackageRequest request = PackageRequest.newBuilder()
 				   .setId(sessionId.toString())
 				   .setHeader(header)
 				   .build();
-      requestTemplate.send("package-requests", request);
-      return Mono
-		 .<HeaderInfo>create(sink -> {
-		       packageInfoMap.put(sessionId, (info) -> {
-			     sink.success((HeaderInfo) info);
-		       });
-		 })
-		 .timeout(Duration.ofMillis(1000), Mono.empty());
+      sendRequest(request);
+      return nextMonoResponse(sessionId);
 }
 
 @Override
 public Flux<ShortInstanceInfo> getAllInstanceInfo(int packageId) {
-      return null;
+      InstanceRequest instance = InstanceRequest.newBuilder()
+				     .setPackageId(packageId)
+				     .setType(InstanceInfoType.SHORT)
+				     .build();
+      UUID sessionId = nextUniqueSessionId();
+      PackageRequest request = PackageRequest.newBuilder()
+				   .setId(sessionId.toString())
+				   .setInstance(instance)
+				   .build();
+      sendRequest(request);
+      return nextFluxResponse(sessionId);
 }
 
 @Override
 public Mono<FullInstanceInfo> getFullInfo(int packageId, String version) {
-      return null;
+      InstanceRequest instance = InstanceRequest.newBuilder()
+				  .setPackageId(packageId)
+				  .setVersion(version)
+				  .setType(InstanceInfoType.FULL)
+				  .build();
+      UUID sessionId = nextUniqueSessionId();
+      PackageRequest request = PackageRequest.newBuilder()
+				   .setId(sessionId.toString())
+				   .setInstance(instance)
+				   .build();
+      sendRequest(request);
+      return nextMonoResponse(sessionId);
 }
 
 @Override
-public Mono<PayloadInfo> getPayloadInfo(int packageId, String version) {
-      return null;
+public Mono<PayloadInfo> getPayloadInfo(int packageId, String version, String archive) {
+      PayloadArchiveType archiveType = PayloadArchiveType.valueOf(archive.toUpperCase());
+      PayloadRequest payload = PayloadRequest.newBuilder()
+				 .setPackageId(packageId)
+				 .setVersion(version)
+				 .setType(archiveType)
+				 .build();
+      UUID sessionId = nextUniqueSessionId();
+      PackageRequest request = PackageRequest.newBuilder()
+				   .setId(sessionId.toString())
+				   .setPayload(payload)
+				   .build();
+      sendRequest(request);
+      return nextMonoResponse(sessionId);
 }
 }

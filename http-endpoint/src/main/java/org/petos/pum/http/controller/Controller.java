@@ -1,25 +1,19 @@
 package org.petos.pum.http.controller;
 
-import com.google.gson.Gson;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.petos.pum.http.service.PackageInfoService;
-import org.petos.pum.networks.dto.packages.FullInstanceInfo;
-import org.petos.pum.networks.dto.packages.HeaderInfo;
-import org.petos.pum.networks.dto.packages.PayloadInfo;
-import org.petos.pum.networks.dto.packages.ShortInstanceInfo;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 
 /**
@@ -34,33 +28,37 @@ private final PackageInfoService packageInfoService;
 
 @GetMapping("/info/header")
 public Mono<ResponseEntity<String>> getPackageInfo(@NotNull @RequestParam("package_name") String packageName) {
-      return toResponse(packageInfoService.getHeaderInfo(packageName));
+      return monoToResponse(packageInfoService.getHeaderInfo(packageName));
 }
 
 @GetMapping("/info/short/{package_id}")
-public Flux<ShortInstanceInfo> getShortPackageInfo(@PathVariable("package_id") int packageId) {
-      return packageInfoService.getAllInstanceInfo(packageId);
+public Mono<ResponseEntity<List<String>>> getShortPackageInfo(@PathVariable("package_id") int packageId) {
+      return fluxToResponse(packageInfoService.getAllInstanceInfo(packageId));
 }
 
 @GetMapping("/info/full/{package_id}/version/{version}")
-public Mono<FullInstanceInfo> getFullPackageInfo(@PathVariable("package_id") int packageId,
-						 @NotNull @PathVariable("version") String version) {
-      return packageInfoService.getFullInfo(packageId, version);
+public Mono<ResponseEntity<String>> getFullPackageInfo(@PathVariable("package_id") int packageId,
+						       @NotNull @PathVariable("version") String version) {
+      return monoToResponse(packageInfoService.getFullInfo(packageId, version));
+}
+
+//the response holds exact information about server
+@GetMapping("/info/payload/{package_id}/version/{version}/archive/{archive}")
+public Mono<ResponseEntity<String>> getPayloadInfo(@PathVariable("package_id") int packageId,
+						   @NotNull @PathVariable String version,
+						   @NotNull @PathVariable String archive) {
+      return monoToResponse(packageInfoService.getPayloadInfo(packageId, version, archive));
 }
 
 //@GetMapping("/info/payload/{package_id}/version/{version}")
 //public Mono<PayloadInfo> get
 
 @GetMapping("/repo/info")
-public Object getRepositoryInfo() {
+public Object getRepositoryInfo(@NotNull @RequestParam("repo_name") String repoName) {
+
       return null;
 }
 
-//the response holds exact information about server
-@GetMapping("/payload")
-public Object getPayloadInfo(@Validated Object payloadInfo) {
-      return null;
-}
 
 //probably, replace such request to Authorization filter
 @PostMapping("/publisher/auth")
@@ -83,8 +81,18 @@ private <T extends Message> String toJson(T instance) {
       return JsonFormat.printer().print(instance);
 }
 
-private <T extends Message> Mono<ResponseEntity<String>> toResponse(Mono<T> mono) {
-      return mono.map(data -> ResponseEntity.status(HttpStatus.OK).body(toJson(data)));
-//      return mono.map(data -> new ResponseEntity<>(toJson(data), HttpStatusCode.valueOf(HttpStatus.OK.value())));
+public static final String NOT_FOUND_MESSAGE = "Failed to found data for given input params";
+
+
+private <T extends Message> Mono<ResponseEntity<String>> monoToResponse(Mono<T> mono) {
+      return mono.map(data -> ResponseEntity.status(HttpStatus.OK).body(toJson(data)))
+		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND_MESSAGE));
+}
+
+private <T extends Message> Mono<ResponseEntity<List<String>>> fluxToResponse(Flux<T> flux) {
+      return flux.mapNotNull(this::toJson)
+		 .collectList()
+		 .map(list -> ResponseEntity.status(HttpStatus.OK).body(list))
+		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(List.of(NOT_FOUND_MESSAGE)));
 }
 }

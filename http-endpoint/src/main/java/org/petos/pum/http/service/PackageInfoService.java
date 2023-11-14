@@ -25,5 +25,5 @@ Mono<FullInstanceInfo> getFullInfo(int packageId, String version);
  * @param version
  * @return
  */
-Mono<PayloadInfo> getPayloadInfo(int packageId, String version);
+Mono<PayloadInfo> getPayloadInfo(int packageId, String version, String archive);
 }

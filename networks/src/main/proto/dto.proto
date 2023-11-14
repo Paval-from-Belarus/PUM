@@ -16,7 +16,7 @@ message HeaderRequest {
 }
 message InstanceRequest {
   uint32 package_id = 1;
-  string version = 2;
+  string version = 2; //if no version was specified than repository service should send all packages for given package_id
   InstanceInfoType type = 3;
 }
 message PayloadRequest {//the response on this request is
