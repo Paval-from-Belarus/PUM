@@ -47,6 +47,7 @@ public ProducerFactory<String, PackageRequest> requestProducerFactory() {
       return new DefaultKafkaProducerFactory<>(producerConfig());
 }
 
+
 @Bean
 public KafkaTemplate<String, PackageRequest> requestKafkaTemplate() {
       return new KafkaTemplate<>(requestProducerFactory());

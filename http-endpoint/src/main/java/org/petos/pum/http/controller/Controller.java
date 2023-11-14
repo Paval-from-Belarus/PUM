@@ -1,48 +1,55 @@
 package org.petos.pum.http.controller;
 
+import com.google.gson.Gson;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.util.JsonFormat;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.petos.pum.networks.dto.packages.HeaderRequest;
-import org.petos.pum.networks.dto.transfer.PackageRequest;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
+import lombok.SneakyThrows;
+import org.petos.pum.http.service.PackageInfoService;
+import org.petos.pum.networks.dto.packages.FullInstanceInfo;
+import org.petos.pum.networks.dto.packages.HeaderInfo;
+import org.petos.pum.networks.dto.packages.PayloadInfo;
+import org.petos.pum.networks.dto.packages.ShortInstanceInfo;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.concurrent.CompletableFuture;
 
 /**
  * @author Paval Shlyk
  * @since 01/11/2023
  */
-@RestController("/api/pum")
+@RestController
+@RequestMapping("/api/pum")
 @RequiredArgsConstructor
 public class Controller {
-private final KafkaTemplate<String, PackageRequest> requestTemplate;
+private final PackageInfoService packageInfoService;
 
-@GetMapping("/info/all")
-public Object getAllInfo() {
-      return null;
+@GetMapping("/info/header")
+public Mono<ResponseEntity<String>> getPackageInfo(@NotNull @RequestParam("package_name") String packageName) {
+      return toResponse(packageInfoService.getHeaderInfo(packageName));
 }
 
-@GetMapping("/info/{package_id}")
-public Object getPackageInfo(@PathVariable("package_id") Long packageId) {
-      HeaderRequest header = HeaderRequest.newBuilder()
-				 .setPackageAlias("package_name")
-				 .build();
-      PackageRequest request = PackageRequest.newBuilder()
-				   .setHeader(header)
-				   .build();
-      requestTemplate.send("package-requests", request);
-      return packageId;
+@GetMapping("/info/short/{package_id}")
+public Flux<ShortInstanceInfo> getShortPackageInfo(@PathVariable("package_id") int packageId) {
+      return packageInfoService.getAllInstanceInfo(packageId);
 }
 
-@GetMapping("/info/{package_id}/short")
-public Object getShortPackageInf(@PathVariable("package_id") long packageId) {
-      return null;
+@GetMapping("/info/full/{package_id}/version/{version}")
+public Mono<FullInstanceInfo> getFullPackageInfo(@PathVariable("package_id") int packageId,
+						 @NotNull @PathVariable("version") String version) {
+      return packageInfoService.getFullInfo(packageId, version);
 }
+
+//@GetMapping("/info/payload/{package_id}/version/{version}")
+//public Mono<PayloadInfo> get
 
 @GetMapping("/repo/info")
 public Object getRepositoryInfo() {
@@ -71,4 +78,13 @@ public Object publishPackage(@Validated Object publicationInfo) {
       return null;
 }
 
+@SneakyThrows
+private <T extends Message> String toJson(T instance) {
+      return JsonFormat.printer().print(instance);
+}
+
+private <T extends Message> Mono<ResponseEntity<String>> toResponse(Mono<T> mono) {
+      return mono.map(data -> ResponseEntity.status(HttpStatus.OK).body(toJson(data)));
+//      return mono.map(data -> new ResponseEntity<>(toJson(data), HttpStatusCode.valueOf(HttpStatus.OK.value())));
+}
 }

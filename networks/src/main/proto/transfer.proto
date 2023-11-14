@@ -5,6 +5,7 @@ option java_multiple_files = true;
 import "dto.proto";
 
 message PackageRequest {
+  string id = 4;
   oneof request {
     HeaderRequest header = 1;
     InstanceRequest instance = 2;
@@ -12,6 +13,7 @@ message PackageRequest {
   }
 }
 message PackageInfo {
+  string id = 5;
   oneof info {
     HeaderInfo header = 1;
     ShortInstanceInfo short = 2;

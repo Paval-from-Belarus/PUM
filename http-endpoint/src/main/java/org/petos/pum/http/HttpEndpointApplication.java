@@ -1,30 +1,23 @@
 package org.petos.pum.http;
 
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.petos.pum.networks.dto.transfer.PackageInfo;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.kafka.annotation.KafkaListener;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.reactive.config.EnableWebFlux;
 
 /**
  * @author Paval Shlyk
  * @since 01/11/2023
  */
 @SpringBootApplication
+@EnableWebFlux
 public class HttpEndpointApplication {
-@KafkaListener(
-    topics = "package-info",
-    groupId = "first"
-)
-public void listener(PackageInfo info) {
-      System.out.println(info);
-}
+//@KafkaListener(
+//    topics = "package-info",
+//    groupId = "first"
+//)
+//public void listener(PackageInfo info) {
+//      System.out.println(info);
+//}
 //@Bean
 //public Map<String, Object> producerConfigs() {
 //      Map<String, Object> props = new HashMap<>();
@@ -35,13 +28,18 @@ public void listener(PackageInfo info) {
 //}
 //@Bean
 //public RouteLocator myRoutes(RouteLocatorBuilder builder) {
+//      return builder.routes()
+//                 .route(path -> path
+//                                    .path("/info")
+//                                    .uri("/info"))
 //      return builder.routes().build();
-////      return builder.routes()
-////		 .route(p -> p
-////				 .path("/get")
-////				 .filters(f -> f.circuitBreaker(config -> config.setName("mycmd")))
-////				 .uri("http://httpbin.org:80"))
-////		 .build();
+//
+//      return builder.routes()
+//		 .route(p -> p
+//				 .path("/get")
+//				 .filters(f -> f.circuitBreaker(config -> config.setName("mycmd")))
+//				 .uri("http://httpbin.org:80"))
+//		 .build();
 //}
 
 //@Bean
