@@ -28,7 +28,7 @@ public class PackageInstance {
 @Column(name = "package_instance_id")
 private long id;
 @ManyToOne(fetch = FetchType.LAZY)
-@MapsId("instanceId")
+@JoinColumn(name = "package_id", referencedColumnName = "package_id")
 private PackageInfo packageInfo;
 @OneToMany(mappedBy = "target", fetch = FetchType.LAZY,
     cascade = CascadeType.ALL, orphanRemoval = true)
@@ -38,7 +38,6 @@ private List<PackageDependency> dependencies = new ArrayList<>();
     cascade = CascadeType.ALL, orphanRemoval = true)
 @Builder.Default
 private List<PackageInstanceArchive> archives = new ArrayList<>();
-@NaturalId
 @Column(name = "version")
 private String version;
 @CreationTimestamp

@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import lombok.RequiredArgsConstructor;
 import org.petos.pum.networks.dto.packages.*;
 import org.petos.pum.repository.dao.PackageAliasRepository;
+import org.petos.pum.repository.dao.PackageInfoRepository;
 import org.petos.pum.repository.dao.PackageInstanceArchiveRepository;
 import org.petos.pum.repository.dao.PackageInstanceRepository;
 import org.petos.pum.repository.model.*;
@@ -25,23 +26,27 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class RepositoryServiceImpl implements RepositoryService {
+private final PackageInfoRepository packageInfoRepository;
 private final PackageAliasRepository packageAliasRepository;
 private final PackageInstanceRepository packageInstanceRepository;
 private final PackageInstanceArchiveRepository packageInstanceArchiveRepository;
 private final String serverAddress = "the default address to start file downloading)";
 
+
 @Override
 public Optional<HeaderInfo> getHeaderInfo(HeaderRequest request) {
       Optional<PackageAlias> optionalAlias = packageAliasRepository.findByName(request.getPackageAlias());
       return optionalAlias
-		 .map(alias -> {
-		       PackageInfo packageInfo = alias.getPackageInfo();
+		 .flatMap(alias -> packageInfoRepository
+				       .findWithAliasesById(alias.getPackageInfo().getId()))
+		 .map(packageInfo -> {
 		       List<String> aliases = packageInfo.getAliases().stream()
 						  .map(PackageAlias::getName)
 						  .toList();
 		       return HeaderInfo.newBuilder()
 				  .setPackageId((int) packageInfo.getId())
 				  .setPackageType(packageInfo.getType().getName())
+				  .setPackageName(packageInfo.getName())
 				  .addAllAliases(aliases)
 				  .build();
 		 });
@@ -51,8 +56,7 @@ public Optional<HeaderInfo> getHeaderInfo(HeaderRequest request) {
 public List<ShortInstanceInfo> getShortInfo(InstanceRequest request) {
       assert request.getType().equals(InstanceInfoType.SHORT);
       int packageId = request.getPackageId();
-      Stream<PackageInstance> instances = packageInstanceRepository.findAllByPackageInfoId(packageId);
-      return instances
+      return packageInstanceRepository.findAllByPackageInfoId(packageId).stream()
 		 .map(this::toShortInfo)
 		 .collect(Collectors.toList());
 }

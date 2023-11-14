@@ -29,6 +29,7 @@ message HeaderInfo {
   uint32 package_id = 1;
   string package_type = 2;
   string license = 4;
+  string package_name = 5;
   repeated string aliases = 3; //all available names for package, to client caching
 }
 message ShortInstanceInfo {

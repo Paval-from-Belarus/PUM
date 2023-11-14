@@ -46,6 +46,7 @@ private void setInstanceInfo(PackageInfo.Builder originBuilder, PackageRequest r
 			sendPackageInfo(cloned, ResponseStatus.OK);
 		  }
 	    }
+	    return;
       }
       if (instance.getType().equals(InstanceInfoType.FULL)) {
 	    List<FullInstanceInfo> fullInfoList = repositoryService.getFullInfo(instance);

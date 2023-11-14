@@ -4,13 +4,13 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: org.hsqldb.jdbc.JDBCDriver
-    url: "jdbc:hsqldb:mem:repository"
+    url: jdbc:hsqldb:hsql://localhost/repository
     username: "sa"
     password:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
   sql:
     init:
       mode: embedded

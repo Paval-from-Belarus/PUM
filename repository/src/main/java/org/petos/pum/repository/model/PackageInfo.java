@@ -32,7 +32,9 @@ private String name;
 private long status;
 @Column(name = "publisher_id")
 private long publisherId;
-@OneToMany(mappedBy = "packageInfo", cascade = CascadeType.ALL, orphanRemoval = true)
+@OneToMany(mappedBy = "packageInfo",
+    cascade = CascadeType.ALL,
+    orphanRemoval = true)
 @Builder.Default
 private List<PackageAlias> aliases = new ArrayList<>();
 @ManyToOne

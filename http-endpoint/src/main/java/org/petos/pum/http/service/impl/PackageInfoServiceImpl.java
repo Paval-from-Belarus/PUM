@@ -82,11 +82,11 @@ public void processKafkaSupplier(DynamicMessage message) {
       }
       if (info.hasPayload()) {
 	    consumePackageInfo(requestId, info.getPayload());
+	    return;
       }
       assert info.getStatus().equals(ResponseStatus.NOT_FOUND);//otherwise, I don't know what is it...
       consumePackageInfo(requestId, null);
 }
-
 private void sendRequest(PackageRequest request) {
       requestTemplate.send("package-requests", request);
 }

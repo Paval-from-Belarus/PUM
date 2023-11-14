@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="DatabaseMigrationSettings" lastSelectedDirectory="repository/src/main/resources/db/migration" />
   <component name="JpaPluginProjectSettings">
     <option name="lastSelectedLanguage" value="Java" />
+  </component>
+  <component name="PersistenceUnitSettings">
+    <persistence-units>
+      <persistence-unit name="Default">
+        <packages>
+          <package value="org.petos.pum.registry" />
+        </packages>
+        <entities>
+          <entity value="org.petos.pum.repository.model.PackageType" />
+          <entity value="org.petos.pum.repository.model.PackageInstance" />
+          <entity value="org.petos.pum.repository.model.License" />
+          <entity value="org.petos.pum.repository.model.PackageAlias" />
+          <entity value="org.petos.pum.repository.model.PackageInfo" />
+          <entity value="org.petos.pum.repository.model.PackageDependency" />
+          <entity value="org.petos.pum.repository.model.ArchiveType" />
+          <entity value="org.petos.pum.repository.model.PackageInstanceArchive" />
+          <entity value="org.petos.pum.repository.model.PackageArchiveId" />
+        </entities>
+      </persistence-unit>
+    </persistence-units>
   </component>
 </project>

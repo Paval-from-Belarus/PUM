@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.petos.pum.http.service.PackageInfoService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +22,9 @@ import java.util.List;
  * @since 01/11/2023
  */
 @RestController
-@RequestMapping("/api/pum")
+@RequestMapping(value = "/api/pum", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-public class Controller {
+public class HttpApiGatewayController {
 private final PackageInfoService packageInfoService;
 
 @GetMapping("/info/header")

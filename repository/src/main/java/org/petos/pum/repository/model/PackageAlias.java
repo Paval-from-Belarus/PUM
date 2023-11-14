@@ -25,6 +25,6 @@ private long id;
 @Column(name = "name")
 @NaturalId
 private String name;
-@ManyToOne(fetch = FetchType.LAZY)
+@ManyToOne
 private PackageInfo packageInfo;
 }
