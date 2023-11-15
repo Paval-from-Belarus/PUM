@@ -15,7 +15,7 @@ List<PackageInstance> findAllByPackageInfoId(long id);
 List<PackageInstance> findWithDependenciesByPackageInfoId(long id);
 
 Optional<PackageInstance> findByPackageInfoIdAndVersion(long id, String version);
-
+@Deprecated//please, don't use such method because it cause exceptions)
 @EntityGraph(attributePaths = {"dependencies.dependency", "archives.archiveType"})
 Optional<PackageInstance> findWithDependenciesAndArchivesByPackageInfoIdAndVersion(long id, String version);
 }

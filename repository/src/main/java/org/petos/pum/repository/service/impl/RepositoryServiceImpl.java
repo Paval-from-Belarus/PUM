@@ -3,10 +3,7 @@ package org.petos.pum.repository.service.impl;
 import com.google.protobuf.ByteString;
 import lombok.RequiredArgsConstructor;
 import org.petos.pum.networks.dto.packages.*;
-import org.petos.pum.repository.dao.PackageAliasRepository;
-import org.petos.pum.repository.dao.PackageInfoRepository;
-import org.petos.pum.repository.dao.PackageInstanceArchiveRepository;
-import org.petos.pum.repository.dao.PackageInstanceRepository;
+import org.petos.pum.repository.dao.*;
 import org.petos.pum.repository.model.*;
 import org.petos.pum.repository.service.RepositoryService;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +26,7 @@ public class RepositoryServiceImpl implements RepositoryService {
 private final PackageInfoRepository packageInfoRepository;
 private final PackageAliasRepository packageAliasRepository;
 private final PackageInstanceRepository packageInstanceRepository;
+private final PackageDependencyRepository packageDependencyRepository;
 private final PackageInstanceArchiveRepository packageInstanceArchiveRepository;
 private final String serverAddress = "the default address to start file downloading)";
 
@@ -67,14 +65,14 @@ public List<FullInstanceInfo> getFullInfo(InstanceRequest request) {
       int packageId = request.getPackageId();
       String version = request.getVersion();
       Optional<PackageInstance> optionalInstance =
-	  packageInstanceRepository.findWithDependenciesAndArchivesByPackageInfoIdAndVersion(packageId, version);
+	  packageInstanceRepository.findByPackageInfoIdAndVersion(packageId, version);
       return optionalInstance.stream()
 		 .map(instance -> {
-		       List<ShortInstanceInfo> dependencies = instance.getDependencies().stream()
+		       List<ShortInstanceInfo> dependencies = packageDependencyRepository.findByTargetId(instance.getId()).stream()
 								  .map(PackageDependency::getDependency)
 								  .map(this::toShortInfo)
 								  .toList();
-		       Map<String, Long> archives = instance.getArchives().stream()
+		       Map<String, Long> archives = packageInstanceArchiveRepository.findByInstanceId(instance.getId()).stream()
 							.collect(Collectors.toMap(
 							    archive -> archive.getArchiveType().getName(),
 							    PackageInstanceArchive::getPayloadSize));

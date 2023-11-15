@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.petos.pum.http.service.PackageInfoService;
+import org.petos.pum.networks.dto.packages.ShortInstanceInfo;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.StringWriter;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -33,8 +36,9 @@ public Mono<ResponseEntity<String>> getPackageInfo(@NotNull @RequestParam("packa
 }
 
 @GetMapping("/info/short/{package_id}")
-public Mono<ResponseEntity<List<String>>> getShortPackageInfo(@PathVariable("package_id") int packageId) {
-      return fluxToResponse(packageInfoService.getAllInstanceInfo(packageId));
+public Mono<ResponseEntity<String>> getShortPackageInfo(@PathVariable("package_id") int packageId) {
+      Flux<ShortInstanceInfo> flux = packageInfoService.getAllInstanceInfo(packageId);
+      return fluxToResponse(flux);
 }
 
 @GetMapping("/info/full/{package_id}/version/{version}")
@@ -79,22 +83,45 @@ public Object publishPackage(@Validated Object publicationInfo) {
 }
 
 @SneakyThrows
-private <T extends Message> String toJson(T instance) {
+private <T extends Message> String elementToJson(T instance) {
       return JsonFormat.printer().print(instance);
+}
+
+@SneakyThrows
+private <T extends Message> String listToJson(Collection<T> collection) {
+      JsonFormat.Printer printer = JsonFormat.printer();
+      StringWriter writer = new StringWriter();
+      int restCount = collection.size();
+      writer.append("[");
+      for (T element : collection) {
+	    printer.appendTo(element, writer);
+	    restCount -= 1;
+	    if (restCount != 0) {
+		  writer.append(",");
+	    }
+      }
+      writer.append("]");
+      return writer.toString();
 }
 
 public static final String NOT_FOUND_MESSAGE = "Failed to found data for given input params";
 
 
 private <T extends Message> Mono<ResponseEntity<String>> monoToResponse(Mono<T> mono) {
-      return mono.map(data -> ResponseEntity.status(HttpStatus.OK).body(toJson(data)))
+      return mono.map(this::dataToResponse)
 		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND_MESSAGE));
+
 }
 
-private <T extends Message> Mono<ResponseEntity<List<String>>> fluxToResponse(Flux<T> flux) {
-      return flux.mapNotNull(this::toJson)
-		 .collectList()
-		 .map(list -> ResponseEntity.status(HttpStatus.OK).body(list))
-		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(List.of(NOT_FOUND_MESSAGE)));
+private <T extends Message> ResponseEntity<String> dataToResponse(T instance) {
+      return ResponseEntity.status(HttpStatus.OK).body(elementToJson(instance));
+}
+
+private <T extends Message> Mono<ResponseEntity<String>> fluxToResponse(Flux<T> flux) {
+      return flux.collectList()
+		 .mapNotNull(this::listToJson)
+		 .map(json -> ResponseEntity.status(HttpStatus.OK).body(json))
+		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND_MESSAGE));
+
 }
 }

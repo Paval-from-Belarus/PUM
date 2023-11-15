@@ -18,14 +18,12 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.LongFunction;
 
 /**
  * @author Paval Shlyk
@@ -36,7 +34,7 @@ import java.util.function.LongFunction;
 public class PackageInfoServiceImpl implements PackageInfoService {
 private static final Logger LOGGER = LogManager.getLogger(PackageInfoServiceImpl.class);
 private final KafkaTemplate<String, PackageRequest> requestTemplate;
-private final Map<UUID, Consumer<? super Message>> packageInfoMap = new ConcurrentHashMap<>();
+private final Map<UUID, BiConsumer<? super Message, ResponseStatus>> packageInfoMap = new ConcurrentHashMap<>();
 
 
 @SneakyThrows
@@ -48,19 +46,19 @@ private UUID nextUniqueSessionId() {
       UUID uuid;
       do {
 	    uuid = UUID.randomUUID();
-      } while ((packageInfoMap.putIfAbsent(uuid, (value) -> {
+      } while ((packageInfoMap.putIfAbsent(uuid, (value, status) -> {
       })) != null);
       return uuid;
 }
 
-private <T extends Message> void consumePackageInfo(UUID id, @Nullable T info) {
-      Consumer<? super Message> consumer = packageInfoMap.get(id);
+private <T extends Message> void consumePackageInfo(UUID id, @Nullable T info, ResponseStatus status) {
+      BiConsumer<? super Message, ResponseStatus> consumer = packageInfoMap.get(id);
       if (consumer == null) {
 	    final String msg = String.format("Attempt to fetch non existing consumer by id=%s", id.toString());
 	    LOGGER.warn(msg);
 	    return;
       }
-      consumer.accept(info);
+      consumer.accept(info, status);
 }
 
 @KafkaListener(topics = "package-info", groupId = "first")
@@ -69,32 +67,33 @@ public void processKafkaSupplier(DynamicMessage message) {
       PackageInfo info = buildInfo(message);
       UUID requestId = UUID.fromString(info.getId());
       if (info.hasHeader()) {
-	    consumePackageInfo(requestId, info.getHeader());
+	    consumePackageInfo(requestId, info.getHeader(), info.getStatus());
 	    return;
       }
       if (info.hasShort()) {
-	    consumePackageInfo(requestId, info.getShort());
+	    consumePackageInfo(requestId, info.getShort(), info.getStatus());
 	    return;
       }
       if (info.hasFull()) {
-	    consumePackageInfo(requestId, info.getFull());
+	    consumePackageInfo(requestId, info.getFull(), info.getStatus());
 	    return;
       }
       if (info.hasPayload()) {
-	    consumePackageInfo(requestId, info.getPayload());
+	    consumePackageInfo(requestId, info.getPayload(), info.getStatus());
 	    return;
       }
       assert info.getStatus().equals(ResponseStatus.NOT_FOUND);//otherwise, I don't know what is it...
-      consumePackageInfo(requestId, null);
+      consumePackageInfo(requestId, null, info.getStatus());
 }
+
 private void sendRequest(PackageRequest request) {
       requestTemplate.send("package-requests", request);
 }
 
 private <T> Mono<T> nextMonoResponse(UUID sessionId) {
       return Mono.<T>create(sink -> {
-	    packageInfoMap.put(sessionId, (info) -> {
-		  if (info == null) {
+	    packageInfoMap.put(sessionId, (info, status) -> {
+		  if (info == null || status == ResponseStatus.NOT_FOUND) {
 			sink.error(newMonoNotFoundException(sessionId));
 		  } else {
 			LOGGER.trace("Mono is committed by sessionId {}", sessionId);
@@ -118,13 +117,16 @@ private ResourceNotFoundException newMonoNotFoundException(UUID sessionId) {
 
 private <T> Flux<T> nextFluxResponse(UUID sessionId) {
       return Flux.create(sink -> {
-	    packageInfoMap.put(sessionId, (info) -> {
-		  if (info == null) {
+	    packageInfoMap.put(sessionId, (info, status) -> {
+		  if (info == null || status == ResponseStatus.NOT_FOUND) {
 			sink.error(newMonoNotFoundException(sessionId));
 			packageInfoMap.remove(sessionId);
 		  } else {
 			sink.next((T) info);
 			LOGGER.trace("Flux is appended with sessionId {}", sessionId);
+			if (status == ResponseStatus.LAST) {
+			      sink.complete();
+			}
 		  }
 	    });
 	    sink.onDispose(() -> {

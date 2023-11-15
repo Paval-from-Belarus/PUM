@@ -30,3 +30,6 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
       enable-auto-commit: false
+logging:
+  level:
+    sql: trace

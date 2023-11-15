@@ -10,6 +10,9 @@ enum InstanceInfoType {
 }
 enum PayloadArchiveType {
   NONE = 0;
+  GZIP = 1;
+  BROTLI = 2;
+  LZMA = 3;
 }
 message HeaderRequest {
   string package_alias = 1; //package mnemonic name
