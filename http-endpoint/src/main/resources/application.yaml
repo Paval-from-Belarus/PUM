@@ -17,6 +17,10 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: earliest
       enable-auto-commit: false
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8765/eureka/
 logging:
   level:
     org.petos.pum.http.service.impl.PackageInfoServiceImpl: trace

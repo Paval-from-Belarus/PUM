@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal" created-in="IU-232.9559.62">
+    <data-source name="repository (embedded)" uuid="0b587114-4d32-4403-9c62-f30aba2be7d1">
+      <database-info product="HSQL Database Engine" version="2.7.0" jdbc-version="4.2" driver-name="HSQL Database Engine Driver" driver-version="2.7.0" dbms="HSQLDB" exact-version="2.7.0" exact-driver-version="2.7">
+        <identifier-quote-string>&quot;</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="upper" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>sa</user-name>
+      <schema-mapping>
+        <introspection-scope>
+          <node kind="database" qname="@">
+            <node kind="schema" qname="@" />
+          </node>
+        </introspection-scope>
+      </schema-mapping>
+    </data-source>
+    <data-source name="repository (localhost)" uuid="2c30aa63-00a7-4273-b410-65c226747c9c">
+      <database-info product="HSQL Database Engine" version="2.7.1" jdbc-version="4.2" driver-name="HSQL Database Engine Driver" driver-version="2.7.0" dbms="HSQLDB" exact-version="2.7.1" exact-driver-version="2.7">
+        <identifier-quote-string>&quot;</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="upper" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>sa</user-name>
+      <schema-mapping>
+        <introspection-scope>
+          <node kind="database" qname="@">
+            <node kind="schema" qname="@" />
+          </node>
+        </introspection-scope>
+      </schema-mapping>
+    </data-source>
+  </component>
+</project>

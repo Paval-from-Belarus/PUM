@@ -1,0 +1,7 @@
+{
+  "packageId": 1,
+  "version": "0.0.2",
+  "archives": {
+    "gzip": "20000"
+  }
+}

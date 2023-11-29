@@ -1,0 +1,7 @@
+{
+  "timestamp": 1700035850219,
+  "path": "/api/pum/info/payload/1/version/0.0.2/archive/gzip",
+  "status": 500,
+  "error": "Internal Server Error",
+  "requestId": "264c1094-9"
+}

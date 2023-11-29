@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="repository (embedded)">
+  <database-model serializer="dbm" dbms="HSQLDB" family-id="HSQLDB" format-version="4.49">
+    <root id="1">
+      <ServerVersion>2.7.0</ServerVersion>
+    </root>
+    <database id="2" parent="1" name="PUBLIC">
+      <Current>1</Current>
+    </database>
+    <schema id="3" parent="2" name="INFORMATION_SCHEMA">
+      <LocalIntrospectionTimestamp>2023-11-14.22:06:25</LocalIntrospectionTimestamp>
+    </schema>
+    <schema id="4" parent="2" name="PUBLIC">
+      <Current>1</Current>
+      <LocalIntrospectionTimestamp>2023-11-14.22:16:57</LocalIntrospectionTimestamp>
+    </schema>
+    <schema id="5" parent="2" name="SYSTEM_LOBS">
+      <LocalIntrospectionTimestamp>2023-11-14.22:06:25</LocalIntrospectionTimestamp>
+    </schema>
+  </database-model>
+</dataSource>

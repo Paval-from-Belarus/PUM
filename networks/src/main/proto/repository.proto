@@ -1,0 +1,4 @@
+syntax = "proto3";
+package networks.packages;
+option java_package = "org.petos.pum.networks.dto.repository";
+option java_multiple_files = true;

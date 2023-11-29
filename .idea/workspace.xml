@@ -1,0 +1,1156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="eca8d108-c6c8-48f1-8113-fd1ceab45b7a" name="Changes" comment="map flux of protobuf to mono of json">
+      <change afterPath="$PROJECT_DIR$/networks/src/main/proto/repository.proto" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/dao/PublisherRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/Publisher.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfo.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfoId.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PackageInfoService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PublisherService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/impl/PublisherServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/utils/AuthorizationUtils.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/RepositoryInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/networks/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/src/main/proto/credentials.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/credentials.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaProtobufController.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaProtobufController.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Enum" />
+        <option value="Record" />
+        <option value="AnnotationType" />
+        <option value="JUnit5 Test Class" />
+        <option value="module-info" />
+        <option value="Interface" />
+        <option value="com.haulmont.jpb.FlywayMigrationScript" />
+        <option value="com.haulmont.jpb.JpaRepository" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="jar://$MAVEN_REPOSITORY$/com/zaxxer/HikariCP/5.0.1/HikariCP-5.0.1-sources.jar!/com/zaxxer/hikari/HikariDataSource.java" root0="SKIP_INSPECTION" />
+    <setting file="jar://$MAVEN_REPOSITORY$/org/springframework/spring-beans/6.0.11/spring-beans-6.0.11-sources.jar!/org/springframework/beans/BeanUtils.java" root0="SKIP_INSPECTION" />
+    <setting file="jar://$MAVEN_REPOSITORY$/org/springframework/spring-context/6.0.11/spring-context-6.0.11-sources.jar!/org/springframework/stereotype/Repository.java" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/server/pom.xml" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="JpbToolWindowState">
+    <option name="isToolWindowVisible" value="false" />
+  </component>
+  <component name="JsbtTreeLayoutManager">
+    <layout place="tools.popupGrunt">
+      <scroll-view-position x="0" y="0" />
+    </layout>
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="3aap5qk3" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHome" value="Use Maven wrapper" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="2MF543Y34Buie74ogewCKVrNKym" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
+    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;java.lang.Object&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;spring-micro&quot;,
+    &quot;import_schema_mapping&quot;: &quot;&lt;schema-mapping&gt;\n  &lt;databases&gt;\n    &lt;list&gt;\n      &lt;schema-mapping-item&gt;\n        &lt;source-data-source-id&gt;132e337b-954e-499d-8cf7-62ec4bb0a0cf&lt;/source-data-source-id&gt;\n        &lt;source-path&gt;database/&amp;quot;PUBLIC&amp;quot;/schema/&amp;quot;PUBLIC&amp;quot;&lt;/source-path&gt;\n        &lt;target-data-source-id&gt;132e337b-954e-499d-8cf7-62ec4bb0a0cf&lt;/target-data-source-id&gt;\n        &lt;target-path&gt;database/&amp;quot;PUBLIC&amp;quot;/schema/&amp;quot;PUBLIC&amp;quot;&lt;/target-path&gt;\n      &lt;/schema-mapping-item&gt;\n    &lt;/list&gt;\n  &lt;/databases&gt;\n&lt;/schema-mapping&gt;&quot;,
+    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;OpenJDK_17&quot;,
+    &quot;last.edited.regexp&quot;: &quot;&quot;,
+    &quot;last_directory_selection&quot;: &quot;/home/Paval/Triggers/Java/PackageManager/PackageManager/server/src/test/java/org/petos/pum/server&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/Paval/Triggers/Java/PackageManager/PackageManager/repository&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2632831&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editing.templates&quot;,
+    &quot;settings.editor.splitter.proportion&quot;: &quot;0.3027245&quot;,
+    &quot;spring.configuration.checksum&quot;: &quot;83ee2bb27e8e25a7e09df4ee791286ee&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;hsqldb&quot;
+    ],
+    &quot;com.intellij.ide.scratch.LRUPopupBuilder$1/&quot;: [
+      &quot;HSQLDB&quot;
+    ],
+    &quot;com.intellij.ide.scratch.LRUPopupBuilder$1/SQL Dialect&quot;: [
+      &quot;HSQLDB&quot;
+    ]
+  }
+}</component>
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="org.petos.pum.publisher.service.impl" />
+      <recent name="org.petos.pum.server.database" />
+      <recent name="org.petos.pum.server.common" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/networks/src/main/proto" />
+      <recent name="$PROJECT_DIR$/server/distribution-service/src/main/java/org/petos/pum/server/distribution" />
+      <recent name="$PROJECT_DIR$/server/src/main/resources/database" />
+      <recent name="$PROJECT_DIR$/server/src/test/java" />
+      <recent name="$PROJECT_DIR$/server/src/test/resources" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller" />
+      <recent name="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/http-endpoint/src/main/resources" />
+      <recent name="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http" />
+    </key>
+    <key name="CreateTestDialog.Recents.Supers">
+      <recent name="java.lang.Object" />
+      <recent name="org.petos.pum.server.repositories.AbstractDaoTest" />
+      <recent name="" />
+    </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="org.petos.pum.repository.service" />
+      <recent name="org.petos.pum.http.service" />
+      <recent name="org.petos.pum.server" />
+      <recent name="org.petos.http" />
+      <recent name="org.petos.pum.server.repositories" />
+    </key>
+    <key name="CreateTestDialog.RecentsKey">
+      <recent name="org.petos.pum.server.network" />
+      <recent name="org.petos.pum.server.repositories" />
+      <recent name="org.petos.pum.server" />
+      <recent name="" />
+      <recent name="transfer" />
+    </key>
+    <key name="ImportMappingsDialog.RecentPackages">
+      <recent name="" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationTypes">
+      <set>
+        <option value="SpringBootApplicationConfigurationType" />
+      </set>
+    </option>
+  </component>
+  <component name="RunManager" selected="Spring Boot.HttpEndpointApplication">
+    <configuration name="generated-requests | #3" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="3" requestIdentifier="#3" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="generated-requests | #4" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="4" requestIdentifier="#4" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="generated-requests | #5" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="5" requestIdentifier="#5" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="generated-requests | #6" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="6" requestIdentifier="#6" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="generated-requests | #7" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="7" requestIdentifier="#7" runType="Run single request">
+      <method v="2" />
+    </configuration>
+    <configuration name="PackageHatDaoTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="server" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.petos.pum.server.repositories.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="org.petos.pum.server.repositories" />
+      <option name="MAIN_CLASS_NAME" value="org.petos.pum.server.repositories.PackageHatDaoTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="tcp-endpoint" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="tcp-endpoint" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="pum-parent [clean,package,--projects...]" type="MavenRunConfiguration" factoryName="Maven" nameIsGenerated="true">
+      <MavenSettings>
+        <option name="myGeneralSettings" />
+        <option name="myRunnerSettings" />
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="clean" />
+                <option value="package" />
+                <option value="--projects" />
+                <option value="networks" />
+              </list>
+            </option>
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map />
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="$PROJECT_DIR$" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+    <configuration name="pum-parent [clean,package,-DskipTests...]" type="MavenRunConfiguration" factoryName="Maven" nameIsGenerated="true">
+      <MavenSettings>
+        <option name="myGeneralSettings" />
+        <option name="myRunnerSettings" />
+        <option name="myRunnerParameters">
+          <MavenRunnerParameters>
+            <option name="cmdOptions" />
+            <option name="profiles">
+              <set />
+            </option>
+            <option name="goals">
+              <list>
+                <option value="clean" />
+                <option value="package" />
+                <option value="-DskipTests" />
+                <option value="--projects" />
+                <option value="networks,server" />
+              </list>
+            </option>
+            <option name="pomFileName" />
+            <option name="profilesMap">
+              <map />
+            </option>
+            <option name="projectsCmdOptionValues">
+              <list />
+            </option>
+            <option name="resolveToWorkspace" value="false" />
+            <option name="workingDirPath" value="$PROJECT_DIR$" />
+          </MavenRunnerParameters>
+        </option>
+      </MavenSettings>
+      <method v="2" />
+    </configuration>
+    <configuration name="HttpEndpointApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="http-endpoint" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.http.HttpEndpointApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="RepositoryApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="repository" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.repository.RepositoryApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ServerApp" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <option name="ALTERNATIVE_JRE_PATH" value="jbr-17" />
+      <module name="server" />
+      <selectedOptions>
+        <option name="spring.boot.profiles" visible="false" />
+      </selectedOptions>
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.server.ServerApp" />
+      <option name="VM_PARAMETERS" value="--add-opens java.base/java.lang=ALL-UNNAMED" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ServerApp" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <option name="ALTERNATIVE_JRE_PATH" value="jbr-17" />
+      <module name="server" />
+      <option name="SHORTEN_COMMAND_LINE" value="MANIFEST" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.server.ServerApp" />
+      <option name="VM_PARAMETERS" value=" --add-opens java.base/java.lang=ALL-UNNAMED" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ServerApp" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="server" />
+      <selectedOptions>
+        <option name="spring.boot.profiles" visible="false" />
+      </selectedOptions>
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.server.ServerApp" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ServiceRegistryApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="service-registry" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.registry.ServiceRegistryApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="HTTP Request.generated-requests | #3" />
+      <item itemvalue="HTTP Request.generated-requests | #4" />
+      <item itemvalue="HTTP Request.generated-requests | #5" />
+      <item itemvalue="HTTP Request.generated-requests | #6" />
+      <item itemvalue="HTTP Request.generated-requests | #7" />
+      <item itemvalue="JUnit.PackageHatDaoTest" />
+      <item itemvalue="Maven.pum-parent [clean,package,--projects...]" />
+      <item itemvalue="Maven.pum-parent [clean,package,-DskipTests...]" />
+      <item itemvalue="Spring Boot.HttpEndpointApplication" />
+      <item itemvalue="Spring Boot.RepositoryApplication" />
+      <item itemvalue="Spring Boot.ServerApp" />
+      <item itemvalue="Spring Boot.ServiceRegistryApplication" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="HTTP Request.generated-requests | #7" />
+        <item itemvalue="HTTP Request.generated-requests | #6" />
+        <item itemvalue="HTTP Request.generated-requests | #4" />
+        <item itemvalue="HTTP Request.generated-requests | #5" />
+        <item itemvalue="HTTP Request.generated-requests | #3" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SpringBeansView">
+    <option name="beanDetailsProportion" value="0.3" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="eca8d108-c6c8-48f1-8113-fd1ceab45b7a" name="Changes" comment="" />
+      <created>1677350295099</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1677350295099</updated>
+      <workItem from="1677350296242" duration="1958000" />
+      <workItem from="1678392646887" duration="1436000" />
+      <workItem from="1678394090393" duration="377000" />
+      <workItem from="1678394496523" duration="164000" />
+      <workItem from="1678394661817" duration="7470000" />
+      <workItem from="1678402270377" duration="99000" />
+      <workItem from="1678402443181" duration="38000" />
+      <workItem from="1678402488441" duration="268000" />
+      <workItem from="1678402764076" duration="16000" />
+      <workItem from="1678436677615" duration="56000" />
+      <workItem from="1678438299027" duration="109000" />
+      <workItem from="1678438433932" duration="33000" />
+      <workItem from="1678438474072" duration="362000" />
+      <workItem from="1678438843046" duration="64000" />
+      <workItem from="1678438913579" duration="129000" />
+      <workItem from="1678439067194" duration="485000" />
+      <workItem from="1678439705577" duration="11000" />
+      <workItem from="1678441525408" duration="2042000" />
+      <workItem from="1678477352483" duration="868000" />
+      <workItem from="1678480818151" duration="6882000" />
+      <workItem from="1678524307623" duration="21674000" />
+      <workItem from="1678554624295" duration="4261000" />
+      <workItem from="1678612497041" duration="26000" />
+      <workItem from="1678612531255" duration="667000" />
+      <workItem from="1678617473885" duration="599000" />
+      <workItem from="1678861091449" duration="2000" />
+      <workItem from="1678861099325" duration="610000" />
+      <workItem from="1678861797878" duration="9000" />
+      <workItem from="1679684245282" duration="3516000" />
+      <workItem from="1679688907629" duration="10471000" />
+      <workItem from="1679741748047" duration="17000" />
+      <workItem from="1679763309086" duration="226000" />
+      <workItem from="1679924262012" duration="337000" />
+      <workItem from="1680255749646" duration="92000" />
+      <workItem from="1680275071479" duration="620000" />
+      <workItem from="1680289021764" duration="1210000" />
+      <workItem from="1680331065104" duration="723000" />
+      <workItem from="1680345352036" duration="2145000" />
+      <workItem from="1681196002632" duration="2375000" />
+      <workItem from="1681328274678" duration="8911000" />
+      <workItem from="1681395854259" duration="660000" />
+      <workItem from="1681400560255" duration="146000" />
+      <workItem from="1681563629762" duration="17797000" />
+      <workItem from="1681604383685" duration="4000" />
+      <workItem from="1681637222086" duration="26904000" />
+      <workItem from="1681670475255" duration="12627000" />
+      <workItem from="1681731281762" duration="13000" />
+      <workItem from="1681741510056" duration="4384000" />
+      <workItem from="1681747035612" duration="14609000" />
+      <workItem from="1681798227161" duration="317000" />
+      <workItem from="1682339599621" duration="30924000" />
+      <workItem from="1682454827831" duration="5017000" />
+      <workItem from="1682489261767" duration="84000" />
+      <workItem from="1682617779118" duration="15532000" />
+      <workItem from="1682662540089" duration="8250000" />
+      <workItem from="1682670945157" duration="249000" />
+      <workItem from="1682677321047" duration="19401000" />
+      <workItem from="1682760959357" duration="1443000" />
+      <workItem from="1682762411583" duration="25660000" />
+      <workItem from="1682788843009" duration="16816000" />
+      <workItem from="1682851195726" duration="40793000" />
+      <workItem from="1683008255601" duration="9932000" />
+      <workItem from="1683019366572" duration="10312000" />
+      <workItem from="1683044718263" duration="19417000" />
+      <workItem from="1683104213066" duration="6174000" />
+      <workItem from="1683123681309" duration="22254000" />
+      <workItem from="1683185099160" duration="4236000" />
+      <workItem from="1683233788818" duration="6076000" />
+      <workItem from="1683290659070" duration="28059000" />
+      <workItem from="1683365390540" duration="32642000" />
+      <workItem from="1683402574716" duration="15686000" />
+      <workItem from="1683448127394" duration="37000" />
+      <workItem from="1683496828266" duration="1926000" />
+      <workItem from="1683547280908" duration="1535000" />
+      <workItem from="1683563141344" duration="733000" />
+      <workItem from="1683583913426" duration="77000" />
+      <workItem from="1683615175505" duration="48873000" />
+      <workItem from="1683670681695" duration="6000" />
+      <workItem from="1683702053282" duration="2631000" />
+      <workItem from="1683713962985" duration="27000" />
+      <workItem from="1683714920371" duration="179000" />
+      <workItem from="1683726637765" duration="1915000" />
+      <workItem from="1683735403092" duration="1801000" />
+      <workItem from="1683993979901" duration="1210000" />
+      <workItem from="1684052847265" duration="46824000" />
+      <workItem from="1684137606514" duration="1091000" />
+      <workItem from="1684139553805" duration="2276000" />
+      <workItem from="1684145325574" duration="1302000" />
+      <workItem from="1684152069096" duration="1046000" />
+      <workItem from="1684157373325" duration="563000" />
+      <workItem from="1684189112955" duration="3777000" />
+      <workItem from="1684233526844" duration="1423000" />
+      <workItem from="1684236015147" duration="15142000" />
+      <workItem from="1684270618949" duration="7831000" />
+      <workItem from="1684278543024" duration="134000" />
+      <workItem from="1684322828001" duration="2450000" />
+      <workItem from="1684338648453" duration="19340000" />
+      <workItem from="1684363131644" duration="4438000" />
+      <workItem from="1684441827090" duration="907000" />
+      <workItem from="1684483211096" duration="21805000" />
+      <workItem from="1684575333369" duration="40314000" />
+      <workItem from="1684623324505" duration="4642000" />
+      <workItem from="1684660894654" duration="11000" />
+      <workItem from="1684743338801" duration="45000" />
+      <workItem from="1684743389760" duration="37000" />
+      <workItem from="1684762310038" duration="8726000" />
+      <workItem from="1684830534663" duration="8000" />
+      <workItem from="1684846114725" duration="251000" />
+      <workItem from="1684857019700" duration="8000" />
+      <workItem from="1684914374710" duration="1484000" />
+      <workItem from="1685048900265" duration="8536000" />
+      <workItem from="1685105951601" duration="2000" />
+      <workItem from="1685123179472" duration="19354000" />
+      <workItem from="1685211734794" duration="17153000" />
+      <workItem from="1685266860108" duration="6533000" />
+      <workItem from="1685295500530" duration="10544000" />
+      <workItem from="1685340354850" duration="36000" />
+      <workItem from="1685341426170" duration="38069000" />
+      <workItem from="1685400196367" duration="52000" />
+      <workItem from="1685400257602" duration="3200000" />
+      <workItem from="1685428146234" duration="8911000" />
+      <workItem from="1685438017502" duration="14843000" />
+      <workItem from="1685468976018" duration="3565000" />
+      <workItem from="1685522228762" duration="22000" />
+      <workItem from="1685542556584" duration="923000" />
+      <workItem from="1685643984888" duration="14461000" />
+      <workItem from="1685692382521" duration="5697000" />
+      <workItem from="1685732993330" duration="121000" />
+      <workItem from="1685873535551" duration="56000" />
+      <workItem from="1685878092743" duration="10559000" />
+      <workItem from="1685953627581" duration="289000" />
+      <workItem from="1686129494451" duration="688000" />
+      <workItem from="1686223073372" duration="2423000" />
+      <workItem from="1686345545903" duration="2853000" />
+      <workItem from="1686387959519" duration="636000" />
+      <workItem from="1686945216776" duration="33000" />
+      <workItem from="1691226177679" duration="1862000" />
+      <workItem from="1691228476272" duration="1298000" />
+      <workItem from="1691909975244" duration="2762000" />
+      <workItem from="1691914796235" duration="6702000" />
+      <workItem from="1691922013151" duration="17851000" />
+      <workItem from="1691966294194" duration="1054000" />
+      <workItem from="1691967362802" duration="350000" />
+      <workItem from="1691967720787" duration="1199000" />
+      <workItem from="1692005067721" duration="12078000" />
+      <workItem from="1692080628536" duration="1892000" />
+      <workItem from="1692094207733" duration="9254000" />
+      <workItem from="1692107363578" duration="7885000" />
+      <workItem from="1692119310991" duration="11416000" />
+      <workItem from="1692175904100" duration="26058000" />
+      <workItem from="1692258112910" duration="3047000" />
+      <workItem from="1692265105479" duration="13067000" />
+      <workItem from="1692291206882" duration="9161000" />
+      <workItem from="1692343965674" duration="25974000" />
+      <workItem from="1692398044820" duration="44000" />
+      <workItem from="1692462308187" duration="16340000" />
+      <workItem from="1692560578497" duration="6085000" />
+      <workItem from="1692624556600" duration="22486000" />
+      <workItem from="1692691530868" duration="10722000" />
+      <workItem from="1692703572794" duration="136000" />
+      <workItem from="1692704039532" duration="358000" />
+      <workItem from="1692704407546" duration="5445000" />
+      <workItem from="1692710446995" duration="16248000" />
+      <workItem from="1692781098044" duration="24838000" />
+      <workItem from="1692817527639" duration="6674000" />
+      <workItem from="1692827235203" duration="5839000" />
+      <workItem from="1692833380758" duration="697000" />
+      <workItem from="1692876171010" duration="28701000" />
+      <workItem from="1692954536263" duration="32149000" />
+      <workItem from="1693024987579" duration="4194000" />
+      <workItem from="1693149327729" duration="16591000" />
+      <workItem from="1693215048373" duration="33091000" />
+      <workItem from="1693394791402" duration="30510000" />
+      <workItem from="1693462880689" duration="34557000" />
+      <workItem from="1693547700706" duration="414000" />
+      <workItem from="1693548125589" duration="1124000" />
+      <workItem from="1693554358748" duration="184000" />
+      <workItem from="1693557166507" duration="63000" />
+      <workItem from="1693573344452" duration="2635000" />
+      <workItem from="1693604754611" duration="4003000" />
+      <workItem from="1693639313540" duration="10406000" />
+      <workItem from="1693775211538" duration="51000" />
+      <workItem from="1693860846639" duration="323000" />
+      <workItem from="1693865432793" duration="717000" />
+      <workItem from="1693917362322" duration="438000" />
+      <workItem from="1694078732082" duration="165000" />
+      <workItem from="1694202310417" duration="6862000" />
+      <workItem from="1694212904810" duration="1153000" />
+      <workItem from="1694249061348" duration="326000" />
+      <workItem from="1694249829182" duration="529000" />
+      <workItem from="1694250367258" duration="19177000" />
+      <workItem from="1694273939045" duration="24000" />
+      <workItem from="1694273971261" duration="5485000" />
+      <workItem from="1694280329313" duration="11793000" />
+      <workItem from="1694294656518" duration="8235000" />
+      <workItem from="1694335601020" duration="3360000" />
+      <workItem from="1694413396817" duration="1393000" />
+      <workItem from="1694415538753" duration="989000" />
+      <workItem from="1694417782539" duration="81000" />
+      <workItem from="1694420367300" duration="816000" />
+      <workItem from="1694431391048" duration="631000" />
+      <workItem from="1694603878347" duration="29000" />
+      <workItem from="1694764538470" duration="1525000" />
+      <workItem from="1694766177051" duration="133000" />
+      <workItem from="1694771996483" duration="11408000" />
+      <workItem from="1694849342135" duration="1432000" />
+      <workItem from="1694851569577" duration="3765000" />
+      <workItem from="1694864216914" duration="18893000" />
+      <workItem from="1694887776954" duration="366000" />
+      <workItem from="1694888442400" duration="104000" />
+      <workItem from="1694888558274" duration="14548000" />
+      <workItem from="1695154569749" duration="216000" />
+      <workItem from="1695154808260" duration="164000" />
+      <workItem from="1695155637077" duration="137000" />
+      <workItem from="1695157549796" duration="728000" />
+      <workItem from="1695236858556" duration="29000" />
+      <workItem from="1695738116398" duration="15000" />
+      <workItem from="1696247349362" duration="559000" />
+      <workItem from="1698082656626" duration="699000" />
+      <workItem from="1698489305170" duration="1319000" />
+      <workItem from="1698492543220" duration="478000" />
+      <workItem from="1698497271546" duration="7000" />
+      <workItem from="1698843088502" duration="5880000" />
+      <workItem from="1698853990552" duration="67000" />
+      <workItem from="1698854061360" duration="6803000" />
+      <workItem from="1698862506053" duration="934000" />
+      <workItem from="1698864718687" duration="133000" />
+      <workItem from="1698868085979" duration="255000" />
+      <workItem from="1698868349516" duration="28000" />
+      <workItem from="1698868386847" duration="7820000" />
+      <workItem from="1698908653424" duration="35000" />
+      <workItem from="1699002106772" duration="186000" />
+      <workItem from="1699002379807" duration="30000" />
+      <workItem from="1699002418595" duration="12000" />
+      <workItem from="1699005227500" duration="568000" />
+      <workItem from="1699006538413" duration="2852000" />
+      <workItem from="1699026338784" duration="914000" />
+      <workItem from="1699603404699" duration="46000" />
+      <workItem from="1699874330947" duration="11182000" />
+      <workItem from="1699890424706" duration="5222000" />
+      <workItem from="1699896521415" duration="2847000" />
+      <workItem from="1699899378577" duration="1811000" />
+      <workItem from="1699901221468" duration="17429000" />
+      <workItem from="1699946825858" duration="4250000" />
+      <workItem from="1699951882916" duration="10037000" />
+      <workItem from="1699964334057" duration="27902000" />
+      <workItem from="1700034416470" duration="10913000" />
+      <workItem from="1700051487324" duration="1000" />
+      <workItem from="1700140655684" duration="638000" />
+      <workItem from="1700143283744" duration="607000" />
+      <workItem from="1700218069267" duration="18000" />
+      <workItem from="1701205454642" duration="2250000" />
+      <workItem from="1701245241839" duration="61000" />
+      <workItem from="1701247374734" duration="6526000" />
+      <workItem from="1701259124642" duration="956000" />
+      <workItem from="1701260086640" duration="2669000" />
+    </task>
+    <task id="LOCAL-00001" summary="unstable version">
+      <created>1681332697217</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1681332697217</updated>
+    </task>
+    <task id="LOCAL-00002" summary="upgrade client">
+      <created>1682897061082</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1682897061082</updated>
+    </task>
+    <task id="LOCAL-00003" summary="rewrite terribly">
+      <created>1683037864266</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1683037864266</updated>
+    </task>
+    <task id="LOCAL-00004" summary="update list command">
+      <created>1683068107459</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1683068107459</updated>
+    </task>
+    <task id="LOCAL-00005" summary="change ignore file">
+      <created>1683140055953</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1683140055953</updated>
+    </task>
+    <task id="LOCAL-00006" summary="add framework">
+      <created>1691968916323</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1691968916323</updated>
+    </task>
+    <task id="LOCAL-00007" summary="add entities, tests">
+      <option name="closed" value="true" />
+      <created>1693642185876</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1693642185876</updated>
+    </task>
+    <task id="LOCAL-00008" summary="add entities, tests">
+      <option name="closed" value="true" />
+      <created>1693642491167</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1693642491167</updated>
+    </task>
+    <task id="LOCAL-00009" summary="add entities, tests">
+      <option name="closed" value="true" />
+      <created>1693642574199</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1693642574199</updated>
+    </task>
+    <task id="LOCAL-00010" summary="exceed dao and move dependencies">
+      <option name="closed" value="true" />
+      <created>1694302767606</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1694302767606</updated>
+    </task>
+    <task id="LOCAL-00011" summary="exceed dao and move dependencies">
+      <option name="closed" value="true" />
+      <created>1694302957274</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1694302957274</updated>
+    </task>
+    <task id="LOCAL-00012" summary="try to fix entities">
+      <option name="closed" value="true" />
+      <created>1694861414673</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1694861414673</updated>
+    </task>
+    <task id="LOCAL-00013" summary="add grpc; prepare migration to microservices">
+      <option name="closed" value="true" />
+      <created>1694903092174</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1694903092174</updated>
+    </task>
+    <task id="LOCAL-00014" summary="git add eurika">
+      <option name="closed" value="true" />
+      <created>1699882534723</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1699882534723</updated>
+    </task>
+    <task id="LOCAL-00015" summary="merge kafka with protobuf">
+      <option name="closed" value="true" />
+      <created>1699917226790</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1699917226790</updated>
+    </task>
+    <task id="LOCAL-00016" summary="merge kafka with protobuf">
+      <option name="closed" value="true" />
+      <created>1699917252893</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1699917252893</updated>
+    </task>
+    <task id="LOCAL-00017" summary="merge kafka with protobuf">
+      <option name="closed" value="true" />
+      <created>1699917271318</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1699917271318</updated>
+    </task>
+    <task id="LOCAL-00018" summary="add protobuf services; add json protobuf serialization">
+      <option name="closed" value="true" />
+      <created>1699984143430</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1699984143430</updated>
+    </task>
+    <task id="LOCAL-00019" summary="complete http endpoint">
+      <option name="closed" value="true" />
+      <created>1699989185082</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1699989185082</updated>
+    </task>
+    <task id="LOCAL-00020" summary="add repository service">
+      <option name="closed" value="true" />
+      <created>1699999520143</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1699999520143</updated>
+    </task>
+    <task id="LOCAL-00021" summary="small fixes in business logic">
+      <option name="closed" value="true" />
+      <created>1700005620167</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1700005620167</updated>
+    </task>
+    <task id="LOCAL-00022" summary="map flux of protobuf to mono of json">
+      <option name="closed" value="true" />
+      <created>1700037885059</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1700037885059</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="spring-micro" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="unstable version" />
+    <MESSAGE value="upgrade client" />
+    <MESSAGE value="rewrite terribly" />
+    <MESSAGE value="update list command" />
+    <MESSAGE value="change ignore file" />
+    <MESSAGE value="add framework" />
+    <MESSAGE value="add entities, tests" />
+    <MESSAGE value="exceed dao and move dependencies" />
+    <MESSAGE value="try to fix entities" />
+    <MESSAGE value="add grpc; prepare migration to microservices" />
+    <MESSAGE value="git add eurika" />
+    <MESSAGE value="merge kafka with protobuf" />
+    <MESSAGE value="add protobuf services; add json protobuf serialization" />
+    <MESSAGE value="complete http endpoint" />
+    <MESSAGE value="add repository service" />
+    <MESSAGE value="small fixes in business logic" />
+    <MESSAGE value="map flux of protobuf to mono of json" />
+    <option name="LAST_COMMIT_MESSAGE" value="map flux of protobuf to mono of json" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src.ignore/main/java/common/SQLConnector.java</url>
+          <line>8</line>
+          <option name="timeStamp" value="28" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/storage/PackageStorage.java</url>
+          <line>506</line>
+          <option name="timeStamp" value="98" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/test/java/PublisherTest.java</url>
+          <line>11</line>
+          <option name="timeStamp" value="162" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/test/java/security/EncryptorTest.java</url>
+          <line>32</line>
+          <option name="timeStamp" value="221" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src.ignore/main/java/common/PackageStorage.java</url>
+          <line>531</line>
+          <option name="timeStamp" value="232" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>657</line>
+          <option name="timeStamp" value="270" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/storage/PackageStorage.java</url>
+          <line>205</line>
+          <option name="timeStamp" value="282" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>218</line>
+          <option name="timeStamp" value="283" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>377</line>
+          <option name="timeStamp" value="284" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>269</line>
+          <option name="timeStamp" value="285" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/test/java/transfer/BinaryObjectMapperTest.java</url>
+          <line>106</line>
+          <option name="timeStamp" value="385" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/BinaryObjectMapper.java</url>
+          <line>227</line>
+          <option name="timeStamp" value="386" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/test/java/transfer/BinaryObjectMapperTest.java</url>
+          <line>98</line>
+          <option name="timeStamp" value="387" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/test/java/transfer/BinaryObjectMapperTest.java</url>
+          <line>77</line>
+          <option name="timeStamp" value="391" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src.ignore/main/java/common/ServerDispatcher.java</url>
+          <line>44</line>
+          <option name="timeStamp" value="397" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src.ignore/main/java/common/Server.java</url>
+          <line>88</line>
+          <option name="timeStamp" value="401" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>901</line>
+          <option name="timeStamp" value="404" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/LZ77Compressor.java</url>
+          <line>334</line>
+          <option name="timeStamp" value="406" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/LZ77Compressor.java</url>
+          <line>349</line>
+          <option name="timeStamp" value="424" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/LZ77Compressor.java</url>
+          <line>345</line>
+          <option name="timeStamp" value="426" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/LZ77Compressor.java</url>
+          <line>286</line>
+          <option name="timeStamp" value="427" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/main/java/org/petos/pum-server/main/AppConfiguration.java</url>
+          <line>44</line>
+          <option name="timeStamp" value="428" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>1023</line>
+          <option name="timeStamp" value="443" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$MAVEN_REPOSITORY$/org/springframework/spring-messaging/6.0.11/spring-messaging-6.0.11-sources.jar!/org/springframework/messaging/core/GenericMessagingTemplate.java</url>
+          <line>186</line>
+          <option name="timeStamp" value="459" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>16</line>
+          <option name="timeStamp" value="478" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>56</line>
+          <option name="timeStamp" value="482" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/main/java/org/petos/pum/server/network/PacketBuilder.java</url>
+          <line>22</line>
+          <option name="timeStamp" value="491" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/common/Client.java</url>
+          <line>301</line>
+          <option name="timeStamp" value="492" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$MAVEN_REPOSITORY$/com/zaxxer/HikariCP/5.0.1/HikariCP-5.0.1-sources.jar!/com/zaxxer/hikari/HikariDataSource.java</url>
+          <line>76</line>
+          <option name="timeStamp" value="501" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>71</line>
+          <option name="timeStamp" value="514" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>381</line>
+          <option name="timeStamp" value="515" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/services/ManagerApiTest.java</url>
+          <line>31</line>
+          <option name="timeStamp" value="534" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/main/java/org/petos/pum/server/ServerApp.java</url>
+          <line>63</line>
+          <option name="timeStamp" value="539" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>231</line>
+          <option name="timeStamp" value="540" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>95</line>
+          <option name="timeStamp" value="543" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/OldSolution.java</url>
+          <line>111</line>
+          <option name="timeStamp" value="558" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewMain.java</url>
+          <line>153</line>
+          <option name="timeStamp" value="569" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewMain.java</url>
+          <line>140</line>
+          <option name="timeStamp" value="573" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewMain.java</url>
+          <line>32</line>
+          <option name="timeStamp" value="577" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>387</line>
+          <option name="timeStamp" value="581" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>527</line>
+          <option name="timeStamp" value="582" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>507</line>
+          <option name="timeStamp" value="588" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>509</line>
+          <option name="timeStamp" value="589" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>506</line>
+          <option name="timeStamp" value="590" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>450</line>
+          <option name="timeStamp" value="592" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/../../MathJava/MathProgramming/src/main/java/by/bsuir/poit/NewSolution.java</url>
+          <line>504</line>
+          <option name="timeStamp" value="593" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/repositories/PackageHatDaoTest.java</url>
+          <line>57</line>
+          <option name="timeStamp" value="594" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/repositories/PackageHatDaoTest.java</url>
+          <line>62</line>
+          <option name="timeStamp" value="598" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/repositories/PackageHatDaoTest.java</url>
+          <line>91</line>
+          <option name="timeStamp" value="601" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/repositories/PackageHatDaoTest.java</url>
+          <line>82</line>
+          <option name="timeStamp" value="602" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/server/src/test/java/org/petos/pum/server/repositories/PackageHatDaoTest.java</url>
+          <line>77</line>
+          <option name="timeStamp" value="604" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java</url>
+          <line>50</line>
+          <option name="timeStamp" value="613" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java</url>
+          <line>45</line>
+          <option name="timeStamp" value="615" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java</url>
+          <line>120</line>
+          <option name="timeStamp" value="623" />
+        </line-breakpoint>
+        <breakpoint type="java-exception">
+          <properties class="java.lang.ClassCastException" package="java.lang" />
+          <option name="timeStamp" value="528" />
+        </breakpoint>
+        <breakpoint enabled="true" type="java-exception">
+          <properties class="org.hibernate.cfg.RecoverableException" package="org.hibernate.cfg" />
+          <option name="timeStamp" value="529" />
+        </breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="SpringBootApplicationConfigurationType">
+        <watch expression="configs" />
+      </configuration>
+    </watches-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>

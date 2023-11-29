@@ -20,7 +20,6 @@
         <dependency>
             <groupId>org.petos.pum</groupId>
             <artifactId>networks</artifactId>
-            <version>0.0.2</version>
         </dependency>
         <!--        <dependency>-->
         <!--            <groupId>org.springframework.boot</groupId>-->
@@ -34,10 +33,10 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java-util</artifactId>
         </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>org.springframework.cloud</groupId>-->
-        <!--            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>-->
-        <!--        </dependency>-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
         <!--                <dependency>-->
         <!--                    <groupId>org.springframework.cloud</groupId>-->
         <!--                    <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>-->

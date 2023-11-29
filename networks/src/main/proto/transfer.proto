@@ -3,6 +3,7 @@ package networks.packages;
 option java_package = "org.petos.pum.networks.dto.transfer";
 option java_multiple_files = true;
 import "dto.proto";
+import "credentials.proto";
 enum ResponseStatus {
   OK = 0;
   NOT_FOUND = 1;
@@ -10,11 +11,33 @@ enum ResponseStatus {
   ILLEGAL = 3;
 }
 message PackageRequest {
+  //the temporal session if for user
   string id = 4;
   oneof request {
     HeaderRequest header = 1;
     InstanceRequest instance = 2;
     PayloadRequest payload = 3;
+  }
+}
+message PublisherRequest {
+  string id = 1;
+  oneof request {
+    RegistrationRequest registration = 2;
+    AuthorizationRequest authorization = 3;
+    PublicationRequest publication = 4;
+  }
+}
+//the request to fetch the basic info about repository
+message RepositoryRequest {
+
+}
+message PublisherInfo {
+  string id = 1;
+  ResponseStatus status = 2;//the general information about request
+  oneof info {
+    //no mapping for RegistrationRequest
+    AuthorizationInfo authorization = 3;
+    PublicationInfo publication = 4;
   }
 }
 message PackageInfo {

@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="repository (localhost)">
+  <database-model serializer="dbm" dbms="HSQLDB" family-id="HSQLDB" format-version="4.49">
+    <root id="1">
+      <ServerVersion>2.7.1</ServerVersion>
+    </root>
+    <database id="2" parent="1" name="PUBLIC">
+      <Current>1</Current>
+    </database>
+    <schema id="3" parent="2" name="INFORMATION_SCHEMA"/>
+    <schema id="4" parent="2" name="PUBLIC">
+      <Current>1</Current>
+      <LocalIntrospectionTimestamp>2023-11-14.22:59:10</LocalIntrospectionTimestamp>
+    </schema>
+    <schema id="5" parent="2" name="SYSTEM_LOBS"/>
+    <table id="6" parent="4" name="ARCHIVE_TYPE"/>
+    <table id="7" parent="4" name="LICENSE"/>
+    <table id="8" parent="4" name="PACKAGE_ALIAS"/>
+    <table id="9" parent="4" name="PACKAGE_DEPENDENCY"/>
+    <table id="10" parent="4" name="PACKAGE_INFO"/>
+    <table id="11" parent="4" name="PACKAGE_INSTANCE"/>
+    <table id="12" parent="4" name="PACKAGE_INSTANCE_ARCHIVE"/>
+    <table id="13" parent="4" name="PACKAGE_TYPE"/>
+    <column id="14" parent="6" name="ARCHIVE_TYPE_ID">
+      <DasType>SMALLINT|5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="15" parent="6" name="NAME">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+    </column>
+    <index id="16" parent="6" name="SYS_PK_10113">
+      <ColNames>ARCHIVE_TYPE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <key id="17" parent="6" name="SYS_PK_10113">
+      <ColNames>ARCHIVE_TYPE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <column id="18" parent="7" name="LICENSE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="19" parent="7" name="NAME">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <Position>2</Position>
+    </column>
+    <index id="20" parent="7" name="SYS_PK_10117">
+      <ColNames>LICENSE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="21" parent="7" name="UK_B030129HQDQ4NBFV7B34573FL">
+      <ColNames>NAME</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <key id="22" parent="7" name="SYS_PK_10117">
+      <ColNames>LICENSE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <key id="23" parent="7" name="UK_B030129HQDQ4NBFV7B34573FL">
+      <ColNames>NAME</ColNames>
+    </key>
+    <column id="24" parent="8" name="ALIAS_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="25" parent="8" name="NAME">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="26" parent="8" name="PACKAGE_INFO_PACKAGE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>3</Position>
+    </column>
+    <foreign-key id="27" parent="8" name="FKCTDWTKSMUYUBLMS31MC1JHO2E">
+      <ColNames>PACKAGE_INFO_PACKAGE_ID</ColNames>
+      <RefColNames>PACKAGE_ID</RefColNames>
+      <RefTableName>PACKAGE_INFO</RefTableName>
+    </foreign-key>
+    <index id="28" parent="8" name="SYS_PK_10120">
+      <ColNames>ALIAS_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="29" parent="8" name="UK_RPSPNQFYL3AUW8Q1K0MYNPCXC">
+      <ColNames>NAME</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <index id="30" parent="8" name="FKCTDWTKSMUYUBLMS31MC1JHO2E">
+      <ColNames>PACKAGE_INFO_PACKAGE_ID</ColNames>
+    </index>
+    <key id="31" parent="8" name="SYS_PK_10120">
+      <ColNames>ALIAS_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <key id="32" parent="8" name="UK_RPSPNQFYL3AUW8Q1K0MYNPCXC">
+      <ColNames>NAME</ColNames>
+    </key>
+    <column id="33" parent="9" name="PACKAGE_DEPENDENCY_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="34" parent="9" name="DEPENDENCY_PACKAGE_INSTANCE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="35" parent="9" name="TARGET_PACKAGE_INSTANCE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>3</Position>
+    </column>
+    <foreign-key id="36" parent="9" name="FKHV53ETEB9G2E3XQ9T9XIA2RN3">
+      <ColNames>DEPENDENCY_PACKAGE_INSTANCE_ID</ColNames>
+      <RefColNames>PACKAGE_INSTANCE_ID</RefColNames>
+      <RefTableName>PACKAGE_INSTANCE</RefTableName>
+    </foreign-key>
+    <foreign-key id="37" parent="9" name="FKAKU4MTEOQAJFV09102OU33REY">
+      <ColNames>TARGET_PACKAGE_INSTANCE_ID</ColNames>
+      <RefColNames>PACKAGE_INSTANCE_ID</RefColNames>
+      <RefTableName>PACKAGE_INSTANCE</RefTableName>
+    </foreign-key>
+    <index id="38" parent="9" name="SYS_PK_10123">
+      <ColNames>PACKAGE_DEPENDENCY_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="39" parent="9" name="FKHV53ETEB9G2E3XQ9T9XIA2RN3">
+      <ColNames>DEPENDENCY_PACKAGE_INSTANCE_ID</ColNames>
+    </index>
+    <index id="40" parent="9" name="FKAKU4MTEOQAJFV09102OU33REY">
+      <ColNames>TARGET_PACKAGE_INSTANCE_ID</ColNames>
+    </index>
+    <key id="41" parent="9" name="SYS_PK_10123">
+      <ColNames>PACKAGE_DEPENDENCY_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <column id="42" parent="10" name="PACKAGE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="43" parent="10" name="NAME">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="44" parent="10" name="PUBLISHER_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="45" parent="10" name="STATUS">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>4</Position>
+    </column>
+    <column id="46" parent="10" name="LICENSE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>5</Position>
+    </column>
+    <column id="47" parent="10" name="PACKAGE_TYPE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>6</Position>
+    </column>
+    <foreign-key id="48" parent="10" name="FKEMHMTKDWJGPQDQ4KMPWHI52SL">
+      <ColNames>LICENSE_ID</ColNames>
+      <RefColNames>LICENSE_ID</RefColNames>
+      <RefTableName>LICENSE</RefTableName>
+    </foreign-key>
+    <foreign-key id="49" parent="10" name="FK2TB5HAC6WFBQFYL0OH05JEX6S">
+      <ColNames>PACKAGE_TYPE_ID</ColNames>
+      <RefColNames>PACKAGE_TYPE_ID</RefColNames>
+      <RefTableName>PACKAGE_TYPE</RefTableName>
+    </foreign-key>
+    <index id="50" parent="10" name="SYS_PK_10126">
+      <ColNames>PACKAGE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="51" parent="10" name="UK_76Y9V8I3U7NR61GR2HVC8CXO7">
+      <ColNames>NAME</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <index id="52" parent="10" name="FKEMHMTKDWJGPQDQ4KMPWHI52SL">
+      <ColNames>LICENSE_ID</ColNames>
+    </index>
+    <index id="53" parent="10" name="FK2TB5HAC6WFBQFYL0OH05JEX6S">
+      <ColNames>PACKAGE_TYPE_ID</ColNames>
+    </index>
+    <key id="54" parent="10" name="SYS_PK_10126">
+      <ColNames>PACKAGE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <key id="55" parent="10" name="UK_76Y9V8I3U7NR61GR2HVC8CXO7">
+      <ColNames>NAME</ColNames>
+    </key>
+    <column id="56" parent="11" name="PACKAGE_INSTANCE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="57" parent="11" name="PUBLICATION_TIME">
+      <DasType>TIMESTAMP|93s</DasType>
+      <Position>2</Position>
+    </column>
+    <column id="58" parent="11" name="PACKAGE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="59" parent="11" name="VERSION">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+    </column>
+    <foreign-key id="60" parent="11" name="FKH7VRBGMPHEU7FYDRLTH2NGJT6">
+      <ColNames>PACKAGE_ID</ColNames>
+      <RefColNames>PACKAGE_ID</RefColNames>
+      <RefTableName>PACKAGE_INFO</RefTableName>
+    </foreign-key>
+    <index id="61" parent="11" name="SYS_PK_10130">
+      <ColNames>PACKAGE_INSTANCE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="62" parent="11" name="FKH7VRBGMPHEU7FYDRLTH2NGJT6">
+      <ColNames>PACKAGE_ID</ColNames>
+    </index>
+    <key id="63" parent="11" name="SYS_PK_10130">
+      <ColNames>PACKAGE_INSTANCE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <column id="64" parent="12" name="ARCHIVE_TYPE_ID">
+      <DasType>SMALLINT|5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="65" parent="12" name="PACKAGE_INSTANCE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>2</Position>
+    </column>
+    <column id="66" parent="12" name="PAYLOAD_PATH">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <Position>3</Position>
+    </column>
+    <column id="67" parent="12" name="PAYLOAD_SIZE">
+      <DasType>BIGINT|-5s</DasType>
+      <Position>4</Position>
+    </column>
+    <foreign-key id="68" parent="12" name="FKFL4G90WYSP8FNNH47MM7CVWR9">
+      <ColNames>ARCHIVE_TYPE_ID</ColNames>
+      <RefColNames>ARCHIVE_TYPE_ID</RefColNames>
+      <RefTableName>ARCHIVE_TYPE</RefTableName>
+    </foreign-key>
+    <foreign-key id="69" parent="12" name="FKT87VEYK8JK9HMEFV7K0A42JQU">
+      <ColNames>PACKAGE_INSTANCE_ID</ColNames>
+      <RefColNames>PACKAGE_INSTANCE_ID</RefColNames>
+      <RefTableName>PACKAGE_INSTANCE</RefTableName>
+    </foreign-key>
+    <index id="70" parent="12" name="SYS_PK_10135">
+      <ColNames>ARCHIVE_TYPE_ID
+PACKAGE_INSTANCE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <index id="71" parent="12" name="FKFL4G90WYSP8FNNH47MM7CVWR9">
+      <ColNames>ARCHIVE_TYPE_ID</ColNames>
+    </index>
+    <index id="72" parent="12" name="FKT87VEYK8JK9HMEFV7K0A42JQU">
+      <ColNames>PACKAGE_INSTANCE_ID</ColNames>
+    </index>
+    <key id="73" parent="12" name="SYS_PK_10135">
+      <ColNames>ARCHIVE_TYPE_ID
+PACKAGE_INSTANCE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+    <column id="74" parent="13" name="PACKAGE_TYPE_ID">
+      <DasType>BIGINT|-5s</DasType>
+      <NotNull>1</NotNull>
+      <Position>1</Position>
+    </column>
+    <column id="75" parent="13" name="NAME">
+      <DasType>VARCHAR(255)|12s</DasType>
+      <Position>2</Position>
+    </column>
+    <index id="76" parent="13" name="SYS_PK_10139">
+      <ColNames>PACKAGE_TYPE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Unique>1</Unique>
+    </index>
+    <key id="77" parent="13" name="SYS_PK_10139">
+      <ColNames>PACKAGE_TYPE_ID</ColNames>
+      <NameSurrogate>1</NameSurrogate>
+      <Primary>1</Primary>
+    </key>
+  </database-model>
+</dataSource>
