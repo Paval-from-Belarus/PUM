@@ -1,4 +1,4 @@
-package org.petos.pum.publisher.model;
+package org.petos.pum.repository.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -19,8 +19,8 @@ import lombok.NoArgsConstructor;
 public class PublisherPackageInfo {
 @EmbeddedId
 private PublisherPackageInfoId id;
-@MapsId("publisherId")
-@ManyToOne(optional = false)
-@JoinColumn(name = "publisher_id", referencedColumnName = "publisher_id")
-private Publisher publisher;
+@MapsId("packageId")
+@OneToOne(optional = false)
+@JoinColumn(name = "package_id", referencedColumnName = "package_id")
+private PackageInfo packageInfo;
 }

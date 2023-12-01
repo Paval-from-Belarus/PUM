@@ -21,6 +21,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PackageInfo {
+public static final long NO_INSTANCE = 1;
+public static final long VALID = 2;
+public static final long BLOCKED = 3;
 @Id
 @GeneratedValue(strategy = GenerationType.AUTO)
 @Column(name = "package_id")

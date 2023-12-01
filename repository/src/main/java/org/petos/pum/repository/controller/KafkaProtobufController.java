@@ -4,9 +4,7 @@ import com.google.protobuf.DynamicMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.petos.pum.networks.dto.packages.*;
-import org.petos.pum.networks.dto.transfer.PackageInfo;
-import org.petos.pum.networks.dto.transfer.PackageRequest;
-import org.petos.pum.networks.dto.transfer.ResponseStatus;
+import org.petos.pum.networks.dto.transfer.*;
 import org.petos.pum.repository.service.RepositoryService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -90,17 +88,29 @@ public void doNothing(DynamicMessage message) {
 	    return;
       }
       if (request.hasPayload()) {
-	    Optional<PayloadInfo> payloadInfo = repositoryService.getPayloadInfo(request.getPayload());
+	    Optional<EndpointInfo> payloadInfo = repositoryService.getPayloadInfo(request.getPayload());
 	    if (payloadInfo.isPresent()) {
-		  builder.setPayload(payloadInfo.get());
+		  builder.setEndpoint(payloadInfo.get());
 		  sendPackageInfo(builder, ResponseStatus.OK);
 	    } else {
 		  sendPackageInfo(builder, ResponseStatus.NOT_FOUND);
 	    }
-      } else {
-	    sendPackageInfo(builder, ResponseStatus.ILLEGAL);
+	    return;
       }
+      if (request.hasPublishing()) {
+	    Optional<EndpointInfo> endpoint = repositoryService.publish(request.getPublishing());
+	    if (endpoint.isPresent()) {
+		  builder.setEndpoint(endpoint.get());
+		  sendPackageInfo(builder, ResponseStatus.OK);
+	    } else {
+		  sendPackageInfo(builder, ResponseStatus.ILLEGAL);
+	    }
+	    return;
+      }
+      sendPackageInfo(builder, ResponseStatus.ILLEGAL);
+
 }
+//this endpoint process request from publisher
 
 private void sendPackageInfo(PackageInfo.Builder builder, ResponseStatus status) {
       PackageInfo response = builder

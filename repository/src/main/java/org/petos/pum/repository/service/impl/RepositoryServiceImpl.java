@@ -1,20 +1,28 @@
 package org.petos.pum.repository.service.impl;
 
 import com.google.protobuf.ByteString;
+import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.apache.avro.data.Json;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.petos.pum.networks.dto.packages.*;
 import org.petos.pum.repository.dao.*;
 import org.petos.pum.repository.model.*;
 import org.petos.pum.repository.service.RepositoryService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Paval Shlyk
@@ -23,20 +31,28 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class RepositoryServiceImpl implements RepositoryService {
+private static final Logger LOGGER = LogManager.getLogger(RepositoryServiceImpl.class);
 private final PackageInfoRepository packageInfoRepository;
 private final PackageAliasRepository packageAliasRepository;
 private final PackageInstanceRepository packageInstanceRepository;
 private final PackageDependencyRepository packageDependencyRepository;
 private final PackageInstanceArchiveRepository packageInstanceArchiveRepository;
 private final String serverAddress = "the default address to start file downloading)";
-
+private final LicenseRepository licenseRepository;
+private final PackageTypeRepository packageTypeRepository;
+@Setter
+@Value("server.port")
+private Integer port;
+@Setter
+@Value("server.address")
+private String address;
 
 @Override
 public Optional<HeaderInfo> getHeaderInfo(HeaderRequest request) {
       Optional<PackageAlias> optionalAlias = packageAliasRepository.findByName(request.getPackageAlias());
       return optionalAlias
 		 .flatMap(alias -> packageInfoRepository
-				       .findWithAliasesById(alias.getPackageInfo().getId()))
+				       .findWithAliasesByIdAndStatus(alias.getPackageInfo().getId(), PackageInfo.VALID))
 		 .map(packageInfo -> {
 		       List<String> aliases = packageInfo.getAliases().stream()
 						  .map(PackageAlias::getName)
@@ -86,22 +102,92 @@ public List<FullInstanceInfo> getFullInfo(InstanceRequest request) {
 }
 
 @Override
-public Optional<PayloadInfo> getPayloadInfo(PayloadRequest request) {
+public Optional<EndpointInfo> getPayloadInfo(PayloadRequest request) {
       int packageId = request.getPackageId();
       String version = request.getVersion();
       short archiveTypeId = (short) request.getType().getNumber();
       Optional<PackageInstance> optionalInstance = packageInstanceRepository.findByPackageInfoIdAndVersion(packageId, version);
       return optionalInstance.flatMap(instance -> {
 	    Optional<PackageInstanceArchive> optionalPayload = packageInstanceArchiveRepository.findByInstanceIdAndArchiveTypeId(instance.getId(), archiveTypeId);
-	    return optionalPayload.map(payload -> {
-		  byte[] secret = new byte[32];
-		  ThreadLocalRandom.current().nextBytes(secret);
-		  return PayloadInfo.newBuilder()
-			     .setRepositoryIp(serverAddress)
-			     .setSecret(ByteString.copyFrom(secret))
-			     .build();
-	    });
+	    return optionalPayload.map(payload -> buildEndpointInfo(new DownloadSecret(payload.getPayloadPath())));
       });
+}
+
+@Override
+@Transactional
+public Optional<EndpointInfo> publish(PublishingRequest request) {
+      EndpointInfo info = null;
+      try {
+	    Optional<PackageInfo> optionalPackageInfo = packageInfoRepository.findByPublisherIdAndName(request.getPublisherId(), request.getPackageName());
+	    PackageInfo packageInfo = optionalPackageInfo.orElse(publishNewPackage(request));
+	    PackageInstance instance = PackageInstance.builder()
+					   .packageInfo(packageInfo)
+					   .version(request.getVersion())
+					   .dependencies(collectDependencies(request.getDependenciesList()))
+					   .build();
+	    packageInstanceRepository.save(instance);
+	    info = buildEndpointInfo(new PublicationSecret(packageInfo.getId(), instance.getVersion()));
+      } catch (DataAccessException e) {
+	    LOGGER.error(e);
+      }
+      return Optional.ofNullable(info);
+}
+
+@Override
+public OutputStream download(byte[] secret) {
+      return null;
+}
+
+@Override
+public void upload(byte[] secret, InputStream input) {
+
+}
+
+private EndpointInfo buildEndpointInfo(@NotNull Object message) {
+      String address = String.format("%s:%d", this.address, this.port);
+      String secret = Json.toString(message);
+      return EndpointInfo.newBuilder()
+		 .setRepositoryIp(address)
+		 .setSecret(ByteString.copyFrom(secret.getBytes()))
+		 .build();
+}
+
+private PackageInfo publishNewPackage(PublishingRequest request) throws DataAccessException {
+      List<PackageAlias> aliases = request.getAliasesList().stream()
+				       .map(alias -> PackageAlias.builder()
+							 .name(alias).build())
+				       .toList();
+      aliases = packageAliasRepository.saveAll(aliases);
+      License license = licenseRepository.getByName(request.getLicense());
+      PackageType type = packageTypeRepository.getByName(request.getPackageType());
+      PackageInfo info = PackageInfo.builder()
+			     .name(request.getPackageName())
+			     .type(type)
+			     .license(license)
+			     .status(PackageInfo.NO_INSTANCE)
+			     .publisherId(request.getPublisherId())
+			     .aliases(aliases)
+			     .build();
+      return packageInfoRepository.save(info);
+}
+
+private List<PackageDependency> collectDependencies(List<ShortInstanceInfo> dependencies) throws DataAccessException {
+      List<PackageDependency> list = new ArrayList<>();
+      for (ShortInstanceInfo shortInfo : dependencies) {
+	    //else throws DataAccessException
+	    PackageInstance instance = packageInstanceRepository.getByPackageInfoIdAndVersion(shortInfo.getPackageId(), shortInfo.getVersion());
+	    PackageDependency dependency = PackageDependency.builder()
+					       .dependencyId(instance.getId())
+					       .build();
+	    list.add(dependency);
+      }
+      return list;
+}
+
+private record PublicationSecret(long packageId, String version) {
+}
+
+private record DownloadSecret(String payloadPath) {
 }
 
 private ShortInstanceInfo toShortInfo(PackageInstance instance) {
@@ -110,4 +196,5 @@ private ShortInstanceInfo toShortInfo(PackageInstance instance) {
 		 .setVersion(instance.getVersion())
 		 .build();
 }
+
 }

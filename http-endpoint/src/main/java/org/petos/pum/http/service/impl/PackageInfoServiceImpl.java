@@ -78,8 +78,8 @@ public void processKafkaSupplier(DynamicMessage message) {
 	    consumePackageInfo(requestId, info.getFull(), info.getStatus());
 	    return;
       }
-      if (info.hasPayload()) {
-	    consumePackageInfo(requestId, info.getPayload(), info.getStatus());
+      if (info.hasEndpoint()) {
+	    consumePackageInfo(requestId, info.getEndpoint(), info.getStatus());
 	    return;
       }
       assert info.getStatus().equals(ResponseStatus.NOT_FOUND);//otherwise, I don't know what is it...
@@ -182,7 +182,7 @@ public Mono<FullInstanceInfo> getFullInfo(int packageId, String version) {
 }
 
 @Override
-public Mono<PayloadInfo> getPayloadInfo(int packageId, String version, String archive) {
+public Mono<EndpointInfo> getPayloadInfo(int packageId, String version, String archive) {
       PayloadArchiveType archiveType = PayloadArchiveType.valueOf(archive.toUpperCase());
       PayloadRequest payload = PayloadRequest.newBuilder()
 				   .setPackageId(packageId)

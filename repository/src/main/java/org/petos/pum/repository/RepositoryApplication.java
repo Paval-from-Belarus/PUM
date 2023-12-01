@@ -71,27 +71,28 @@ private String schemaUrl;
 @Value("${spring.kafka.consumer.group-id}")
 private String kafkaConsumerId;
 
-@Bean
-public Map<String, Object> producerConfig() {
-      Map<String, Object> props = new HashMap<>();
-      props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class);
-      props.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaConsumerId);
-      props.put(KafkaProtobufSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
-      props.put(KafkaProtobufSerializerConfig.VALUE_SUBJECT_NAME_STRATEGY, TopicNameStrategy.class);
-      return props;
-}
+//@Bean
+//public Map<String, Object> producerConfig() {
+//      Map<String, Object> props = new HashMap<>();
+//      props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+//      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+//      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaProtobufSerializer.class);
+//      props.put(ProducerConfig.CLIENT_ID_CONFIG, kafkaConsumerId);
+//      props.put(KafkaProtobufSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaUrl);
+//      props.put(KafkaProtobufSerializerConfig.VALUE_SUBJECT_NAME_STRATEGY, TopicNameStrategy.class);
+//      return props;
+//}
+//
+//@Bean
+//public ProducerFactory<String, PackageInfo> requestProducerFactory() {
+//      return new DefaultKafkaProducerFactory<>(producerConfig());
+//}
+
 
 @Bean
-public ProducerFactory<String, PackageInfo> requestProducerFactory() {
-      return new DefaultKafkaProducerFactory<>(producerConfig());
-}
-
-
-@Bean
-public KafkaTemplate<String, PackageInfo> requestKafkaTemplate() {
-      return new KafkaTemplate<>(requestProducerFactory());
+public KafkaTemplate<String, PackageInfo> requestKafkaTemplate(ProducerFactory<?,?> defaultFactory) {
+      Map<String, Object> properties = defaultFactory.getConfigurationProperties();
+      return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(properties));
 }
 
 public static void main(String[] args) {

@@ -1,4 +1,4 @@
-package org.petos.pum.publisher.model;
+package org.petos.pum.repository.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

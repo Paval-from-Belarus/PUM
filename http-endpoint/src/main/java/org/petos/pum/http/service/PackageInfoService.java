@@ -1,8 +1,8 @@
 package org.petos.pum.http.service;
 
+import org.petos.pum.networks.dto.packages.EndpointInfo;
 import org.petos.pum.networks.dto.packages.FullInstanceInfo;
 import org.petos.pum.networks.dto.packages.HeaderInfo;
-import org.petos.pum.networks.dto.packages.PayloadInfo;
 import org.petos.pum.networks.dto.packages.ShortInstanceInfo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,5 +25,5 @@ Mono<FullInstanceInfo> getFullInfo(int packageId, String version);
  * @param version
  * @return
  */
-Mono<PayloadInfo> getPayloadInfo(int packageId, String version, String archive);
+Mono<EndpointInfo> getPayloadInfo(int packageId, String version, String archive);
 }

@@ -1,0 +1,7 @@
+{
+  "timestamp": 1701379735660,
+  "path": "/api/pum/info/header",
+  "status": 500,
+  "error": "Internal Server Error",
+  "requestId": "69731c53-2"
+}

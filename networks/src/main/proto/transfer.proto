@@ -9,6 +9,7 @@ enum ResponseStatus {
   NOT_FOUND = 1;
   LAST = 2;
   ILLEGAL = 3;
+  BUSY = 4;//the server currently busy and cannot create response
 }
 message PackageRequest {
   //the temporal session if for user
@@ -16,28 +17,10 @@ message PackageRequest {
   oneof request {
     HeaderRequest header = 1;
     InstanceRequest instance = 2;
+    //retrieving of existing package
     PayloadRequest payload = 3;
-  }
-}
-message PublisherRequest {
-  string id = 1;
-  oneof request {
-    RegistrationRequest registration = 2;
-    AuthorizationRequest authorization = 3;
-    PublicationRequest publication = 4;
-  }
-}
-//the request to fetch the basic info about repository
-message RepositoryRequest {
-
-}
-message PublisherInfo {
-  string id = 1;
-  ResponseStatus status = 2;//the general information about request
-  oneof info {
-    //no mapping for RegistrationRequest
-    AuthorizationInfo authorization = 3;
-    PublicationInfo publication = 4;
+    //publication of new package
+    PublishingRequest publishing = 5;
   }
 }
 message PackageInfo {
@@ -47,6 +30,48 @@ message PackageInfo {
     HeaderInfo header = 1;
     ShortInstanceInfo short = 2;
     FullInstanceInfo full = 3;
-    PayloadInfo payload = 4;
+    EndpointInfo endpoint = 4;//used both for payload request and publishing request
   }
 }
+message PublisherRequest {
+  string id = 1;
+  oneof request {
+    RegistrationRequest registration = 2;
+    AuthorizationRequest authorization = 3;
+    ValidationRequest validation = 4;
+  }
+}
+message PublisherInfo {
+  string id = 1;
+  ResponseStatus status = 2;//the general information about request
+  oneof info {
+    RegistrationErrorInfo registration = 3;
+    AuthorizationInfo authorization = 4;
+    ValidationInfo validation = 5;
+  }
+}
+//the message to publish payload
+//this message is alternative to rpm descriptor
+message PublicationRequest {
+  string id = 1;
+  uint64 publisher_id = 4;//the
+  ValidationRequest validation = 2;
+  PublishingRequest info = 3;
+}
+message PublicationInfo {
+  string id = 1;
+  oneof info {
+    ValidationInfo validation = 2;
+    EndpointInfo endpoint = 3;
+  }
+}
+//the request to fetch the basic info about repository
+message RepositoryRequest {
+  string id = 1;
+}
+message RepositoryInfo {
+  string name = 1;
+  uint64 packagesCount = 2;
+  string diskspace = 3;
+}
+

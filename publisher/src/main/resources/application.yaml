@@ -4,7 +4,7 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: org.hsqldb.jdbc.JDBCDriver
-    url: jdbc:hsqldb:hsql://localhost/repository #conceptually, the publisher has an own database to store credentials about publishers
+    url: jdbc:hsqldb:hsql://localhost/repository
     username: "sa"
     password:
   jpa:
@@ -15,7 +15,7 @@ spring:
     init:
       mode: embedded
   application:
-    name: repository
+    name: publisher
   kafka:
     bootstrap-servers: petos.project.su:9092
     properties:
@@ -34,4 +34,4 @@ logging:
   level:
     sql: trace
 server:
-  port: 8081
+  port: 8082

@@ -28,11 +28,8 @@ private long id;
 private String name;
 @Column(name = "email")
 private String email;
-@Column(name = "password")
-private String password;
-@Column(name = "salt")
-private String salt;
-@OneToMany(mappedBy = "publisher", fetch = FetchType.LAZY)
-@Builder.Default
-private List<PublisherPackageInfo> packages = new ArrayList<>();
+@Column(name = "password", nullable = false)
+private byte[] password;
+@Column(name = "salt", nullable = false)
+private byte[] salt;
 }

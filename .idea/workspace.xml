@@ -5,26 +5,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="eca8d108-c6c8-48f1-8113-fd1ceab45b7a" name="Changes" comment="map flux of protobuf to mono of json">
-      <change afterPath="$PROJECT_DIR$/networks/src/main/proto/repository.proto" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/dao/PublisherRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/Publisher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfoId.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PackageInfoService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PublisherService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/impl/PublisherServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/utils/AuthorizationUtils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/RepositoryInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/resources/application.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/networks/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/networks/pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/KafkaPublisherController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/publisher/src/main/resources/application.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/LicenseRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageTypeRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T023319.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T023454.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T023710.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T023911.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T024619.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T110424.200.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaConsumerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaConsumerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaProducerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaProducerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/PackageInfoService.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/PackageInfoService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/networks/src/main/proto/credentials.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/credentials.proto" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/publisher/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/Controller.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/PublisherApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/PublisherApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/dao/PublisherRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/dao/PublisherRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/Publisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/Publisher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PublisherPackageInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/model/PublisherPackageInfoId.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PublisherPackageInfoId.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PackageInfoService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PublisherService.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/PublisherService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/impl/PublisherServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/service/impl/PublisherServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaProtobufController.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaProtobufController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageDependencyRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageDependencyRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInfoRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInfoRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInstanceRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInstanceRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInstance.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInstance.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/RepositoryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/RepositoryService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/service-registry/src/main/java/org/petos/pum/registry/TopicConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/service-registry/src/main/java/org/petos/pum/registry/TopicConfig.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,8 +62,8 @@
         <option value="module-info" />
         <option value="Interface" />
         <option value="com.haulmont.jpb.FlywayMigrationScript" />
-        <option value="com.haulmont.jpb.JpaRepository" />
         <option value="Class" />
+        <option value="com.haulmont.jpb.JpaRepository" />
       </list>
     </option>
   </component>
@@ -88,52 +109,52 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
-    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary&quot;: &quot;JUnit5&quot;,
-    &quot;com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5&quot;: &quot;java.lang.Object&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;spring-micro&quot;,
-    &quot;import_schema_mapping&quot;: &quot;&lt;schema-mapping&gt;\n  &lt;databases&gt;\n    &lt;list&gt;\n      &lt;schema-mapping-item&gt;\n        &lt;source-data-source-id&gt;132e337b-954e-499d-8cf7-62ec4bb0a0cf&lt;/source-data-source-id&gt;\n        &lt;source-path&gt;database/&amp;quot;PUBLIC&amp;quot;/schema/&amp;quot;PUBLIC&amp;quot;&lt;/source-path&gt;\n        &lt;target-data-source-id&gt;132e337b-954e-499d-8cf7-62ec4bb0a0cf&lt;/target-data-source-id&gt;\n        &lt;target-path&gt;database/&amp;quot;PUBLIC&amp;quot;/schema/&amp;quot;PUBLIC&amp;quot;&lt;/target-path&gt;\n      &lt;/schema-mapping-item&gt;\n    &lt;/list&gt;\n  &lt;/databases&gt;\n&lt;/schema-mapping&gt;&quot;,
-    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;OpenJDK_17&quot;,
-    &quot;last.edited.regexp&quot;: &quot;&quot;,
-    &quot;last_directory_selection&quot;: &quot;/home/Paval/Triggers/Java/PackageManager/PackageManager/server/src/test/java/org/petos/pum/server&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/Paval/Triggers/Java/PackageManager/PackageManager/repository&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2632831&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editing.templates&quot;,
-    &quot;settings.editor.splitter.proportion&quot;: &quot;0.3027245&quot;,
-    &quot;spring.configuration.checksum&quot;: &quot;83ee2bb27e8e25a7e09df4ee791286ee&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Downloaded.Files.Path.Enabled": "false",
+    "Repository.Attach.Annotations": "false",
+    "Repository.Attach.JavaDocs": "false",
+    "Repository.Attach.Sources": "false",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrary": "JUnit5",
+    "com.intellij.testIntegration.createTest.CreateTestDialog.defaultLibrarySuperClass.JUnit5": "java.lang.Object",
+    "git-widget-placeholder": "spring-micro",
+    "import_schema_mapping": "<schema-mapping>\n  <databases>\n    <list>\n      <schema-mapping-item>\n        <source-data-source-id>132e337b-954e-499d-8cf7-62ec4bb0a0cf</source-data-source-id>\n        <source-path>database/&quot;PUBLIC&quot;/schema/&quot;PUBLIC&quot;</source-path>\n        <target-data-source-id>132e337b-954e-499d-8cf7-62ec4bb0a0cf</target-data-source-id>\n        <target-path>database/&quot;PUBLIC&quot;/schema/&quot;PUBLIC&quot;</target-path>\n      </schema-mapping-item>\n    </list>\n  </databases>\n</schema-mapping>",
+    "jdk.selected.JAVA_MODULE": "OpenJDK_17",
+    "last.edited.regexp": "",
+    "last_directory_selection": "/home/Paval/Triggers/Java/PackageManager/PackageManager/server/src/test/java/org/petos/pum/server",
+    "last_opened_file_path": "/home/Paval/Triggers/Java/PackageManager/PackageManager/repository/src/main/java/org/petos/pum/repository/model",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2632831",
+    "settings.editor.selected.configurable": "bigdataide_conn_settings",
+    "settings.editor.splitter.proportion": "0.3027245",
+    "spring.configuration.checksum": "83ee2bb27e8e25a7e09df4ee791286ee",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;hsqldb&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "hsqldb"
     ],
-    &quot;com.intellij.ide.scratch.LRUPopupBuilder$1/&quot;: [
-      &quot;HSQLDB&quot;
+    "com.intellij.ide.scratch.LRUPopupBuilder$1/": [
+      "HSQLDB"
     ],
-    &quot;com.intellij.ide.scratch.LRUPopupBuilder$1/SQL Dialect&quot;: [
-      &quot;HSQLDB&quot;
+    "com.intellij.ide.scratch.LRUPopupBuilder$1/SQL Dialect": [
+      "HSQLDB"
     ]
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -144,11 +165,11 @@
       <recent name="org.petos.pum.server.common" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model" />
       <recent name="$PROJECT_DIR$/networks/src/main/proto" />
       <recent name="$PROJECT_DIR$/server/distribution-service/src/main/java/org/petos/pum/server/distribution" />
       <recent name="$PROJECT_DIR$/server/src/main/resources/database" />
       <recent name="$PROJECT_DIR$/server/src/test/java" />
-      <recent name="$PROJECT_DIR$/server/src/test/resources" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller" />
@@ -187,14 +208,11 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Spring Boot.HttpEndpointApplication">
+  <component name="RunManager" selected="Spring Boot.PublisherApplication">
     <configuration name="generated-requests | #3" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="3" requestIdentifier="#3" runType="Run single request">
       <method v="2" />
     </configuration>
     <configuration name="generated-requests | #4" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="4" requestIdentifier="#4" runType="Run single request">
-      <method v="2" />
-    </configuration>
-    <configuration name="generated-requests | #5" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="5" requestIdentifier="#5" runType="Run single request">
       <method v="2" />
     </configuration>
     <configuration name="generated-requests | #6" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="6" requestIdentifier="#6" runType="Run single request">
@@ -202,21 +220,6 @@
     </configuration>
     <configuration name="generated-requests | #7" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/generated-requests.http" index="7" requestIdentifier="#7" runType="Run single request">
       <method v="2" />
-    </configuration>
-    <configuration name="PackageHatDaoTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <module name="server" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="org.petos.pum.server.repositories.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <option name="PACKAGE_NAME" value="org.petos.pum.server.repositories" />
-      <option name="MAIN_CLASS_NAME" value="org.petos.pum.server.repositories.PackageHatDaoTest" />
-      <option name="TEST_OBJECT" value="class" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
     </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="tcp-endpoint" />
@@ -303,6 +306,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="PublisherApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" temporary="true" nameIsGenerated="true">
+      <module name="publisher" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.publisher.PublisherApplication" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="org.petos.pum.publisher.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="RepositoryApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="repository" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="org.petos.pum.repository.RepositoryApplication" />
@@ -352,24 +368,23 @@
     <list>
       <item itemvalue="HTTP Request.generated-requests | #3" />
       <item itemvalue="HTTP Request.generated-requests | #4" />
-      <item itemvalue="HTTP Request.generated-requests | #5" />
       <item itemvalue="HTTP Request.generated-requests | #6" />
       <item itemvalue="HTTP Request.generated-requests | #7" />
-      <item itemvalue="JUnit.PackageHatDaoTest" />
       <item itemvalue="Maven.pum-parent [clean,package,--projects...]" />
       <item itemvalue="Maven.pum-parent [clean,package,-DskipTests...]" />
       <item itemvalue="Spring Boot.HttpEndpointApplication" />
       <item itemvalue="Spring Boot.RepositoryApplication" />
       <item itemvalue="Spring Boot.ServerApp" />
       <item itemvalue="Spring Boot.ServiceRegistryApplication" />
+      <item itemvalue="Spring Boot.PublisherApplication" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Spring Boot.PublisherApplication" />
         <item itemvalue="HTTP Request.generated-requests | #7" />
+        <item itemvalue="HTTP Request.generated-requests | #3" />
         <item itemvalue="HTTP Request.generated-requests | #6" />
         <item itemvalue="HTTP Request.generated-requests | #4" />
-        <item itemvalue="HTTP Request.generated-requests | #5" />
-        <item itemvalue="HTTP Request.generated-requests | #3" />
       </list>
     </recent_temporary>
   </component>
@@ -639,7 +654,10 @@
       <workItem from="1701245241839" duration="61000" />
       <workItem from="1701247374734" duration="6526000" />
       <workItem from="1701259124642" duration="956000" />
-      <workItem from="1701260086640" duration="2669000" />
+      <workItem from="1701260086640" duration="2712000" />
+      <workItem from="1701288637961" duration="129000" />
+      <workItem from="1701369400996" duration="7224000" />
+      <workItem from="1701421858367" duration="9477000" />
     </task>
     <task id="LOCAL-00001" summary="unstable version">
       <created>1681332697217</created>
@@ -1132,6 +1150,11 @@
           <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java</url>
           <line>120</line>
           <option name="timeStamp" value="623" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaProducerConfig.java</url>
+          <line>57</line>
+          <option name="timeStamp" value="625" />
         </line-breakpoint>
         <breakpoint type="java-exception">
           <properties class="java.lang.ClassCastException" package="java.lang" />
