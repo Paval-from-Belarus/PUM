@@ -4,114 +4,48 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="eca8d108-c6c8-48f1-8113-fd1ceab45b7a" name="Changes" comment="map flux of protobuf to mono of json">
-      <change afterPath="$PROJECT_DIR$/author.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/ClientApplication.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/controller/Runner.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/utils/InputProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/utils/OutputProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/utils/ParameterMap.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/resources/application.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/main/resources/commands.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/client/src/test/java/org/petos/pum/http/client/ClientApplicationTests.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deploy.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/PublisherInfoService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/AbstractReactiveKafkaService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PublisherInfoServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/AuthorizationDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/AuthorizationToken.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/DependencyDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/EndpointDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/FullInstanceInfoDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/HeaderInfoDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/PublicationDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/RegistrationDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/ShortInstanceInfoDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/old_client/pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/old_client/src/main/resources/application.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/old_client/src/main/resources/commands.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/publications/src/main/java/org/petos/pum/publications/KafkaController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/SelfInjectionBeanPostProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/HttpRepositoryController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/ArchiveTypeRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/exception/UserAccessViolationException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T152448.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T152948.200.protobuf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T154748.200.protobuf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T204145.200.protobuf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T204251.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T204816.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T215144.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T215146.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-14T215148.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T022214.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T022506.200.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T022825.200.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T023323.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T023344.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T023434.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T023848.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T024047.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T024233.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T110711.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T110738.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T110742.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/2023-11-15T110801.404.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/httpRequests/http-requests-log.http" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+    <list default="true" id="eca8d108-c6c8-48f1-8113-fd1ceab45b7a" name="Changes" comment="build a simple client">
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215513.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215530.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215552.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215611.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215810.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215817.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215948.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T215950.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220203.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220222.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220410.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220421.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220443.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220647.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T220657.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221331.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221520.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221531.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221706.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221805.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T221932.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T222103.404.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T222149.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T222155.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T222208.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T222258.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T223531.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/httpRequests/2023-12-01T223703.200.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/client" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/Configuration.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/Configuration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/InputProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/InputProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/OutputProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/OutputProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/ParameterMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/ParameterMap.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/common/Wrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/common/Wrapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/database/CachedInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/database/CachedInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/database/InstanceInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/database/InstanceInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/database/PackageInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/database/PackageInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/database/RepositoryInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/database/RepositoryInfo.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/module-info.not-java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/module-info.not-java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/AbstractSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/AbstractSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/InstallerSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/InstallerSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/JournalTransaction.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/JournalTransaction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/ModifierSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/ModifierSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/PackageStorage.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/PackageStorage.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/Publisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/Publisher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/PublisherDependency.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/PublisherDependency.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/RemovableSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/RemovableSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/java/storage/StorageSession.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/java/storage/StorageSession.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/resources/hibernate.cfg.xml" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/resources/hibernate.cfg.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/resources/log4j2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/resources/log4j2.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/main/resources/transfer-packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/main/resources/transfer-packages.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/test/java/InstanceInfoTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/test/java/InstanceInfoTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client/src/test/java/PublisherTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/old_client/src/test/java/PublisherTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaConsumerConfig.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/KafkaProducerConfig.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller/HttpApiGatewayController.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller/HttpApiGatewayController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/PackageInfoService.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/PackageInfoService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/networks/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/networks/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/PackageAssembly.java" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/transfer/PackageAssembly.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/transfer.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/publications/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/publications/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/publications/src/main/java/org/petos/pum/publications/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/publications/src/main/java/org/petos/pum/publications/PublicationApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/publications/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/publications/src/main/resources/application.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/publisher/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/KafkaPublisherController.java" beforeDir="false" afterPath="$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/KafkaPublisherController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/repository/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/RepositoryApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaProtobufController.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/KafkaRepositoryController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/main/resources/commands.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deploy.json" beforeDir="false" afterPath="$PROJECT_DIR$/deploy.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/PublicationDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/java/org/petos/pum/networks/dto/PublicationDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" beforeDir="false" afterPath="$PROJECT_DIR$/networks/src/main/proto/dto.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/SelfInjectionBeanPostProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/SelfInjectionBeanPostProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/HttpRepositoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/controller/HttpRepositoryController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInfoRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/dao/PackageInfoRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageArchiveId.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/model/PackageArchiveId.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/RepositoryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/RepositoryService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repository/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/repository/src/main/resources/application.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -204,7 +138,7 @@
     "project.structure.last.edited": "SDKs",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2632831",
-    "settings.editor.selected.configurable": "bigdataide_conn_settings",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings",
     "settings.editor.splitter.proportion": "0.3027245",
     "spring.configuration.checksum": "bda6f6a665922fc0a3a2186f7ce76520",
     "vue.rearranger.settings.migration": "true"
@@ -743,7 +677,7 @@
       <workItem from="1701421858367" duration="15945000" />
       <workItem from="1701448603684" duration="9062000" />
       <workItem from="1701461831171" duration="9369000" />
-      <workItem from="1701504563952" duration="15894000" />
+      <workItem from="1701504563952" duration="24804000" />
     </task>
     <task id="LOCAL-00001" summary="unstable version">
       <created>1681332697217</created>
@@ -915,7 +849,23 @@
       <option name="project" value="LOCAL" />
       <updated>1700037885059</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="build a simple client">
+      <option name="closed" value="true" />
+      <created>1701520607598</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1701520607598</updated>
+    </task>
+    <task id="LOCAL-00024" summary="build a simple client">
+      <option name="closed" value="true" />
+      <created>1701520781807</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1701520781807</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -945,6 +895,9 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
+    <ignored-roots>
+      <path value="$PROJECT_DIR$/client" />
+    </ignored-roots>
     <MESSAGE value="unstable version" />
     <MESSAGE value="upgrade client" />
     <MESSAGE value="rewrite terribly" />
@@ -962,7 +915,8 @@
     <MESSAGE value="add repository service" />
     <MESSAGE value="small fixes in business logic" />
     <MESSAGE value="map flux of protobuf to mono of json" />
-    <option name="LAST_COMMIT_MESSAGE" value="map flux of protobuf to mono of json" />
+    <MESSAGE value="build a simple client" />
+    <option name="LAST_COMMIT_MESSAGE" value="build a simple client" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1239,23 +1193,8 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/controller/Runner.java</url>
-          <line>128</line>
+          <line>131</line>
           <option name="timeStamp" value="637" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller/HttpApiGatewayController.java</url>
-          <line>66</line>
-          <option name="timeStamp" value="640" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller/HttpApiGatewayController.java</url>
-          <line>79</line>
-          <option name="timeStamp" value="645" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PublisherInfoServiceImpl.java</url>
-          <line>39</line>
-          <option name="timeStamp" value="647" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/publisher/src/main/java/org/petos/pum/publisher/KafkaPublisherController.java</url>
@@ -1263,9 +1202,39 @@
           <option name="timeStamp" value="648" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/controller/Runner.java</url>
+          <line>186</line>
+          <option name="timeStamp" value="650" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/client/src/main/java/org/petos/pum/http/client/controller/Runner.java</url>
+          <line>180</line>
+          <option name="timeStamp" value="662" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/service/impl/PackageInfoServiceImpl.java</url>
-          <line>43</line>
-          <option name="timeStamp" value="649" />
+          <line>57</line>
+          <option name="timeStamp" value="672" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/http-endpoint/src/main/java/org/petos/pum/http/controller/HttpApiGatewayController.java</url>
+          <line>133</line>
+          <option name="timeStamp" value="676" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java</url>
+          <line>206</line>
+          <option name="timeStamp" value="684" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java</url>
+          <line>222</line>
+          <option name="timeStamp" value="688" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/repository/src/main/java/org/petos/pum/repository/service/impl/RepositoryServiceImpl.java</url>
+          <line>230</line>
+          <option name="timeStamp" value="689" />
         </line-breakpoint>
         <breakpoint type="java-exception">
           <properties class="java.lang.ClassCastException" package="java.lang" />

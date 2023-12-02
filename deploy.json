@@ -3,5 +3,6 @@
   "packageType": "bin",
   "version": "0.0.1",
   "license": "GNU",
-  "aliases": []
+  "aliases": [],
+  "dependencies": []
 }

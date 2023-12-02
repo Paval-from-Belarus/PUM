@@ -50,7 +50,7 @@ message FullInstanceInfo {
 }
 //the information about real http-endpoint
 message EndpointInfo {
-  bytes secret = 1; //to establish SSL connection
+  string secret = 1; //to establish SSL connection
   string repository_ip = 2;
 }
 message PublishingRequest {

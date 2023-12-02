@@ -20,7 +20,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class PackageArchiveId implements Serializable {
 @Column(name = "package_instance_id")
-private long instanceId;
+private Long instanceId;
 @Column(name = "archive_type_id")
-private short archiveTypeId;
+private Short archiveTypeId;
 }

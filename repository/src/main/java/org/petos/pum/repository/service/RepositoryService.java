@@ -23,7 +23,7 @@ Optional<EndpointInfo> getPayloadInfo(PayloadRequest request);
 
 Optional<EndpointInfo> publish(PublishingRequest request);
 
-void download(byte[] secret, OutputStream output) throws UserAccessViolationException;
+void download(String secret, OutputStream output) throws UserAccessViolationException;
 
-void upload(byte[] secret, InputStream input) throws UserAccessViolationException;
+void upload(String secret, InputStream input) throws UserAccessViolationException;
 }

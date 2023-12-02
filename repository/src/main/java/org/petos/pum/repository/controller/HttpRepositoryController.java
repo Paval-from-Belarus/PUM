@@ -4,9 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.petos.pum.repository.service.RepositoryService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,16 +23,16 @@ public class HttpRepositoryController {
 private final RepositoryService repositoryService;
 
 @GetMapping("/download")
-public void shareFile(HttpServletResponse response, @RequestParam("secret") @NotNull String token) throws IOException {
-      repositoryService.download(token.getBytes(), response.getOutputStream());
+public void shareFile(HttpServletResponse response, @RequestParam("secret") @NotNull String secret) throws IOException {
+      repositoryService.download(secret, response.getOutputStream());
 }
 
 @PutMapping("/upload")
 public void saveFile(
-    @RequestParam("secret") @NotNull String token,
-    MultipartFile file,
+    @RequestParam("secret") @NotNull String secret,
+    @RequestPart("file") MultipartFile file,
     HttpServletResponse response) throws IOException {
-      repositoryService.upload(token.getBytes(), file.getInputStream());
+      repositoryService.upload(secret, file.getInputStream());
       response.setStatus(HttpServletResponse.SC_CREATED);
 }
 }

@@ -14,6 +14,6 @@ public record PublicationDto(
     @NotNull String version,
     @NotNull String license,
     List<String> aliases,
-    @NotNull List<DependencyDto> dependencies
+    List<DependencyDto> dependencies
 ) {
 }

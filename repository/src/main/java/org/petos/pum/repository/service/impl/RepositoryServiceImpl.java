@@ -1,7 +1,6 @@
 package org.petos.pum.repository.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.protobuf.ByteString;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
@@ -18,12 +17,14 @@ import org.petos.pum.repository.model.*;
 import org.petos.pum.repository.service.RepositoryService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import scala.reflect.ClassTag;
 import scala.util.Either;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -56,14 +57,16 @@ private String address;
 @Value("${storage.root.path}")
 private Path storageRoot;
 private final ArchiveTypeRepository archiveTypeRepository;
+
 public void setSelfInjection(RepositoryServiceImpl self) {
-      this.self	= self;
+      this.self = self;
 }
 
 @PostConstruct
 public void init() {
       System.out.println("The self bean is " + self);
 }
+
 @Override
 public Optional<HeaderInfo> getHeaderInfo(HeaderRequest request) {
       Optional<PackageAlias> optionalAlias = packageAliasRepository.findByName(request.getPackageAlias());
@@ -136,15 +139,22 @@ public Optional<EndpointInfo> publish(PublishingRequest request) {
       EndpointInfo info = null;
       try {
 	    Optional<PackageInfo> optionalPackageInfo = packageInfoRepository.findByPublisherIdAndName(request.getPublisherId(), request.getPackageName());
-	    PackageInfo packageInfo = optionalPackageInfo.orElse(publishNewPackage(request));
-	    PackageInstance instance = PackageInstance.builder()
-					   .packageInfo(packageInfo)
-					   .version(request.getVersion())
-					   .dependencies(collectDependencies(request.getDependenciesList()))
-					   .build();
-	    packageInstanceRepository.save(instance);
-	    info = buildEndpointInfo(new PublicationSecret(packageInfo.getId(), instance.getVersion()));
-      } catch (DataAccessException e) {
+	    PackageInfo packageInfo;
+	    packageInfo = optionalPackageInfo.orElseGet(() -> publishNewPackage(request));
+	    Optional<PackageInstance> optionalInstance = packageInstanceRepository.findByPackageInfoIdAndVersion(packageInfo.getId(), request.getVersion());
+	    if (optionalInstance.isPresent() && !optionalInstance.get().getArchives().isEmpty()) {
+		  return Optional.empty();
+	    }
+	    if (optionalInstance.isEmpty()) {
+		  PackageInstance instance = PackageInstance.builder()
+						 .packageInfo(packageInfo)
+						 .version(request.getVersion())
+						 .dependencies(collectDependencies(request.getDependenciesList()))
+						 .build();
+		  packageInstanceRepository.save(instance);
+	    }
+	    info = buildEndpointInfo(new PublicationSecret(packageInfo.getId(), request.getVersion()));
+      } catch (Exception e) {
 	    LOGGER.error(e);
       }
       return Optional.ofNullable(info);
@@ -157,17 +167,14 @@ private UserAccessViolationException newUserAccessViolationException(String para
 }
 
 @Override
-@Async("fileTaskExecutor")
-public void download(byte[] token, OutputStream output) {
-      Either<JsonProcessingException, DownloadSecret> either = Json.parseBytesAs(token, ClassTag.apply(DownloadSecret.class));
+public void download(String token, OutputStream output) {
       String message;
-      try {
-	    if (either.isLeft()) {
-		  output.close();
-		  throw newUserAccessViolationException("Failed to share file with Invalid token:%s", Arrays.toString(token));
+      try (output) {
+	    Optional<DownloadSecret> optionalSecret = decodeSecret(token, DownloadSecret.class);
+	    if (optionalSecret.isEmpty()) {
+		  throw newUserAccessViolationException("Failed to share file with Invalid token:%s", token);
 	    }
-	    DownloadSecret secret = either.getOrElse(() -> null);
-	    assert secret != null;
+	    DownloadSecret secret = optionalSecret.get();
 	    Path targetPath = storageRoot.resolve(secret.payloadPath());
 	    try (InputStream input = PackageAssembly.decompress(Files.newInputStream(targetPath, StandardOpenOption.READ))) {
 		  input.transferTo(output);
@@ -182,18 +189,15 @@ public void download(byte[] token, OutputStream output) {
 
 
 @Override
-@Async("fileTaskExecutor")
-public void upload(byte[] token, InputStream input) {
-      Either<JsonProcessingException, PublicationSecret> either = Json.parseBytesAs(token, ClassTag.apply(PublicationSecret.class));
+public void upload(String token, InputStream input) {
       Path targetPath = null;
       String message;
       try (input) {
-	    if (either.isLeft()) {
-		  input.close();
-		  throw newUserAccessViolationException("Failed upload with invalid token:%s", Arrays.toString(token));
+	    Optional<PublicationSecret> optionalSecret = decodeSecret(token, PublicationSecret.class);
+	    if (optionalSecret.isEmpty()) {
+		  throw newUserAccessViolationException("Failed upload with invalid token:%s", token);
 	    }
-	    PublicationSecret secret = either.getOrElse(() -> null);
-	    assert secret != null;
+	    PublicationSecret secret = optionalSecret.get();
 	    PackageInfo packageInfo = packageInfoRepository.findById(secret.packageId()).orElseThrow();
 	    String uniqueFileName = packageInfo.getName() + secret.version();
 	    targetPath = storageRoot.resolve(uniqueFileName);
@@ -213,6 +217,8 @@ public void upload(byte[] token, InputStream input) {
 		  //we can do nothing
 	    }
 	    message = "Failed to upload file";
+	    LOGGER.warn(message);
+//	    throw new IllegalStateException(message);
       }
       LOGGER.trace(message);
 }
@@ -221,22 +227,41 @@ public void upload(byte[] token, InputStream input) {
 public void assignPackageAsAvailable(long packageId, String version, Path targetPath) {
       File targetFile = targetPath.toFile();
       PackageInstance instance = packageInstanceRepository.findByPackageInfoIdAndVersion(packageId, version).orElseThrow();
+      ArchiveType archiveType = archiveTypeRepository.findById((short) 2).orElseThrow();//brotli algo
+      PackageArchiveId id = PackageArchiveId.builder()
+				   .instanceId(instance.getId())
+				   .archiveTypeId(archiveType.getId())
+				   .build();
       PackageInstanceArchive archive = PackageInstanceArchive.builder()
-					   .instance(instance)
+					   .id(id)
 					   .payloadPath(targetPath.toAbsolutePath().toString())
 					   .payloadSize(targetFile.length())
-					   .archiveType(archiveTypeRepository.getReferenceById((short) 2))//the brotli algo
 					   .build();
-      instance.getArchives().add(archive);
+      packageInstanceArchiveRepository.save(archive);
       packageInfoRepository.setStatusById(packageId, PackageInfo.VALID);
+}
+
+private static String encodeSecret(@NotNull Object message) {
+      byte[] bytes = Json.encodeAsBytes(message);
+      return Base64.getEncoder().encodeToString(bytes);
+}
+
+private static <T> Optional<T> decodeSecret(String secret, Class<T> clazz) {
+      byte[] bytes = Base64.getDecoder().decode(secret);
+      Either<JsonProcessingException, Object> either = Json.parseBytesAs(bytes, ClassTag.apply(clazz));
+      if (either.isLeft()) {
+	    return Optional.empty();
+      } else {
+	    return Optional.of(either.getOrElse(() -> null));
+      }
 }
 
 private EndpointInfo buildEndpointInfo(@NotNull Object message) {
       String address = String.format("%s:%d", this.address, this.port);
-      byte[] secret = Json.encodeAsBytes(message);
+      String secret = encodeSecret(message);
       return EndpointInfo.newBuilder()
 		 .setRepositoryIp(address)
-		 .setSecret(ByteString.copyFrom(secret))
+		 .setSecret(secret)
 		 .build();
 }
 

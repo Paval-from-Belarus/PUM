@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -15,6 +16,6 @@ Optional<PackageInfo> findWithAliasesByIdAndStatus(long id, long status);
 Optional<PackageInfo> findByPublisherIdAndName(long publisherId, String name);
 @Modifying
 @Query("update PackageInfo set status = :id where id = :status")
-void setStatusById(long id, long status);
+void setStatusById(@Param("id") long id, @Param("status") long status);
 
 }
