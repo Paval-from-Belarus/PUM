@@ -50,21 +50,6 @@ message PublisherInfo {
     ValidationInfo validation = 5;
   }
 }
-//the message to publish payload
-//this message is alternative to rpm descriptor
-message PublicationRequest {
-  string id = 1;
-  uint64 publisher_id = 4;//the
-  ValidationRequest validation = 2;
-  PublishingRequest info = 3;
-}
-message PublicationInfo {
-  string id = 1;
-  oneof info {
-    ValidationInfo validation = 2;
-    EndpointInfo endpoint = 3;
-  }
-}
 //the request to fetch the basic info about repository
 message RepositoryRequest {
   string id = 1;

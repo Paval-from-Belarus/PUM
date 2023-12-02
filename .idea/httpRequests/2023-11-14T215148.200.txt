@@ -1,5 +1,0 @@
-{
-  "packageId": 42,
-  "packageType": "Any type",
-  "aliases": ["zero field", "first field"]
-}

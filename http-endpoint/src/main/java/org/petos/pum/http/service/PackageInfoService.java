@@ -1,5 +1,6 @@
 package org.petos.pum.http.service;
 
+import org.petos.pum.networks.dto.PublicationDto;
 import org.petos.pum.networks.dto.packages.EndpointInfo;
 import org.petos.pum.networks.dto.packages.FullInstanceInfo;
 import org.petos.pum.networks.dto.packages.HeaderInfo;
@@ -26,4 +27,6 @@ Mono<FullInstanceInfo> getFullInfo(int packageId, String version);
  * @return
  */
 Mono<EndpointInfo> getPayloadInfo(int packageId, String version, String archive);
+
+Mono<EndpointInfo> publish(long publisherId, PublicationDto dto);
 }

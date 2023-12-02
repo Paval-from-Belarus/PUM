@@ -2,11 +2,14 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/client/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/client/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/http-endpoint/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/http-endpoint/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/networks/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/networks/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/old_client/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/publications/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/publications/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/publisher/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/publisher/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/repository/src/main/java" charset="UTF-8" />

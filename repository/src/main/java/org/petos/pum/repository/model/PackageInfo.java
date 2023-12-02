@@ -15,7 +15,8 @@ import java.util.List;
  * @since 03/11/2023
  */
 @Entity
-@Table(name = "package_info")
+@Table(name = "package_info",
+    uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 @Data
 @Builder
 @AllArgsConstructor

@@ -1,5 +1,0 @@
-{
-  "packageId": 1,
-  "packageType": "bin",
-  "aliases": ["kernel"]
-}

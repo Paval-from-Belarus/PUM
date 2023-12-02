@@ -10,6 +10,7 @@ import org.petos.pum.networks.security.Encryptor;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -30,6 +31,7 @@ public static class VerificationException extends Exception {
 	    super(cause);
       }
 }
+
 private static final int BODY_SIGN = 0xCCEEDDFF;
 
 public enum AssemblyType {Library, Application}
@@ -144,6 +146,15 @@ public static @NotNull byte[] decompress(byte[] compressed, ArchiveType archive)
       return result;
 }
 
+//the brotli only
+public static @NotNull OutputStream compress(OutputStream origin) throws IOException {
+      return brotliCompression(origin);
+}
+
+public static InputStream decompress(InputStream origin) throws IOException {
+      return brotliDecompression(origin);
+}
+
 private void encrypt() {
       this.payload = encryptor.encrypt(payload);
 }
@@ -228,11 +239,11 @@ public static PackageAssembly valueOf(@NotNull PackageHeader header, @NotNull by
       return new PackageAssembly(header, payload);
 }
 
-private @NotNull GZIPOutputStream gzipCompression(OutputStream destination) throws IOException {
+private static @NotNull GZIPOutputStream gzipCompression(OutputStream destination) throws IOException {
       return new GZIPOutputStream(destination);
 }
 
-private @NotNull BrotliOutputStream brotliCompression(OutputStream destination) throws IOException {
+private static @NotNull BrotliOutputStream brotliCompression(OutputStream destination) throws IOException {
       Brotli4jLoader.ensureAvailability();
       Encoder.Parameters params = new Encoder.Parameters().setQuality(6);
       return new BrotliOutputStream(destination, params);

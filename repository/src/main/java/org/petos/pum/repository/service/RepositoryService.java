@@ -1,7 +1,7 @@
 package org.petos.pum.repository.service;
 
 import org.petos.pum.networks.dto.packages.*;
-import org.petos.pum.networks.dto.transfer.PublisherRequest;
+import org.petos.pum.repository.exception.UserAccessViolationException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,7 +23,7 @@ Optional<EndpointInfo> getPayloadInfo(PayloadRequest request);
 
 Optional<EndpointInfo> publish(PublishingRequest request);
 
-OutputStream download(byte[] secret);
+void download(byte[] secret, OutputStream output) throws UserAccessViolationException;
 
-void upload(byte[] secret, InputStream input);
+void upload(byte[] secret, InputStream input) throws UserAccessViolationException;
 }

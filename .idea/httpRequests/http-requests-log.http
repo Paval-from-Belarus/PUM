@@ -3,6 +3,258 @@ Connection: Keep-Alive
 User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
 Accept-Encoding: br,deflate,gzip,x-gzip
 
+<> 2023-12-01T223703.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/payload/1/version/0.0.2/archive/gzip
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T223531.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/full/1/version/0.0.2
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T222258.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/full/1/version/0.0.2
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T222208.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T222155.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T222149.200.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T222103.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221932.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221805.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221706.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221531.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221520.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T221331.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220657.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220647.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220443.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220421.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220410.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220222.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T220203.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215950.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215948.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215817.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215810.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215611.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=kernel
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215552.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=12
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215530.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/header?package_name=12
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-12-01T215513.404.json
+
+###
+
+GET http://localhost:8080/api/pum/info/payload/1/version/0.0.2/archive/gzip
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
 <> 2023-12-01T003215.200.json
 
 ###
@@ -193,246 +445,6 @@ User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
 Accept-Encoding: br,deflate,gzip,x-gzip
 
 <> 2023-11-15T110949.200.json
-
-###
-
-GET http://localhost:8080/api/pum/info/full/1/version/0.0.3
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T110801.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/full/1/version/0.0.3
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T110742.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/full/1/version/0.0.3
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T110738.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/full/1/version/0.0.3
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T110711.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T024233.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T024047.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T023848.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T023434.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T023344.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/short/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T023323.404.json
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=kernel
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T022825.200.json
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=kernel
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T022506.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=kernel
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-15T022214.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T215148.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T215146.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T215144.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T204816.200.txt
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T204251.200.json
-
-###
-
-GET http://localhost:8080/api/pum/info/header?package_name=12
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T204145.200.protobuf
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T154748.200.protobuf
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:8080/api/pum/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T152948.200.protobuf
-
-###
-
-GET http://localhost:8080/info/1
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.8)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-11-14T152448.404.json
 
 ###
 

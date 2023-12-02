@@ -55,6 +55,7 @@ public void doPublisher(DynamicMessage message) {
       }
       if (request.hasValidation()) {
 	    ValidationInfo info = publisherService.validate(request.getValidation());
+	    builder.setValidation(info);
 	    if (info.hasError()) {
 		  sendPublisherInfo(builder, ResponseStatus.ILLEGAL);
 	    } else {
@@ -70,6 +71,6 @@ private void sendPublisherInfo(PublisherInfo.Builder builder, ResponseStatus sta
       PublisherInfo response = builder
 				   .setStatus(status)
 				   .build();
-      kafkaTemplate.send("package-info", response);
+      kafkaTemplate.send("publisher-info", response);
 }
 }

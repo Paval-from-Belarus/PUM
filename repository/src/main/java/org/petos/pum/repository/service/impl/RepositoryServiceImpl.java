@@ -1,27 +1,33 @@
 package org.petos.pum.repository.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.ByteString;
+import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
+import kafka.utils.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.apache.avro.data.Json;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.petos.pum.networks.dto.packages.*;
+import org.petos.pum.networks.transfer.PackageAssembly;
 import org.petos.pum.repository.dao.*;
+import org.petos.pum.repository.exception.UserAccessViolationException;
 import org.petos.pum.repository.model.*;
 import org.petos.pum.repository.service.RepositoryService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import scala.reflect.ClassTag;
+import scala.util.Either;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -37,16 +43,27 @@ private final PackageAliasRepository packageAliasRepository;
 private final PackageInstanceRepository packageInstanceRepository;
 private final PackageDependencyRepository packageDependencyRepository;
 private final PackageInstanceArchiveRepository packageInstanceArchiveRepository;
-private final String serverAddress = "the default address to start file downloading)";
 private final LicenseRepository licenseRepository;
 private final PackageTypeRepository packageTypeRepository;
+private RepositoryServiceImpl self;
 @Setter
-@Value("server.port")
+@Value("${server.port}")
 private Integer port;
 @Setter
-@Value("server.address")
+@Value("${server.address}")
 private String address;
+@Setter
+@Value("${storage.root.path}")
+private Path storageRoot;
+private final ArchiveTypeRepository archiveTypeRepository;
+public void setSelfInjection(RepositoryServiceImpl self) {
+      this.self	= self;
+}
 
+@PostConstruct
+public void init() {
+      System.out.println("The self bean is " + self);
+}
 @Override
 public Optional<HeaderInfo> getHeaderInfo(HeaderRequest request) {
       Optional<PackageAlias> optionalAlias = packageAliasRepository.findByName(request.getPackageAlias());
@@ -133,22 +150,93 @@ public Optional<EndpointInfo> publish(PublishingRequest request) {
       return Optional.ofNullable(info);
 }
 
-@Override
-public OutputStream download(byte[] secret) {
-      return null;
+private UserAccessViolationException newUserAccessViolationException(String params, Object... args) {
+      String message = String.format(params, args);
+      LOGGER.warn(message);
+      return new UserAccessViolationException(message);
 }
 
 @Override
-public void upload(byte[] secret, InputStream input) {
+@Async("fileTaskExecutor")
+public void download(byte[] token, OutputStream output) {
+      Either<JsonProcessingException, DownloadSecret> either = Json.parseBytesAs(token, ClassTag.apply(DownloadSecret.class));
+      String message;
+      try {
+	    if (either.isLeft()) {
+		  output.close();
+		  throw newUserAccessViolationException("Failed to share file with Invalid token:%s", Arrays.toString(token));
+	    }
+	    DownloadSecret secret = either.getOrElse(() -> null);
+	    assert secret != null;
+	    Path targetPath = storageRoot.resolve(secret.payloadPath());
+	    try (InputStream input = PackageAssembly.decompress(Files.newInputStream(targetPath, StandardOpenOption.READ))) {
+		  input.transferTo(output);
+	    }
+	    message = "File is fully sent";
+      } catch (IOException e) {
+	    LOGGER.warn("Failed to download file by client: {}", e.toString());
+	    message = "Failed to sent file";
+      }
+      LOGGER.trace(message);
+}
 
+
+@Override
+@Async("fileTaskExecutor")
+public void upload(byte[] token, InputStream input) {
+      Either<JsonProcessingException, PublicationSecret> either = Json.parseBytesAs(token, ClassTag.apply(PublicationSecret.class));
+      Path targetPath = null;
+      String message;
+      try (input) {
+	    if (either.isLeft()) {
+		  input.close();
+		  throw newUserAccessViolationException("Failed upload with invalid token:%s", Arrays.toString(token));
+	    }
+	    PublicationSecret secret = either.getOrElse(() -> null);
+	    assert secret != null;
+	    PackageInfo packageInfo = packageInfoRepository.findById(secret.packageId()).orElseThrow();
+	    String uniqueFileName = packageInfo.getName() + secret.version();
+	    targetPath = storageRoot.resolve(uniqueFileName);
+	    try (OutputStream output = PackageAssembly.compress(Files.newOutputStream(targetPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE))) {
+		  input.transferTo(output);
+	    }
+	    self.assignPackageAsAvailable(packageInfo.getId(), secret.version(), targetPath);
+	    message = "File successfully stored";
+      } catch (Throwable e) {
+	    LOGGER.error(e);
+	    try {
+		  if (targetPath != null) {
+			Files.deleteIfExists(targetPath);
+		  }
+	    } catch (IOException e2) {
+		  LOGGER.error("Double fault while file uploading: {}", e2.toString());
+		  //we can do nothing
+	    }
+	    message = "Failed to upload file";
+      }
+      LOGGER.trace(message);
+}
+
+@Transactional
+public void assignPackageAsAvailable(long packageId, String version, Path targetPath) {
+      File targetFile = targetPath.toFile();
+      PackageInstance instance = packageInstanceRepository.findByPackageInfoIdAndVersion(packageId, version).orElseThrow();
+      PackageInstanceArchive archive = PackageInstanceArchive.builder()
+					   .instance(instance)
+					   .payloadPath(targetPath.toAbsolutePath().toString())
+					   .payloadSize(targetFile.length())
+					   .archiveType(archiveTypeRepository.getReferenceById((short) 2))//the brotli algo
+					   .build();
+      instance.getArchives().add(archive);
+      packageInfoRepository.setStatusById(packageId, PackageInfo.VALID);
 }
 
 private EndpointInfo buildEndpointInfo(@NotNull Object message) {
       String address = String.format("%s:%d", this.address, this.port);
-      String secret = Json.toString(message);
+      byte[] secret = Json.encodeAsBytes(message);
       return EndpointInfo.newBuilder()
 		 .setRepositoryIp(address)
-		 .setSecret(ByteString.copyFrom(secret.getBytes()))
+		 .setSecret(ByteString.copyFrom(secret))
 		 .build();
 }
 

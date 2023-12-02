@@ -38,7 +38,7 @@ build/
 ### Mac OS ###
 .DS_Store
 ### Project FS
-client/local
+old_client/local
 server/packages
 *.log
 *.lck

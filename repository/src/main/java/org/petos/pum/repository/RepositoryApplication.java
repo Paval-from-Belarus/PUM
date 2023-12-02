@@ -1,43 +1,28 @@
 package org.petos.pum.repository;
 
-import com.google.protobuf.DynamicMessage;
-import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializer;
-import io.confluent.kafka.serializers.protobuf.KafkaProtobufDeserializerConfig;
-import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializer;
-import io.confluent.kafka.serializers.protobuf.KafkaProtobufSerializerConfig;
-import io.confluent.kafka.serializers.subject.TopicNameStrategy;
-import jakarta.annotation.PostConstruct;
-import lombok.SneakyThrows;
-import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.petos.pum.networks.dto.packages.HeaderInfo;
-import org.petos.pum.networks.dto.transfer.PackageInfo;
-import org.petos.pum.networks.dto.transfer.PackageRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.config.KafkaListenerContainerFactory;
-import org.springframework.kafka.core.*;
-import org.springframework.kafka.support.converter.BatchMessagingMessageConverter;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.support.GenericMessage;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author Paval Shlyk
  * @since 01/11/2023
  */
 @SpringBootApplication
+@EnableAsync
+@EnableTransactionManagement
 public class RepositoryApplication {
+@Bean(name = "fileTaskExecutor")
+public Executor fileTaskExecutor() {
+      return Executors.newFixedThreadPool(10);
+}
 //@Bean
 //public KafkaListenerContainerFactory<?> batchFactory() {
 //      ConcurrentKafkaListenerContainerFactory<String, PackageRequest> factory =
@@ -64,12 +49,6 @@ public class RepositoryApplication {
 //      return props;
 //}
 
-@Value("${spring.kafka.bootstrap-servers}")
-private String bootstrapServers;
-@Value("${kafka.schema}")
-private String schemaUrl;
-@Value("${spring.kafka.consumer.group-id}")
-private String kafkaConsumerId;
 
 //@Bean
 //public Map<String, Object> producerConfig() {
@@ -87,13 +66,6 @@ private String kafkaConsumerId;
 //public ProducerFactory<String, PackageInfo> requestProducerFactory() {
 //      return new DefaultKafkaProducerFactory<>(producerConfig());
 //}
-
-
-@Bean
-public KafkaTemplate<String, PackageInfo> requestKafkaTemplate(ProducerFactory<?,?> defaultFactory) {
-      Map<String, Object> properties = defaultFactory.getConfigurationProperties();
-      return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(properties));
-}
 
 public static void main(String[] args) {
       SpringApplication.run(RepositoryApplication.class, args);

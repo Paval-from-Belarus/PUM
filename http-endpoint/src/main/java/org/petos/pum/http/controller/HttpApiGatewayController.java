@@ -1,11 +1,17 @@
 package org.petos.pum.http.controller;
 
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.petos.pum.http.service.PackageInfoService;
+import org.petos.pum.http.service.PublisherInfoService;
+import org.petos.pum.networks.dto.AuthorizationDto;
+import org.petos.pum.networks.dto.PublicationDto;
+import org.petos.pum.networks.dto.RegistrationDto;
+import org.petos.pum.networks.dto.credentials.ValidationInfo;
 import org.petos.pum.networks.dto.packages.ShortInstanceInfo;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,7 +23,6 @@ import reactor.core.publisher.Mono;
 
 import java.io.StringWriter;
 import java.util.Collection;
-import java.util.List;
 
 
 /**
@@ -29,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class HttpApiGatewayController {
 private final PackageInfoService packageInfoService;
+private final PublisherInfoService publisherInfoService;
 
 @GetMapping("/info/header")
 public Mono<ResponseEntity<String>> getPackageInfo(@NotNull @RequestParam("package_name") String packageName) {
@@ -55,32 +61,37 @@ public Mono<ResponseEntity<String>> getPayloadInfo(@PathVariable("package_id") i
       return monoToResponse(packageInfoService.getPayloadInfo(packageId, version, archive));
 }
 
-//@GetMapping("/info/payload/{package_id}/version/{version}")
-//public Mono<PayloadInfo> get
+//probably, replace such request to Authorization filter
+@PostMapping("/publisher/auth")
+public Mono<ResponseEntity<String>> authorizePublisher(@Validated @RequestBody AuthorizationDto dto) {
+      return monoToResponse(publisherInfoService.authorize(dto));
+}
+
+@PostMapping("/publisher/reg")
+public Mono<ResponseEntity<String>> registerPublisher(@Validated @RequestBody RegistrationDto dto) {
+      return errorMonoToResponse(publisherInfoService.register(dto));
+}
+
+@PostMapping("/publisher/deploy")
+public Mono<ResponseEntity<String>> publishPackage(@RequestParam("token") String token,
+						   @Validated @RequestBody PublicationDto dto) {
+      Mono<ValidationInfo> mono = publisherInfoService.validate(token);
+      Mono<GeneratedMessageV3> response = mono.flatMap(validation -> {
+	    if (validation.hasError()) {
+		  return Mono.just(validation);
+	    }
+	    return packageInfoService.publish(validation.getPublisherId(), dto);
+      });
+      return monoToResponse(response);
+}
 
 @GetMapping("/repo/info")
 public Object getRepositoryInfo(@NotNull @RequestParam("repo_name") String repoName) {
-      return null;
+      return "repo info";
 }
 //@GetMapping("/repo/info/full")
 //@GetMapping("/repo/info/archives")
 
-
-//probably, replace such request to Authorization filter
-@PostMapping("/publisher/auth")
-public Object authorizePublisher(@Validated Object publisherInfo) {
-      return null;
-}
-
-@PostMapping("/publisher/reg")
-public Object registerPublisher(@Validated Object registrationPublisherInfo) {
-      return null;
-}
-
-@PostMapping("/publisher/deploy")
-public Object publishPackage(@Validated Object publicationInfo) {
-      return null;
-}
 
 @SneakyThrows
 private <T extends Message> String elementToJson(T instance) {
@@ -112,6 +123,12 @@ private <T extends Message> Mono<ResponseEntity<String>> monoToResponse(Mono<T> 
 		 .defaultIfEmpty(ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND_MESSAGE));
 
 }
+
+private <T extends Message> Mono<ResponseEntity<String>> errorMonoToResponse(Mono<T> mono) {
+      return mono.map(error -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(elementToJson(error)))
+		 .defaultIfEmpty(ResponseEntity.ok().build());
+}
+
 
 private <T extends Message> ResponseEntity<String> dataToResponse(T instance) {
       return ResponseEntity.status(HttpStatus.OK).body(elementToJson(instance));
